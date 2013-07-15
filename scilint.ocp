@@ -1,0 +1,23 @@
+
+
+
+begin program "scilint"
+  files = [
+
+	"src/common/scilabSymbol.ml"
+	"src/common/scilabAst.ml"
+	"src/common/scilabAstPrinter.ml"
+	"src/common/scilabPrettyPrinter.ml"
+
+	"src/parser/scilabPreParser.ml"
+	"src/parser/scilabParser.mly"
+	"src/parser/uutf.ml"
+	"src/parser/scilabLexer.mll"
+
+	"src/scilint/scilabFunctionAnalyze.ml"
+	"src/scilint/scilabUtils.ml"
+	"src/scilint/scilabDeffRefactoring.ml"
+	"src/scilint/scilabAstStats.ml"
+	"src/scilint/scilintMain.ml"
+  ]
+end
