@@ -73,30 +73,30 @@ depend: $(OCAML_PARSER_MLS)
 include .depend_ocaml
 
 ########## COMMON
-SUFFIXES += .ml .mli .mll .mly .cmi .cmx
+.SUFFIXES: .ml .mli .mll .mly .cmi .cmx
 
-%.cmx: %.ml
+.ml.cmx:
 	$(OCAMLOPT) $(OPTFLAGS) -c $<
 
-%.cmx: %.mll
+.mll.cmx:
 	$(OCAMLLEX) $<
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.ml
 
-%.cmi: %.mli
+.mli.cmi:
 	$(OCAMLOPT) $(OPTFLAGS) -c $<
 
-%.ml: %.mll
+.mll.ml: 
 	$(OCAMLLEX) $<
 
-%.ml %.mli: %.mly
+.mly.ml:
 	$(OCAMLYACC) -v $<
 
-%.cmx: %.mly
+.mly.cmx:
 	$(OCAMLYACC) $<
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.ml
 
-%.cmi: %.mly
+.mly.cmi:
 	$(OCAMLYACC) -v $<
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
 

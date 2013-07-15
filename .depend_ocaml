@@ -2,10 +2,6 @@ src/common/scilabSymbol.cmo :
 src/common/scilabSymbol.cmx :
 src/common/scilabAst.cmo : src/common/scilabSymbol.cmx
 src/common/scilabAst.cmx : src/common/scilabSymbol.cmx
-src/common/scilabString2Ast.cmo : src/common/scilabSymbol.cmx \
-    src/common/scilabAst.cmx
-src/common/scilabString2Ast.cmx : src/common/scilabSymbol.cmx \
-    src/common/scilabAst.cmx
 src/common/scilabAstPrinter.cmo : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx
 src/common/scilabAstPrinter.cmx : src/common/scilabSymbol.cmx \
@@ -18,10 +14,6 @@ src/common/scilabSymbol.cmo :
 src/common/scilabSymbol.cmx :
 src/common/scilabAst.cmo : src/common/scilabSymbol.cmx
 src/common/scilabAst.cmx : src/common/scilabSymbol.cmx
-src/common/scilabString2Ast.cmo : src/common/scilabSymbol.cmx \
-    src/common/scilabAst.cmx
-src/common/scilabString2Ast.cmx : src/common/scilabSymbol.cmx \
-    src/common/scilabAst.cmx
 src/common/scilabAstPrinter.cmo : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx
 src/common/scilabAstPrinter.cmx : src/common/scilabSymbol.cmx \
@@ -56,14 +48,12 @@ src/scilint/scilabAstStats.cmo : src/common/scilabSymbol.cmx \
     src/scilint/scilabFunctionAnalyze.cmx src/common/scilabAst.cmx
 src/scilint/scilabAstStats.cmx : src/common/scilabSymbol.cmx \
     src/scilint/scilabFunctionAnalyze.cmx src/common/scilabAst.cmx
-src/scilint/scilintMain.cmo : src/scilint/scilabUtils.cmx \
-    src/common/scilabString2Ast.cmx src/parser/scilabPreParser.cmx \
+src/scilint/scilintMain.cmo : src/parser/scilabPreParser.cmx \
     src/parser/scilabParser.cmi src/parser/scilabLexer.cmx \
     src/scilint/scilabFunctionAnalyze.cmx \
     src/scilint/scilabDeffRefactoring.cmx src/scilint/scilabAstStats.cmx \
     src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
-src/scilint/scilintMain.cmx : src/scilint/scilabUtils.cmx \
-    src/common/scilabString2Ast.cmx src/parser/scilabPreParser.cmx \
+src/scilint/scilintMain.cmx : src/parser/scilabPreParser.cmx \
     src/parser/scilabParser.cmx src/parser/scilabLexer.cmx \
     src/scilint/scilabFunctionAnalyze.cmx \
     src/scilint/scilabDeffRefactoring.cmx src/scilint/scilabAstStats.cmx \
