@@ -1,0 +1,72 @@
+src/common/scilabSymbol.cmo :
+src/common/scilabSymbol.cmx :
+src/common/scilabAst.cmo : src/common/scilabSymbol.cmx
+src/common/scilabAst.cmx : src/common/scilabSymbol.cmx
+src/common/scilabString2Ast.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabString2Ast.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabAstPrinter.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabAstPrinter.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabPrettyPrinter.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
+src/common/scilabPrettyPrinter.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
+src/common/scilabSymbol.cmo :
+src/common/scilabSymbol.cmx :
+src/common/scilabAst.cmo : src/common/scilabSymbol.cmx
+src/common/scilabAst.cmx : src/common/scilabSymbol.cmx
+src/common/scilabString2Ast.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabString2Ast.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabAstPrinter.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabAstPrinter.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/common/scilabPrettyPrinter.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
+src/common/scilabPrettyPrinter.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
+src/parser/scilabPreParser.cmo :
+src/parser/scilabPreParser.cmx :
+src/parser/scilabParser.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx src/parser/scilabParser.cmi
+src/parser/scilabParser.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx src/parser/scilabParser.cmi
+src/parser/uutf.cmo : src/parser/uutf.cmi
+src/parser/uutf.cmx : src/parser/uutf.cmi
+src/parser/scilabLexer.cmo : src/parser/uutf.cmi src/parser/scilabParser.cmi
+src/parser/scilabLexer.cmx : src/parser/uutf.cmx src/parser/scilabParser.cmx
+src/scilint/scilabFunctionAnalyze.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/scilint/scilabFunctionAnalyze.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/scilint/scilabUtils.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/scilint/scilabUtils.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/scilint/scilabDeffRefactoring.cmo : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/scilint/scilabDeffRefactoring.cmx : src/common/scilabSymbol.cmx \
+    src/common/scilabAst.cmx
+src/scilint/scilabAstStats.cmo : src/common/scilabSymbol.cmx \
+    src/scilint/scilabFunctionAnalyze.cmx src/common/scilabAst.cmx
+src/scilint/scilabAstStats.cmx : src/common/scilabSymbol.cmx \
+    src/scilint/scilabFunctionAnalyze.cmx src/common/scilabAst.cmx
+src/scilint/scilintMain.cmo : src/scilint/scilabUtils.cmx \
+    src/common/scilabString2Ast.cmx src/parser/scilabPreParser.cmx \
+    src/parser/scilabParser.cmi src/parser/scilabLexer.cmx \
+    src/scilint/scilabFunctionAnalyze.cmx \
+    src/scilint/scilabDeffRefactoring.cmx src/scilint/scilabAstStats.cmx \
+    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
+src/scilint/scilintMain.cmx : src/scilint/scilabUtils.cmx \
+    src/common/scilabString2Ast.cmx src/parser/scilabPreParser.cmx \
+    src/parser/scilabParser.cmx src/parser/scilabLexer.cmx \
+    src/scilint/scilabFunctionAnalyze.cmx \
+    src/scilint/scilabDeffRefactoring.cmx src/scilint/scilabAstStats.cmx \
+    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
+src/parser/uutf.cmi :
+src/parser/scilabParser.cmi : src/common/scilabAst.cmx
