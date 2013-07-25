@@ -12,7 +12,7 @@ let print_config () =
         if Sys.is_directory file 
         then iter fun_iter file (Sys.readdir file);
         if List.exists (Filename.check_suffix file) list_ext 
-        then fun_iter ("  " ^ file ^ "\n")
+        then fun_iter ("  \"" ^ file ^ "\"\n")
         (* printf.printf "%s \n" dirname *)
       with _ -> ()
     ) list in
@@ -26,3 +26,7 @@ let print_config () =
         output_string ch "]"
       end
   with _ -> failwith "No macro dir found"
+
+
+let print_files = function
+  | ScilintTree.Files l -> List.iter print_endline l

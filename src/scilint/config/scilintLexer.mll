@@ -30,8 +30,9 @@ rule token = parse
   | assign                       { EQ }
   | lbrack                       { LB }
   | rbrack                       { RB }
-  | quote                        { str:= ""; simplestr lexbuf}
+  | quote                        { str := ""; simplestr lexbuf}
   | dquote                       { str := ""; doublestr lexbuf}
+  | _ as c                       { print_char c; token lexbuf }
 
 and doublestr = parse
   | dquote                       { STR !str }

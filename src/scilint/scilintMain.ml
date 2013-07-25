@@ -3,10 +3,12 @@ let test_flag = ref false
 let analyze_flag = ref false
 let type_flag = ref false
 let cfg_flag = ref false
+let cfg_file = ref false
 let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": run tests");
             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code");
             ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab programe");
-           ("-cfg", Arg.Unit (fun() -> cfg_flag := true), ": try to create config file if current dir is a scilab project")]
+            ("-cfg", Arg.Unit (fun () -> cfg_flag := true), ": try to create config file if current dir is a scilab project");
+            ("-load", Arg.String (fun s -> cfg_file := true; file := s), ": try to create config file if current dir is a scilab project")]
 let usage = "Usage: " ^ Sys.argv.(0) ^ " [-t] [-eq file] [-analyze file] [file]"
 
 (* let test_parser ast = *)
@@ -284,8 +286,9 @@ let _ =
       else 
         if !cfg_flag
         then ScilintConfig.print_config ()
-          
-
+        else 
+          if !cfg_file
+        then ScilintConfig.print_files (ScilintConfig.read_config !file)
 
 
 
