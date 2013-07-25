@@ -20,6 +20,10 @@ OCAML_PARSER_MLIS= \
 	src/parser/scilabParser.mli
 
 OCAML_SCILINT_MLS = \
+	src/scilint/config/scilintTree.ml \
+	src/scilint/config/scilintParser.ml \
+	src/scilint/config/scilintLexer.ml \
+	src/scilint/config/scilintConfig.ml \
 	src/scilint/scilabFunctionAnalyze.ml \
 	src/scilint/scilabUtils.ml \
 	src/scilint/scilabDeffRefactoring.ml \
@@ -57,7 +61,7 @@ SCILINT_CMIS = $(SCILINT_MLS:.ml=.cmi) $(SCILINT_MLIS:.mli=.cmi)
 SCILINT_CMXS = $(SCILINT_MLS:.ml=.cmx)
 SCILINT_OBJS = $(SCILINT_MLS:.ml=.o)
 
-OCAML_INCL= -I src/common -I src/parser -I src/scilint
+OCAML_INCL= -I src/common -I src/parser -I src/scilint -I src/scilint/config
 OPTFLAGS = -g -c -fPIC $(OCAML_INCL)
 
 
