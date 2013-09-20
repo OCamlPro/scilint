@@ -26,10 +26,11 @@
 <div class="row">
   <div class="span8">
     <p class="lead">The Scilab source analyzer</p>
+    <p>Scilint is a tool to analyze Scilab code, developed within the <a href="http://www.richelieu.pro/">Richelieu</a> project. </p>
   </div>
   <div class="span4">
     <a class="btn btn-large btn-success btn-block" href="https://github.com/OCamlPro/scilint/releases">
-      <i class="icon-arrow-down icon-white"></i> Download 0.1
+      <i class="icon-arrow-down icon-white"></i> Download version 0.1
     </a>
   </div>
 </div>
@@ -39,24 +40,24 @@
 <p class="text-info text-center">Scilint checks Scilab code files to
   find possible problems.</p>
 <hr />
-<h2>Function Analyzes</h2>
+<h2>Local Analyzes</h2>
 <h5><i class="icon-arrow-right"></i>    Variable not
   initialized    </h5>
 <div class="row">
   <div class="span6">
-    <p class="text-center"> We think that it's important to point out
-    when an 'not-initiliazed' variable is used in the body of a function
-    for severals reasons. The first one is because it can lead to
-    errors or unexpected beahvior. The second one is because it
-    prevents some optimizations </p>
+    <p> Although it is possible in Scilab to access
+    a variable in an upper scope, it is not a good practice (such
+    variables should be passed as arguments), since it is also often
+    an error (a mispelled variable, for example). Also, it can prevent
+    optimisation by a JIT compiler in the future.</p>
   </div>
 </div>
 <h5><i class="icon-arrow-right"></i>    Unused arguments     </h5>
 <div class="row">
   <div class="span6">
-    <p class="text-center"> We feel like this is important because it
-    allow some optimizations. Also it may be an indication that the
-    developer made a mistake. </p>
+    <p> An argument that appears as needed by a
+    function in its arguments and is not used is usually a good sign
+    of a mistake, somewhere in the function. </p>
   </div>
 </div>
 
@@ -64,26 +65,24 @@
 <h3>Installation</h3>
 <div class="row">
 <div class="span6">
-<p> In order to use Scilint you need OCaml 4.00. </p>
-<p>On <b>Linux</b> or <b>OSX</b>, we recommend you use the <a href="http://opam.ocamlpro.com">OPAM</a> package manager:</p>
-<pre>opam switch 4.00.0</pre>
-<p>Once you have OCaml 4.00 installed :</p>
+<p> In order to use this version of Scilint, you need at least OCaml 4.00. </p>
+<p>On <b>Linux</b> or <b>OSX</b>, we recommend the use of the <a href="http://opam.ocamlpro.com">OPAM</a> package manager:</p>
+<pre>opam switch 4.00.1</pre>
+<p>Once you have OCaml 4.00.1 installed :</p>
 <pre>make</pre>
 </div>
 <div class="span6">
-<p>Further informations will come to install Scilint on <b>Microsoft Windows</b>.</p>
+<p>Further informations will come on how to install Scilint on <b>Microsoft Windows</b>.</p>
 </div>
 </div>
 <h3>Usage</h3>
 <div class="row">
   <div class="span6">
-    <p> Scilint will deliver some warnings if it encouters some cases
-    we described.</p>
-    <p>To analyze your Scilab source code, you can just call Scilint :
+    <p>To analyze your Scilab source code, call Scilint with:
       <pre>./scilint file.sci</pre>
-    Scilint will parse your file and then analyze it looking for some
-    useful informations to give. Those informations will be deliver
-    with location indication so you can easily find your way to the
+    Scilint will parse the file and then analyze it looking for some
+    useful informations to give. Those informations will be printed
+    with location information, so you can easily find your way to the
     right code.
     </p>
   </div>
@@ -92,18 +91,38 @@
 <a id="downloads"></a>
 <table class="table table-striped">
 <tr>
-  <td><a href="http://opam.ocamlpro.com/">OPAM</a></td>
-  <td>To install OCaml 4.00</td>
+  <td>
+    <a href="https://github.com/OCamlPro/scilint">
+      Scilint on GitHub
+    </a>
+  </td>
+  <td>
+    Git Repository of Scilint on GitHub
+  </td>
+</tr>
+<tr>
+  <td>
+    <a href="https://github.com/OCamlPro/scilint/issues">
+      Scilint Issues
+    </a>
+  </td>
+  <td>
+    Scilint Bug Tracker
+  </td>
 </tr>
 <tr>
   <td>
     <a href="https://github.com/OCamlPro/scilint/releases">
-      Version 0.1
+      Scilint Releases
     </a>
   </td>
   <td>
-    Download for Linux
+    Scilint Source Archives
   </td>
+</tr>
+<tr>
+  <td><a href="http://opam.ocamlpro.com/">OPAM</a></td>
+  <td>To install OCaml</td>
 </tr>
 </table>
 </div>
