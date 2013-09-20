@@ -1,0 +1,115 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <link rel="stylesheet" href="css/bootstrap.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <meta name="keywords"
+  content="Objective-Caml,Objective,Caml,Ocaml,compilers,patches,caml-light,sml,haskell,scheme,lisp,functional,languages,ocamlc,ocamlopt,cmo,cmx,cma,platform,development,open-source,free-software,native" />
+   <title>Scilint: Scilab-Analyzer</title>
+</head>
+<body>
+ <div class="navbar navbar-inverse navbar-fixed-top">
+   <div class="navbar-inner">
+     <div class="container">
+       <a class="brand" href="index.html">Scilint</a>
+       <ul class="nav pull-right">
+         <li><a href="index.html">Home</a></li>
+       </ul>
+    </div>
+  </div>
+</div>
+<div class="content">
+<div class="container">
+<h1>Scilint</h1>
+<div class="row">
+  <div class="span8">
+    <p class="lead">The Scilab source analyzer</p>
+  </div>
+  <div class="span4">
+    <a class="btn btn-large btn-success btn-block" href="https://github.com/OCamlPro/scilint/releases">
+      <i class="icon-arrow-down icon-white"></i> Download 0.1
+    </a>
+  </div>
+</div>
+<div style="height: 8ex;"></div>
+<div class="span12">
+<img src="images/scilab-site.png" alt="scilint screenshot">
+<p class="text-info text-center">Scilint checks Scilab code files to
+  find possible problems.</p>
+<hr />
+<h2>Function Analyzes</h2>
+<h5><i class="icon-arrow-right"></i>    Variable not
+  initialized    </h5>
+<div class="row">
+  <div class="span6">
+    <p class="text-center"> We think that it's important to point out
+    when an 'not-initiliazed' variable is used in the body of a function
+    for severals reasons. The first one is because it can lead to
+    errors or unexpected beahvior. The second one is because it
+    prevents some optimizations </p>
+  </div>
+</div>
+<h5><i class="icon-arrow-right"></i>    Unused arguments     </h5>
+<div class="row">
+  <div class="span6">
+    <p class="text-center"> We feel like this is important because it
+    allow some optimizations. Also it may be an indication that the
+    developer made a mistake. </p>
+  </div>
+</div>
+
+<h2>Documentation</h2>
+<h3>Installation</h3>
+<div class="row">
+<div class="span6">
+<p> In order to use Scilint you need OCaml 4.00. </p>
+<p>On <b>Linux</b> or <b>OSX</b>, we recommend you use the <a href="http://opam.ocamlpro.com">OPAM</a> package manager:</p>
+<pre>opam switch 4.00.0</pre>
+<p>Once you have OCaml 4.00 installed :</p>
+<pre>make</pre>
+</div>
+<div class="span6">
+<p>Further informations will come to install Scilint on <b>Microsoft Windows</b>.</p>
+</div>
+</div>
+<h3>Usage</h3>
+<div class="row">
+  <div class="span6">
+    <p> Scilint will deliver some warnings if it encouters some cases
+    we described.</p>
+    <p>To analyze your Scilab source code, you can just call Scilint :
+      <pre>./scilint file.sci</pre>
+    Scilint will parse your file and then analyze it looking for some
+    useful informations to give. Those informations will be deliver
+    with location indication so you can easily find your way to the
+    right code.
+    </p>
+  </div>
+</div>
+<h2>Resources</h2>
+<a id="downloads"></a>
+<table class="table table-striped">
+<tr>
+  <td><a href="http://opam.ocamlpro.com/">OPAM</a></td>
+  <td>To install OCaml 4.00</td>
+</tr>
+<tr>
+  <td>
+    <a href="https://github.com/OCamlPro/scilint/releases">
+      Version 0.1
+    </a>
+  </td>
+  <td>
+    Download for Linux
+  </td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
