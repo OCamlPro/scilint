@@ -4,12 +4,12 @@ let analyze_flag = ref false
 let type_flag = ref false
 let cfg_flag = ref false
 let cfg_file = ref false
-let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": run tests");
+let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base");
             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code");
-            ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab programe");
+            ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab program");
             ("-cfg", Arg.Unit (fun () -> cfg_flag := true), ": try to create config file if current dir is a scilab project");
-            ("-load", Arg.String (fun s -> cfg_file := true; file := s), ": try to create config file if current dir is a scilab project")]
-let usage = "Usage: " ^ Sys.argv.(0) ^ " [-t] [-eq file] [-analyze file] [file]"
+            ("-load", Arg.String (fun s -> cfg_file := true; file := s), ": try to load config file if current dir is a scilab project")]
+let usage = "Usage: " ^ Sys.argv.(0) ^ " [-t] [-a file] [-typ file] [-cfg] [-load] [file]"
 
 (* let test_parser ast = *)
 (*   (\* ast -> binary format *\) *)
@@ -31,11 +31,16 @@ let richelieu_test_path = "/home/michael/dev_sci/richelieu/"
 
 let scilab_forge_test_path = "/home/michael/test_forge/mirror.forge.scilab.org-1.4GB/"
 
-let print_exn_infos =
-  Printf.printf "Error at token : %s (line %i, character %i) \n\n"
+let print_error file msg line char = 
+  ScilabUtils.print_loc file line char msg  
 
-let print_lex_infos =
-  Printf.printf "at token : %s (line %i, character %i) \n\n"
+let print_parser_infos file token line char =
+  let msg = "Error : Parsing error at token " ^ token in
+  print_error file msg line char
+
+let print_lex_infos file token line char =
+  let msg = "Error : Syntax error at token " ^ token  in 
+  print_error file msg line char
 
 let get_length ic =
   let buf = Buffer.create 4 in
@@ -50,7 +55,7 @@ let get_length ic =
 let run_deff file =
   let ch = if file = "" then stdin else open_in file in
   let new_prog = ScilabPreParser.pre_parse ch in
-  Printf.printf "Testing %s : " file;
+  Printf.printf "Testing %s : \n" file;
   let lexbuf = Lexing.from_string new_prog in
   ScilabLexer.init_lexer_var ();
   try
@@ -70,7 +75,7 @@ let run_deff file =
         let line = curr.Lexing.pos_lnum in
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
-        print_exn_infos tok line cnum;
+        print_parser_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Err_str str_err ->
@@ -79,7 +84,7 @@ let run_deff file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_err;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Lex_err str_lex ->
@@ -88,7 +93,7 @@ let run_deff file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_lex;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | _ as err -> raise err
@@ -97,7 +102,7 @@ let run_deff file =
 let run_test file =
   let ch = if file = "" then stdin else open_in file in
   let new_prog = ScilabPreParser.pre_parse ch in
-  Printf.printf "Testing %s : " file;
+  Printf.printf "Testing %s : \n" file;
   let lexbuf = Lexing.from_string new_prog in
   ScilabLexer.init_lexer_var ();
   try
@@ -115,7 +120,7 @@ let run_test file =
         let line = curr.Lexing.pos_lnum in
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
-        print_exn_infos tok line cnum;
+        print_parser_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Err_str str_err ->
@@ -124,7 +129,7 @@ let run_test file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_err;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Lex_err str_lex ->
@@ -133,7 +138,7 @@ let run_test file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_lex;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | _ as err -> raise err
@@ -141,7 +146,6 @@ let run_test file =
 let run_type_file file =
   let ch = if file = "" then stdin else open_in file in
   let new_prog = ScilabPreParser.pre_parse ch in
-  Printf.printf "Typing %s : " file;
   let lexbuf = Lexing.from_string new_prog in
   ScilabLexer.init_lexer_var ();
   try
@@ -149,10 +153,8 @@ let run_type_file file =
     begin
       match ast with
         | ScilabAst.Exp exp ->
-            print_endline "-> OK\n";
-            print_endline (ScilabAstPrinter.to_string exp);
-            ScilabFunctionAnalyze.analyze exp;
-            ScilabFunctionAnalyze.print ();
+            ScilabFunctionAnalyze.analyze file exp;
+            ScilabFunctionAnalyze.print_warning_init ();
             (* ScilabTyper.type_ast exp *)
         | _ -> print_endline "-> Error not an Exp\n"
     end;
@@ -164,7 +166,7 @@ let run_type_file file =
         let line = curr.Lexing.pos_lnum in
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
-        print_exn_infos tok line cnum;
+        print_parser_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Err_str str_err ->
@@ -173,7 +175,7 @@ let run_type_file file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_err;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Lex_err str_lex ->
@@ -182,7 +184,7 @@ let run_type_file file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_lex;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | _ as err -> raise err
@@ -190,7 +192,7 @@ let run_type_file file =
 let run_analyze_file file =
   let ch = if file = "" then stdin else open_in file in
   let new_prog = ScilabPreParser.pre_parse ch in
-  Printf.printf "Analyzing %s : " file;
+  Printf.printf "Analyzing %s : \n" file;
   let lexbuf = Lexing.from_string new_prog in
   ScilabLexer.init_lexer_var ();
   try
@@ -201,7 +203,7 @@ let run_analyze_file file =
             print_endline "-> OK\n";
             incr cpt_files;
             ScilabAstStats.analyze_ast exp;
-            ScilabFunctionAnalyze.analyze exp
+            ScilabFunctionAnalyze.analyze file exp
         | _ -> print_endline "-> Error not an Exp\n"
     end;
     flush stdout;
@@ -212,7 +214,7 @@ let run_analyze_file file =
         let line = curr.Lexing.pos_lnum in
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
-        print_exn_infos tok line cnum;
+        print_parser_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Err_str str_err ->
@@ -221,7 +223,7 @@ let run_analyze_file file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_err;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | ScilabLexer.Lex_err str_lex ->
@@ -230,7 +232,7 @@ let run_analyze_file file =
         let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
         let tok = Lexing.lexeme lexbuf in
         print_string str_lex;
-        print_lex_infos tok line cnum;
+        print_lex_infos file tok line cnum;
         flush stdout;
         close_in ch
     | _ as err -> raise err

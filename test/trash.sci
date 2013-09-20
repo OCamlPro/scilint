@@ -1,21 +1,21 @@
-function w = h(x)
-  w = x + 1
+function w = h(a)
+  w = 2 + 1
 endfunction
 
-function z = f(x)
-  b = 3
+function z = f(y)
+  b = 3;
   function a = j(x)
-    a = x + b
+    a = y + x
   endfunction
-  z = h(x + j(t))
+  z = h(b + j(t))
 endfunction
 
 function g(x)
   x(1)
 endfunction
 
-function w = k(x)
-  w = return(x)
+function w = k(b)
+  w = return(b)
 endfunction
 
 t = 2

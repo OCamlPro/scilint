@@ -24,8 +24,8 @@ OCAML_SCILINT_MLS = \
 	src/scilint/config/scilintParser.ml \
 	src/scilint/config/scilintLexer.ml \
 	src/scilint/config/scilintConfig.ml \
-	src/scilint/scilabFunctionAnalyze.ml \
 	src/scilint/scilabUtils.ml \
+	src/scilint/scilabFunctionAnalyze.ml \
 	src/scilint/scilabDeffRefactoring.ml \
 	src/scilint/scilabAstStats.ml \
 	src/scilint/scilintMain.ml

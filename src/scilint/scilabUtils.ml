@@ -433,6 +433,17 @@ let is_equal ast1 ast2 =
     | _ ,_ -> raise (Not_equal "Ast1 <> Ast2")
 
 
+let print_loc_with_endchar file line startchar endchar msg = 
+  Printf.printf "File \"%s\", line %i, charactere %i-%i:\n%s" file line startchar endchar msg
+
+let print_loc file line startchar msg = 
+  Printf.printf "File \"%s\", line %i, charactere %i:\n%s" file line startchar msg
+
+let print_warning msg file loc = 
+  Printf.printf "File \"%s\", line %i, charactere %i:\n%s" file loc.first_line loc.first_column msg
+
+
+
 
 
 
