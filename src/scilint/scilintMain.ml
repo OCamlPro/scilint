@@ -4,12 +4,14 @@ let analyze_flag = ref false
 let type_flag = ref false
 let cfg_flag = ref false
 let cfg_file = ref false
-let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base");
-            ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code");
-            ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab program");
-            ("-cfg", Arg.Unit (fun () -> cfg_flag := true), ": try to create config file if current dir is a scilab project");
-            ("-load", Arg.String (fun s -> cfg_file := true; file := s), ": try to load config file if current dir is a scilab project")]
-let usage = "Usage: " ^ Sys.argv.(0) ^ " [-t] [-a file] [-typ file] [-cfg] [-load] [file]"
+let args = []
+(* let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base"); *)
+(*             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code"); *)
+(*             ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab program"); *)
+(*             ("-cfg", Arg.Unit (fun () -> cfg_flag := true), ": try to create config file if current dir is a scilab project"); *)
+(*             ("-load", Arg.String (fun s -> cfg_file := true; file := s), ": try to load config file if current dir is a scilab project")] *)
+(* let usage = "Usage: " ^ Sys.argv.(0) ^ " [-t] [-a file] [-typ file] [-cfg] [-load] [file]" *)
+let usage = "Usage: " ^ Sys.argv.(0) ^ " [file]"
 
 (* let test_parser ast = *)
 (*   (\* ast -> binary format *\) *)
@@ -253,7 +255,7 @@ let rec run_tests fun_iter dirname =
   ) files
 
 let _ =
-  Arg.parse args (fun s ->  run_deff s) usage;
+  Arg.parse args (fun s ->  run_type_file s) usage;
   if !test_flag
   then
     begin
