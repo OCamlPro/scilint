@@ -479,7 +479,7 @@ let print_fun_stats () =
       begin
         let (v1, v2, _) = Stats.find fn !stats_id in
         if (v1 + v2) = 1 then incr cpt_fun_unique;
-        ScilabFunctionAnalyze.SetSy.iter (fun sy -> 
+        ScilabFunctionAnalyze.SetSyWithLoc.iter (fun (sy, loc) -> 
           incr cpt_escaped_sy;
           let syn = ScilabSymbol.symbol_name sy in
           if Stats.mem syn !stats_id then
@@ -489,11 +489,11 @@ let print_fun_stats () =
             end
           else incr cpt_escaped_sy_unique
         ) esc_set;
-        if ScilabFunctionAnalyze.SetSy.cardinal ret_set <> 0 
+        if ScilabFunctionAnalyze.SetSyWithLoc.cardinal ret_set <> 0 
         then
           begin
             incr cpt_fun_ret;
-            ScilabFunctionAnalyze.SetSy.iter (fun sy -> incr cpt_returned_sy) ret_set
+            ScilabFunctionAnalyze.SetSyWithLoc.iter (fun (sy, loc) -> incr cpt_returned_sy) ret_set
           end
       end
     else incr cpt_fun_unique
