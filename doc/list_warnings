@@ -1,0 +1,56 @@
+================================== PYLINT ======================================
+
+[R]efactor for a “good practice”
+R0913: Too many arguments (%s/%s)
+R0914: Too many local variables (%s/%s)
+
+[C]onvention for coding standard violation
+C0324: Comma not followed by a space
+C0321: More than one statement on a single line
+C0323: Operator not followed by a space
+C0322: Operator not preceded by a space
+
+[W]arning for stylistic problems, or minor programming issues
+W0212: Access to a protected member %s of a client class
+W0221: Arguments number differs from %s method
+W1111: Assigning to function call which only returns None
+W0601: Global variable %r undefined at the module level
+W0223: Method %r is abstract in class %r but is not overridden
+W0101: Unreachable code
+W0613: Unused argument %r
+W0611: Unused import %s
+W0612: Unused variable %r
+W0122: Use of the exec statement
+W0333: Use of the `` operator
+
+[E]rror for important programming issues (i.e. most probably bug)
+E1101: %s %r has no %r member
+E0102: %s already defined line %s
+E0203: Access to member %r before its definition line %s
+E0202: An attribute inherited from %s hide this method
+E1111: Assigning to function call which doesn't return
+E0104: Return outside function
+E0602: Undefined variable %r
+E0601: Using variable %r before assignment
+
+[F]atal for errors which prevented further processing
+F0401: Unable to import %r (%s)
+
+================================== MLINT =======================================
+
+[R]
+Terminate statement with semicolon to suppress output (in functions).
+Use of brackets [] is unnecessary. Use parentheses to group, if needed.
+
+[W]
+The value assigned here to variable 'var_name' might never be used.
+There may be a parenthesis imbalance around here.
+
+[P]erformance
+fun1(arg1) is usually faster than fun2(arg1).
+'var_name' might be growing inside a loop. Consider preallocating for speed.
+Use STRCMPI(str1,str2) instead of using LOWER in a call to STRCMP.
+Use dynamic fieldnames with structures instead of GETFIELD.
+Use || instead of | as the OR operator in (scalar) conditional statements.
+
+
