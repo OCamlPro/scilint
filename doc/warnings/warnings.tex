@@ -1,5 +1,6 @@
 \documentclass{article}
 
+\usepackage{url}
 \title{Scilint Warnings}
 \author{INRIA \& OCamlPro}
 
@@ -25,6 +26,8 @@ W004 & duplicate return variable   &  \\ \hline
 W005 & function argument used as return variable   &  \\ \hline
 W006 & return variable is never set &  \\ \hline
 W007 & return variable used as a local variable &  \\ \hline
+% W--- & variable defined but not used & \\ \hline
+% W--- & use of ``exec'' function      & \\ \jline
 \end{tabular}
 
 \subsection{File Warnings}
@@ -38,6 +41,9 @@ these functions.
 Identifier & Title & Roadmap          \\ \hline
 FW 001 & too many arguments in function call & \\ \hline
 FW 002 & too few arguments in function call  & \\ \hline
+% FW 003 & duplicate function identifier & \\ \hline
+% FW 004 & redefinition of primitive function & \\ \hline
+% FW 005 & redefinition of standard library function & \\ \hline
 \end{tabular}
 
 \subsection{Global Warnings}
@@ -49,6 +55,19 @@ project.
 \begin{tabular}{|l|l|l|} \hline
 Identifier & Title & Roadmap          \\ \hline
 GW 001  & duplicate function identifier & \\ \hline
+\end{tabular}
+
+\subsection{Style Warnings}
+
+Style warnings are warnings caused by not following the style
+conventions.
+
+See \url{http://wiki.scilab.org/Code%20Conventions%20for%20the%20Scilab%20Programming%20Language}
+
+\begin{tabular}{|l|l|l|} \hline
+Identifier & Title & Roadmap          \\ \hline
+SW 001  & functions should start with lowercase & \\ \hline
+SW 002  & functions should not contain numeric values & \\ \hline
 \end{tabular}
 
 \section{Local warnings}
@@ -191,5 +210,9 @@ x = max(1);  // FW 002 : "max" used with too few arguments
 
 \section{Global warnings}
 
+\subsection{GW 001 --- Duplicate function identifier}
+
+The same name is used by two definitions of functions in two different
+files.
 
 \end{document}
