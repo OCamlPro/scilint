@@ -206,7 +206,16 @@ and analyze_dec = function
       let ini, args = 
         Array.fold_left (fun (acc1, acc2) arg -> 
           match arg.var_desc with
-            | SimpleVar sy_arg -> (SetSy.add sy_arg acc1, SetSyWithLoc.add (sy_arg, arg.var_location) acc2)
+            | SimpleVar sy_arg -> 
+                if SetSy.mem sy_arg acc1
+                then 
+                  begin
+                    let w = create_warning 
+                      (!file, arg.var_location) 
+                      (Duplicate_arg sy_arg.symbol_name) in
+                    print_warning w
+                  end;
+                (SetSy.add sy_arg acc1, SetSyWithLoc.add (sy_arg, arg.var_location) acc2)
             | _ -> failwith "FunctionDecArgs : Not suppose to happen"
         ) (SetSy.empty, SetSyWithLoc.empty) args in
       init_sy := SetSy.union !init_sy ini;
