@@ -219,7 +219,7 @@ and analyze_dec = function
                 (SetSy.add sy_arg acc1, SetSyWithLoc.add (sy_arg, arg.var_location) acc2)
             | _ -> failwith "FunctionDecArgs : Not suppose to happen"
         ) (SetSy.empty, SetSyWithLoc.empty) args in
-      ignore (Array.fold_left (fun acc ret_var -> 
+      let ret_vars = Array.fold_left (fun acc ret_var -> 
         match ret_var.var_desc with
           | SimpleVar sy_arg ->
               if SetSy.mem sy_arg ini
@@ -230,20 +230,26 @@ and analyze_dec = function
                     (Var_arg_ret sy_arg.symbol_name) in
                   print_warning w
                 end;
-              if SetSy.mem sy_arg acc
+              if SetSyWithLoc.mem (sy_arg, ret_var.var_location) acc
               then 
                 let w = create_warning 
                   (!file, ret_var.var_location) 
                   (Duplicate_return sy_arg.symbol_name) in
                 print_warning w;
                 acc
-              else SetSy.add sy_arg acc
+              else SetSyWithLoc.add (sy_arg, ret_var.var_location) acc
           | _ -> failwith "FunctionDecRet : Not suppose to happen"
-      ) SetSy.empty ret);
+      ) SetSyWithLoc.empty ret in
       init_sy := SetSy.union !init_sy ini;
       args_sy := args;
       analyze_ast body;
       let unused = get_unused !args_sy !used_sy in
+      SetSyWithLoc.iter (fun (sy, loc) ->
+        if SetSy.mem sy !used_sy
+        then
+          let w = create_warning (!file, loc) (Return_as_var sy.symbol_name) in
+          print_warning w
+      ) ret_vars;
       if (SetSyWithLoc.cardinal unused <> 0) 
       then 
         begin
