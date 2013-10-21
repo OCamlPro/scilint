@@ -222,6 +222,14 @@ and analyze_dec = function
       ignore (Array.fold_left (fun acc ret_var -> 
         match ret_var.var_desc with
           | SimpleVar sy_arg ->
+              if SetSy.mem sy_arg ini
+              then 
+                begin
+                  let w = create_warning 
+                    (!file, ret_var.var_location) 
+                    (Var_arg_ret sy_arg.symbol_name) in
+                  print_warning w
+                end;
               if SetSy.mem sy_arg acc
               then 
                 let w = create_warning 
