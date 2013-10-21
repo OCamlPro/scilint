@@ -4,6 +4,33 @@ open ScilabSymbol
 (* TODO : Use of typed context... make context modulable 
    We dont need type nor value here *)
 
+type warning_ty = 
+  | Uninitialized_var of string (* W001 *)
+  | Unused_arg of string (* W002 *)
+  | Duplicate_arg of string (* W003 *)
+  | Duplicate_return of string (* W004 *)
+  | Var_arg_ret of string (* W005 *)
+  | Unset_ret of string (* W006 *)
+  | Return_as_var of string (* W007 *)
+
+type code = string
+
+type message = string
+
+type warning_loc = string * ScilabAst.Location.t
+
+type warning = code * message * warning_loc
+
+let create_warning loc = function
+  | Uninitialized_var s -> ("W001", "\"" ^ s ^ "\" not initialized\n", loc)
+  | Unused_arg s -> ("W002", "\"" ^ s ^ "\" not used\n", loc)
+  | Duplicate_arg s -> ("W003", "argument \"" ^ s ^ "\" appears several times\n", loc)
+  | Duplicate_return s -> ("W004", "return variable \"" ^ s ^ "\" appears several times\n", loc)
+  | Var_arg_ret s -> ("W005", "return variable \"" ^ s ^ "\" is also an argument\n", loc)
+  | Unset_ret s -> ("W006", "return variable \"" ^ s ^ "\" is never set\n", loc)
+  | Return_as_var s -> ("W007", "return variable \"" ^ s ^ "\" is used as a local variable\n", loc)
+
+
 module SetSy = Set.Make(
   struct
     let compare = Pervasives.compare
@@ -46,20 +73,8 @@ let table_unsafe_fun = ref UnsafeFunSy.empty
 
 let cpt_analyze_fun = ref 0
 
-let print_warning_init () =
-  UnsafeFunSy.iter (fun fsy (esy, rsy) ->
-    SetSyWithLoc.iter (fun (sy, loc) -> 
-      let msg = ("Warning : " ^ sy.symbol_name ^ " is not initialized.\n") in
-      ScilabUtils.print_warning msg !file loc) esy
-    (* SetSyWithLoc.iter (fun (sy, loc) ->        *)
-    (*   let msg = "Warning : " ^ sy.symbol_name ^ " is returned.\n" in *)
-    (*   ScilabUtils.print_warning msg file loc) rsy *)
-  ) !table_unsafe_fun
-
-let print_warning_args fn args =
-  SetSyWithLoc.iter (fun (sy, loc) -> 
-    let msg = "Warning : " ^ sy.symbol_name ^ " argument not used by " ^ fn ^ ".\n" in
-    ScilabUtils.print_warning msg !file loc) args
+let print_warning (code, msg, (file, loc)) = 
+  ScilabUtils.print_warning (code ^ " : " ^ msg) file loc
 
 let get_unused args used =
   SetSyWithLoc.filter (fun (sy, _) -> not (SetSy.mem sy used)) args
@@ -199,10 +214,21 @@ and analyze_dec = function
       analyze_ast body;
       let unused = get_unused !args_sy !used_sy in
       if (SetSyWithLoc.cardinal unused <> 0) 
-      then print_warning_args fd.functionDec_symbol.symbol_name unused;
+      then 
+        begin
+          let list_w = SetSyWithLoc.fold (fun (sy, loc) acc -> 
+            let w = create_warning (!file, loc) (Unused_arg sy.symbol_name) in
+            w::acc) unused [] in
+          List.iter print_warning list_w
+        end;
       if (SetSyWithLoc.cardinal !escaped_sy) <> 0 || (SetSyWithLoc.cardinal !returned_sy) <> 0
       then 
         begin 
+          let list_w = SetSyWithLoc.fold (fun (sy, loc) acc -> 
+            let w = 
+              create_warning (!file, loc) (Uninitialized_var sy.symbol_name) in
+            w::acc) !escaped_sy [] in
+          List.iter print_warning list_w;
           add_unsafeFun sy !escaped_sy !returned_sy;
           init_sy := SetSy.add sy cur_init_sy;
           args_sy := get_unused cur_args_sy !used_sy;

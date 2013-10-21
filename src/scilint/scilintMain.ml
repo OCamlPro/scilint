@@ -155,8 +155,7 @@ let run_type_file file =
     begin
       match ast with
         | ScilabAst.Exp exp ->
-            ScilabFunctionAnalyze.analyze file exp;
-            ScilabFunctionAnalyze.print_warning_init ();
+            ScilabFunctionAnalyze.analyze file exp
             (* ScilabTyper.type_ast exp *)
         | _ -> print_endline "-> Error not an Exp\n"
     end;
