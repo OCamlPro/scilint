@@ -203,6 +203,7 @@ and analyze_dec = function
       let sy = fd.functionDec_symbol in
       let body = fd.functionDec_body in
       let args = fd.functionDec_args.arrayListVar_vars in
+      let ret = fd.functionDec_returns.arrayListVar_vars in
       let ini, args = 
         Array.fold_left (fun (acc1, acc2) arg -> 
           match arg.var_desc with
@@ -218,6 +219,19 @@ and analyze_dec = function
                 (SetSy.add sy_arg acc1, SetSyWithLoc.add (sy_arg, arg.var_location) acc2)
             | _ -> failwith "FunctionDecArgs : Not suppose to happen"
         ) (SetSy.empty, SetSyWithLoc.empty) args in
+      ignore (Array.fold_left (fun acc ret_var -> 
+        match ret_var.var_desc with
+          | SimpleVar sy_arg ->
+              if SetSy.mem sy_arg acc
+              then 
+                let w = create_warning 
+                  (!file, ret_var.var_location) 
+                  (Duplicate_return sy_arg.symbol_name) in
+                print_warning w;
+                acc
+              else SetSy.add sy_arg acc
+          | _ -> failwith "FunctionDecRet : Not suppose to happen"
+      ) SetSy.empty ret);
       init_sy := SetSy.union !init_sy ini;
       args_sy := args;
       analyze_ast body;
