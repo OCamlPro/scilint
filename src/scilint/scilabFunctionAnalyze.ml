@@ -66,7 +66,7 @@ let init_sy = ref SetSy.empty
 (* table of used args *)
 let args_sy = ref SetSyWithLoc.empty
 
-let used_sy = ref SetSy.empty
+let used_sy = ref SetSyWithLoc.empty
 
 (* table of unsafe fun with unsafe sy *)
 let table_unsafe_fun = ref UnsafeFunSy.empty
@@ -77,7 +77,7 @@ let print_warning (code, msg, (file, loc)) =
   ScilabUtils.print_warning (code ^ " : " ^ msg) file loc
 
 let get_unused args used =
-  SetSyWithLoc.filter (fun (sy, _) -> not (SetSy.mem sy used)) args
+  SetSyWithLoc.filter (fun (sy, loc) -> not (SetSyWithLoc.mem (sy, loc) used)) args
 
 let add_unsafeFun sy escaped returned =
   table_unsafe_fun := UnsafeFunSy.add sy (escaped, returned) !table_unsafe_fun
@@ -116,7 +116,7 @@ let rec analyze_ast e = match e.exp_desc with
       begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } ->
-              used_sy := SetSy.add sy !used_sy;
+              used_sy := SetSyWithLoc.add (sy, loc) !used_sy;
               if not (SetSy.mem sy !init_sy)
               then escaped_sy := SetSyWithLoc.add (sy, loc) !escaped_sy;
               if SetSyWithLoc.mem (sy, loc) !args_sy
@@ -199,7 +199,7 @@ and analyze_dec = function
       returned_sy := SetSyWithLoc.empty;
       let cur_args_sy = !args_sy in
       let cur_used_sy = !used_sy in
-      used_sy := SetSy.empty;
+      used_sy := SetSyWithLoc.empty;
       let sy = fd.functionDec_symbol in
       let body = fd.functionDec_body in
       let args = fd.functionDec_args.arrayListVar_vars in
@@ -211,6 +211,7 @@ and analyze_dec = function
                 if SetSy.mem sy_arg acc1
                 then 
                   begin
+                    (* W003 *)
                     let w = create_warning 
                       (!file, arg.var_location) 
                       (Duplicate_arg sy_arg.symbol_name) in
@@ -222,6 +223,7 @@ and analyze_dec = function
       let ret_vars = Array.fold_left (fun acc ret_var -> 
         match ret_var.var_desc with
           | SimpleVar sy_arg ->
+              (* W005 *)
               if SetSy.mem sy_arg ini
               then 
                 begin
@@ -230,6 +232,7 @@ and analyze_dec = function
                     (Var_arg_ret sy_arg.symbol_name) in
                   print_warning w
                 end;
+              (* W004 *)
               if SetSyWithLoc.mem (sy_arg, ret_var.var_location) acc
               then 
                 let w = create_warning 
@@ -244,21 +247,26 @@ and analyze_dec = function
       args_sy := args;
       analyze_ast body;
       let unused = get_unused !args_sy !used_sy in
-      SetSyWithLoc.iter (fun (sy, loc) ->
-        if SetSy.mem sy !used_sy
+      (* W006 and W007 *)
+      SetSyWithLoc.iter (fun (sy, loc_ret) ->
+        if SetSyWithLoc.mem (sy, loc_ret) !used_sy
         then
           begin
+            (* Ineffective *)
+            let (_, loc) = SetSyWithLoc.choose 
+              (SetSyWithLoc.filter (fun (sy_ret, _) -> sy = sy_ret) !used_sy) in
             let w = create_warning (!file, loc) (Return_as_var sy.symbol_name) in
             print_warning w
           end;
         if not (SetSy.mem sy !init_sy)
         then
-          let w = create_warning (!file, loc) (Unset_ret sy.symbol_name) in
+          let w = create_warning (!file, loc_ret) (Unset_ret sy.symbol_name) in
           print_warning w
       ) ret_vars;
       if (SetSyWithLoc.cardinal unused <> 0) 
       then 
         begin
+          (* W002 *)
           let list_w = SetSyWithLoc.fold (fun (sy, loc) acc -> 
             let w = create_warning (!file, loc) (Unused_arg sy.symbol_name) in
             w::acc) unused [] in
@@ -267,6 +275,7 @@ and analyze_dec = function
       if (SetSyWithLoc.cardinal !escaped_sy) <> 0 || (SetSyWithLoc.cardinal !returned_sy) <> 0
       then 
         begin 
+          (* W001 *)
           let list_w = SetSyWithLoc.fold (fun (sy, loc) acc -> 
             let w = 
               create_warning (!file, loc) (Uninitialized_var sy.symbol_name) in
@@ -296,7 +305,7 @@ and analyze_var v = match v.var_desc with
       then escaped_sy := SetSyWithLoc.add (symbol, v.var_location) !escaped_sy;
       if SetSyWithLoc.mem (symbol, v.var_location) !args_sy
       then args_sy := SetSyWithLoc.remove (symbol, v.var_location) !args_sy;
-      used_sy := SetSy.add symbol !used_sy;
+      used_sy := SetSyWithLoc.add (symbol, v.var_location) !used_sy;
   | ArrayListVar arr -> Array.iter analyze_var arr
 
 and analyze_math = function
