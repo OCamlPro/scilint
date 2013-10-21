@@ -247,7 +247,13 @@ and analyze_dec = function
       SetSyWithLoc.iter (fun (sy, loc) ->
         if SetSy.mem sy !used_sy
         then
-          let w = create_warning (!file, loc) (Return_as_var sy.symbol_name) in
+          begin
+            let w = create_warning (!file, loc) (Return_as_var sy.symbol_name) in
+            print_warning w
+          end;
+        if not (SetSy.mem sy !init_sy)
+        then
+          let w = create_warning (!file, loc) (Unset_ret sy.symbol_name) in
           print_warning w
       ) ret_vars;
       if (SetSyWithLoc.cardinal unused <> 0) 
