@@ -7,3 +7,6 @@
 *.cmx
 *.cmxs
 *.cmxa
+*~
+_obuild
+scilint
