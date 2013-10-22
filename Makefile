@@ -25,6 +25,7 @@ OCAML_SCILINT_MLS = \
 	src/scilint/config/scilintLexer.ml \
 	src/scilint/config/scilintConfig.ml \
 	src/scilint/scilabUtils.ml \
+	src/scilint/scilintWarning.ml \
 	src/scilint/scilabFunctionAnalyze.ml \
 	src/scilint/scilabDeffRefactoring.ml \
 	src/scilint/scilabAstStats.ml \
@@ -64,11 +65,11 @@ SCILINT_OBJS = $(SCILINT_MLS:.ml=.o)
 OCAML_INCL= -I src/common -I src/parser -I src/scilint -I src/scilint/config
 OPTFLAGS = -g -c -fPIC $(OCAML_INCL)
 
-all: scilint
+all: scilint.asm
 
-scilint : $(SCILINT_CMXS)
+scilint.asm : $(SCILINT_CMXS)
 	$(OCAMLOPT) bigarray.cmxa str.cmxa \
-	  -o scilint $(SCILINT_CMXS)
+	  -o scilint.asm $(SCILINT_CMXS)
 
 
 depend: $(OCAML_PARSER_MLS)
@@ -113,6 +114,7 @@ clean :
 	$(SCILINT_CMXS)  \
 	$(SCILINT_OBJS)  \
 	scilint \
+	scilint.asm \
 	src/lex/*.cm* \
 	src/lex/*.o \
 	src/yacc/*.cm* \

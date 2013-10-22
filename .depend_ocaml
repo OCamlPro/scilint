@@ -48,9 +48,13 @@ src/scilint/scilabUtils.cmo : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx
 src/scilint/scilabUtils.cmx : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx
-src/scilint/scilabFunctionAnalyze.cmo : src/scilint/scilabUtils.cmx \
+src/scilint/scilintWarning.cmo : src/scilint/scilabUtils.cmx \
+    src/common/scilabAst.cmx src/scilint/scilintWarning.cmi
+src/scilint/scilintWarning.cmx : src/scilint/scilabUtils.cmx \
+    src/common/scilabAst.cmx src/scilint/scilintWarning.cmi
+src/scilint/scilabFunctionAnalyze.cmo : src/scilint/scilintWarning.cmi \
     src/common/scilabSymbol.cmx src/common/scilabAst.cmx
-src/scilint/scilabFunctionAnalyze.cmx : src/scilint/scilabUtils.cmx \
+src/scilint/scilabFunctionAnalyze.cmx : src/scilint/scilintWarning.cmx \
     src/common/scilabSymbol.cmx src/common/scilabAst.cmx
 src/scilint/scilabDeffRefactoring.cmo : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx

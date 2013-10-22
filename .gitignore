@@ -9,4 +9,5 @@
 *.cmxa
 *~
 _obuild
-scilint
+scilint.asm
+
