@@ -219,7 +219,7 @@ and analyze_dec = function
                   end;
                 (SetSy.add sy_arg acc1, SetSyWithLoc.add (sy_arg, arg.var_location) acc2)
             | _ -> failwith "FunctionDecArgs : Not suppose to happen"
-        ) (SetSy.empty, SetSyWithLoc.empty) args in
+        ) (SetSy.singleton sy, SetSyWithLoc.empty) args in
       let ret_vars = Array.fold_left (fun acc ret_var -> 
         match ret_var.var_desc with
           | SimpleVar sy_arg ->
