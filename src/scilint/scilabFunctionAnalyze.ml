@@ -1,35 +1,9 @@
 open ScilabAst
 open ScilabSymbol
+open ScilintWarning
 
-(* TODO : Use of typed context... make context modulable 
+(* TODO : Use of typed context... make context modulable
    We dont need type nor value here *)
-
-type warning_ty = 
-  | Uninitialized_var of string (* W001 *)
-  | Unused_arg of string (* W002 *)
-  | Duplicate_arg of string (* W003 *)
-  | Duplicate_return of string (* W004 *)
-  | Var_arg_ret of string (* W005 *)
-  | Unset_ret of string (* W006 *)
-  | Return_as_var of string (* W007 *)
-
-type code = string
-
-type message = string
-
-type warning_loc = string * ScilabAst.Location.t
-
-type warning = code * message * warning_loc
-
-let create_warning loc = function
-  | Uninitialized_var s -> ("W001", "\"" ^ s ^ "\" not initialized\n", loc)
-  | Unused_arg s -> ("W002", "\"" ^ s ^ "\" not used\n", loc)
-  | Duplicate_arg s -> ("W003", "argument \"" ^ s ^ "\" appears several times\n", loc)
-  | Duplicate_return s -> ("W004", "return variable \"" ^ s ^ "\" appears several times\n", loc)
-  | Var_arg_ret s -> ("W005", "return variable \"" ^ s ^ "\" is also an argument\n", loc)
-  | Unset_ret s -> ("W006", "return variable \"" ^ s ^ "\" is never set\n", loc)
-  | Return_as_var s -> ("W007", "return variable \"" ^ s ^ "\" is used as a local variable\n", loc)
-
 
 module SetSy = Set.Make(
   struct
@@ -43,7 +17,7 @@ module SetSyWithLoc = Set.Make(
     let compare (sy1, loc1) (sy2, loc2) = Pervasives.compare sy1 sy2
     type t = ScilabSymbol.symbol * ScilabAst.Location.t
   end )
-  
+
 
 module UnsafeFunSy = Map.Make(
   struct
@@ -75,9 +49,6 @@ let cpt_analyze_fun = ref 0
 
 let level = ref 0
 
-let print_warning (code, msg, (file, loc)) = 
-  ScilabUtils.print_warning (code ^ " : " ^ msg) file loc
-
 let get_unused args used =
   SetSyWithLoc.filter (fun (sy, loc) -> not (SetSyWithLoc.mem (sy, loc) used)) args
 
@@ -94,8 +65,8 @@ let rec get_assign_ident e = match e.exp_desc with
           | ArrayListVar arr -> failwith "Can't extract ident from ARRAYLISTVAR"
       end
   | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident fieldExp_head
-  | CallExp exp ->  
-      begin 
+  | CallExp exp ->
+      begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
           | _ -> failwith "can't ident from fun name"
@@ -103,7 +74,7 @@ let rec get_assign_ident e = match e.exp_desc with
   | _ -> failwith "Can't extract ident from this"
 
 let is_return_call e = match e.exp_desc with
-  | ControlExp (ReturnExp { returnExp_exp }) -> 
+  | ControlExp (ReturnExp { returnExp_exp }) ->
       begin
         match returnExp_exp with
           | Some _ -> true
@@ -114,7 +85,7 @@ let is_return_call e = match e.exp_desc with
 let rec analyze_ast e = match e.exp_desc with
   | SeqExp list -> List.iter analyze_ast list
   | ConstExp exp -> ()
-  | CallExp exp | CellCallExp exp ->  
+  | CallExp exp | CellCallExp exp ->
       begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } ->
@@ -134,12 +105,12 @@ let rec analyze_ast e = match e.exp_desc with
       analyze_ast assignExp_right_exp;
       init_sy := Array.fold_left (fun acc (sy, _) -> SetSy.add sy acc) !init_sy arr_sy;
       if is_return_call assignExp_right_exp
-      then 
-        returned_sy := Array.fold_left (fun acc sy -> 
+      then
+        returned_sy := Array.fold_left (fun acc sy ->
           SetSyWithLoc.add sy acc) !returned_sy arr_sy
   | ControlExp controlExp -> analyze_cntrl controlExp
   | FieldExp { fieldExp_head; fieldExp_tail } -> ()
-  | ListExp { listExp_start; listExp_step; listExp_end } -> 
+  | ListExp { listExp_start; listExp_step; listExp_end } ->
       analyze_ast listExp_start;
       analyze_ast listExp_step;
       analyze_ast listExp_end
@@ -151,8 +122,8 @@ let rec analyze_ast e = match e.exp_desc with
 
 and analyze_cntrl = function
   | BreakExp -> ()
-  | ContinueExp -> () 
-  | ForExp forExp -> 
+  | ContinueExp -> ()
+  | ForExp forExp ->
       let varDec = forExp.forExp_vardec in (* name, init, kind *)
       let sy = varDec.varDec_name in
       analyze_ast varDec.varDec_init;
@@ -166,13 +137,13 @@ and analyze_cntrl = function
           | Some exp -> analyze_ast exp
           | None -> ()
       end
-  | ReturnExp returnExp -> 
+  | ReturnExp returnExp ->
       begin
         match returnExp.returnExp_exp with
           | Some exp -> analyze_ast exp
           | None -> ()
       end
-  | SelectExp selectExp -> 
+  | SelectExp selectExp ->
       analyze_ast selectExp.selectExp_selectme;
       Array.iter (fun case_exp ->
         analyze_ast case_exp.caseExp_test;
@@ -183,10 +154,10 @@ and analyze_cntrl = function
           | Some (_, se) -> List.iter analyze_ast se
           | None -> ()
       end
-  | TryCatchExp tryCatchExp -> 
+  | TryCatchExp tryCatchExp ->
       List.iter analyze_ast tryCatchExp.tryCatchExp_tryme;
       List.iter analyze_ast tryCatchExp.tryCatchExp_catchme
-  | WhileExp whileExp -> 
+  | WhileExp whileExp ->
       analyze_ast whileExp.whileExp_test;
       analyze_ast whileExp.whileExp_body
 
@@ -207,43 +178,36 @@ and analyze_dec = function
       let body = fd.functionDec_body in
       let args = fd.functionDec_args.arrayListVar_vars in
       let ret = fd.functionDec_returns.arrayListVar_vars in
-      let ini, args = 
-        Array.fold_left (fun (acc1, acc2) arg -> 
+      let ini, args =
+        Array.fold_left (fun (acc1, acc2) arg ->
           match arg.var_desc with
-            | SimpleVar sy_arg -> 
+            | SimpleVar sy_arg ->
                 if SetSy.mem sy_arg acc1
-                then 
-                  begin
+                then
                     (* W003 *)
-                    let w = create_warning 
-                      (!file, arg.var_location) 
-                      (Duplicate_arg sy_arg.symbol_name) in
-                    print_warning w
-                  end;
+                    local_warning
+                      (!file, arg.var_location)
+                      (Duplicate_arg sy_arg.symbol_name);
                 (SetSy.add sy_arg acc1, SetSyWithLoc.add (sy_arg, arg.var_location) acc2)
-            | _ -> failwith "FunctionDecArgs : Not suppose to happen"
+            | _ -> failwith "FunctionDecArgs : Not supposed to happen"
         ) (SetSy.singleton sy, SetSyWithLoc.empty) args in
-      let ret_vars = Array.fold_left (fun acc ret_var -> 
+      let ret_vars = Array.fold_left (fun acc ret_var ->
         match ret_var.var_desc with
           | SimpleVar sy_arg ->
               (* W005 *)
               if SetSy.mem sy_arg ini
-              then 
-                begin
-                  let w = create_warning 
-                    (!file, ret_var.var_location) 
-                    (Var_arg_ret sy_arg.symbol_name) in
-                  print_warning w
-                end;
+              then
+                local_warning
+                    (!file, ret_var.var_location)
+                    (Var_arg_ret sy_arg.symbol_name);
               (* W004 *)
               if SetSyWithLoc.mem (sy_arg, ret_var.var_location) acc
-              then 
-                let w = create_warning 
-                  (!file, ret_var.var_location) 
-                  (Duplicate_return sy_arg.symbol_name) in
-                print_warning w;
+              then begin
+                local_warning
+                  (!file, ret_var.var_location)
+                  (Duplicate_return sy_arg.symbol_name);
                 acc
-              else SetSyWithLoc.add (sy_arg, ret_var.var_location) acc
+              end else SetSyWithLoc.add (sy_arg, ret_var.var_location) acc
           | _ -> failwith "FunctionDecRet : Not suppose to happen"
       ) SetSyWithLoc.empty ret in
       init_sy := SetSy.union !init_sy ini;
@@ -256,37 +220,31 @@ and analyze_dec = function
         then
           begin
             (* Ineffective *)
-            let (_, loc) = SetSyWithLoc.choose 
+            let (_, loc) = SetSyWithLoc.choose
               (SetSyWithLoc.filter (fun (sy_ret, _) -> sy = sy_ret) !used_sy) in
-            let w = create_warning (!file, loc) (Return_as_var sy.symbol_name) in
-            print_warning w
+            local_warning (!file, loc) (Return_as_var sy.symbol_name)
           end;
         if not (SetSy.mem sy !init_sy)
         then
-          let w = create_warning (!file, loc_ret) (Unset_ret sy.symbol_name) in
-          print_warning w
+          local_warning (!file, loc_ret) (Unset_ret sy.symbol_name)
       ) ret_vars;
-      if (SetSyWithLoc.cardinal unused <> 0) 
-      then 
-        begin
-          (* W002 *)
-          let list_w = SetSyWithLoc.fold (fun (sy, loc) acc -> 
-            let w = create_warning (!file, loc) (Unused_arg sy.symbol_name) in
-            w::acc) unused [] in
-          List.iter print_warning list_w
-        end;
+      if (SetSyWithLoc.cardinal unused <> 0)
+      then
+        (* W002 *)
+        SetSyWithLoc.iter (fun (sy, loc) ->
+          local_warning (!file, loc) (Unused_arg sy.symbol_name)
+        ) unused;
+
       if (SetSyWithLoc.cardinal !escaped_sy) <> 0 || (SetSyWithLoc.cardinal !returned_sy) <> 0
-      then 
-        begin 
+      then
+        begin
           (* W001 *)
-          let list_w = SetSyWithLoc.fold (fun (sy, loc) acc -> 
-            let w = 
-              create_warning (!file, loc) (Uninitialized_var sy.symbol_name) in
-            w::acc) !escaped_sy [] in
+          SetSyWithLoc.iter (fun (sy, loc) ->
+            local_warning (!file, loc) (Uninitialized_var sy.symbol_name)
+          ) !escaped_sy;
           decr level;
-          List.iter print_warning list_w;
           add_unsafeFun sy !escaped_sy !returned_sy;
-          if !level <> 0 
+          if !level <> 0
           then init_sy := SetSy.add sy cur_init_sy
           else init_sy := cur_init_sy;
           args_sy := get_unused cur_args_sy !used_sy;
@@ -294,10 +252,10 @@ and analyze_dec = function
           returned_sy := cur_returned_sy;
           used_sy := cur_used_sy;
         end
-      else 
+      else
         begin
           decr level;
-          if !level <> 0 
+          if !level <> 0
           then init_sy := SetSy.add sy cur_init_sy
           else init_sy := cur_init_sy;
           escaped_sy := cur_escaped_sy;
@@ -305,11 +263,11 @@ and analyze_dec = function
           args_sy := get_unused cur_args_sy !used_sy;
           used_sy := cur_used_sy;
         end
-        
+
 and analyze_var v = match v.var_desc with
   | ColonVar -> ()
   | DollarVar -> ()
-  | SimpleVar symbol -> 
+  | SimpleVar symbol ->
       if not (SetSy.mem symbol !init_sy)
       then escaped_sy := SetSyWithLoc.add (symbol, v.var_location) !escaped_sy;
       if SetSyWithLoc.mem (symbol, v.var_location) !args_sy
@@ -318,13 +276,13 @@ and analyze_var v = match v.var_desc with
   | ArrayListVar arr -> Array.iter analyze_var arr
 
 and analyze_math = function
-  | MatrixExp matrixExp -> analyze_matrixExp matrixExp 
-  | CellExp matrixExp ->analyze_matrixExp matrixExp 
+  | MatrixExp matrixExp -> analyze_matrixExp matrixExp
+  | CellExp matrixExp ->analyze_matrixExp matrixExp
   | NotExp notExp -> analyze_ast notExp.notExp_exp
-  | OpExp (opExp_Oper, opExp_args) -> 
+  | OpExp (opExp_Oper, opExp_args) ->
       analyze_ast opExp_args.opExp_left;
       analyze_ast opExp_args.opExp_right
-  | LogicalOpExp (opLogicalExp_Oper, opExp_args) -> 
+  | LogicalOpExp (opLogicalExp_Oper, opExp_args) ->
       analyze_ast opExp_args.opExp_left;
       analyze_ast opExp_args.opExp_right
   | TransposeExp transposeExp -> analyze_ast transposeExp.transposeExp_exp
