@@ -64,8 +64,9 @@ SCILINT_OBJS = $(SCILINT_MLS:.ml=.o)
 OCAML_INCL= -I src/common -I src/parser -I src/scilint -I src/scilint/config
 OPTFLAGS = -g -c -fPIC $(OCAML_INCL)
 
+all: scilint
 
-all : $(SCILINT_CMXS)
+scilint : $(SCILINT_CMXS)
 	$(OCAMLOPT) bigarray.cmxa str.cmxa \
 	  -o scilint $(SCILINT_CMXS)
 
