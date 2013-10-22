@@ -10,21 +10,28 @@ type local_warning =
 
 type location = string * ScilabAst.Location.t
 
-let print_warning (code, msg, (file, loc)) =
-  ScilabUtils.print_warning (code ^ " : " ^ msg) file loc
+let print_warning (code, msg) (file,loc) =
+  ScilabUtils.print_warning (Printf.sprintf "Warning: %s.  (%s)\n" msg code)
+    file loc
 
 let local_warning loc w =
-  let w =
+  let (code, msg) =
     match w with
-    | Uninitialized_var s -> ("W001", "\"" ^ s ^ "\" not initialized\n", loc)
-    | Unused_arg s -> ("W002", "\"" ^ s ^ "\" not used\n", loc)
-    | Duplicate_arg s -> ("W003", "argument \"" ^ s ^ "\" appears several times\n", loc)
-    | Duplicate_return s -> ("W004", "return variable \"" ^ s ^ "\" appears several times\n", loc)
-    | Var_arg_ret s -> ("W005", "return variable \"" ^ s ^ "\" is also an argument\n", loc)
-    | Unset_ret s -> ("W006", "return variable \"" ^ s ^ "\" is never set\n", loc)
-    | Return_as_var s -> ("W007", "return variable \"" ^ s ^ "\" is used as a local variable\n", loc)
-
+    | Uninitialized_var s -> ("W001",
+        "\"" ^ s ^ "\" not initialized")
+    | Unused_arg s -> ("W002",
+        "\"" ^ s ^ "\" not used")
+    | Duplicate_arg s -> ("W003",
+        "argument \"" ^ s ^ "\" appears several times")
+    | Duplicate_return s -> ("W004",
+        "return variable \"" ^ s ^ "\" appears several times")
+    | Var_arg_ret s -> ("W005",
+        "return variable \"" ^ s ^ "\" is also an argument")
+    | Unset_ret s -> ("W006",
+        "return variable \"" ^ s ^ "\" is never set")
+    | Return_as_var s -> ("W007",
+        "return variable \"" ^ s ^ "\" is used as a local variable")
   in
-  print_warning w
+  print_warning (code, msg) loc
 
 
