@@ -32,14 +32,26 @@ src/parser/uutf.cmo : src/parser/uutf.cmi
 src/parser/uutf.cmx : src/parser/uutf.cmi
 src/parser/scilabLexer.cmo : src/parser/uutf.cmi src/parser/scilabParser.cmi
 src/parser/scilabLexer.cmx : src/parser/uutf.cmx src/parser/scilabParser.cmx
-src/scilint/scilabFunctionAnalyze.cmo : src/common/scilabSymbol.cmx \
-    src/common/scilabAst.cmx
-src/scilint/scilabFunctionAnalyze.cmx : src/common/scilabSymbol.cmx \
-    src/common/scilabAst.cmx
+src/scilint/config/scilintTree.cmo :
+src/scilint/config/scilintTree.cmx :
+src/scilint/config/scilintParser.cmo : src/scilint/config/scilintTree.cmx \
+    src/scilint/config/scilintParser.cmi
+src/scilint/config/scilintParser.cmx : src/scilint/config/scilintTree.cmx \
+    src/scilint/config/scilintParser.cmi
+src/scilint/config/scilintLexer.cmo : src/scilint/config/scilintParser.cmi
+src/scilint/config/scilintLexer.cmx : src/scilint/config/scilintParser.cmx
+src/scilint/config/scilintConfig.cmo : src/scilint/config/scilintTree.cmx \
+    src/scilint/config/scilintParser.cmi src/scilint/config/scilintLexer.cmx
+src/scilint/config/scilintConfig.cmx : src/scilint/config/scilintTree.cmx \
+    src/scilint/config/scilintParser.cmx src/scilint/config/scilintLexer.cmx
 src/scilint/scilabUtils.cmo : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx
 src/scilint/scilabUtils.cmx : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx
+src/scilint/scilabFunctionAnalyze.cmo : src/scilint/scilabUtils.cmx \
+    src/common/scilabSymbol.cmx src/common/scilabAst.cmx
+src/scilint/scilabFunctionAnalyze.cmx : src/scilint/scilabUtils.cmx \
+    src/common/scilabSymbol.cmx src/common/scilabAst.cmx
 src/scilint/scilabDeffRefactoring.cmo : src/common/scilabSymbol.cmx \
     src/common/scilabAst.cmx
 src/scilint/scilabDeffRefactoring.cmx : src/common/scilabSymbol.cmx \
@@ -48,15 +60,17 @@ src/scilint/scilabAstStats.cmo : src/common/scilabSymbol.cmx \
     src/scilint/scilabFunctionAnalyze.cmx src/common/scilabAst.cmx
 src/scilint/scilabAstStats.cmx : src/common/scilabSymbol.cmx \
     src/scilint/scilabFunctionAnalyze.cmx src/common/scilabAst.cmx
-src/scilint/scilintMain.cmo : src/parser/scilabPreParser.cmx \
+src/scilint/scilintMain.cmo : src/scilint/config/scilintConfig.cmx \
+    src/scilint/scilabUtils.cmx src/parser/scilabPreParser.cmx \
     src/parser/scilabParser.cmi src/parser/scilabLexer.cmx \
     src/scilint/scilabFunctionAnalyze.cmx \
     src/scilint/scilabDeffRefactoring.cmx src/scilint/scilabAstStats.cmx \
-    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
-src/scilint/scilintMain.cmx : src/parser/scilabPreParser.cmx \
+    src/common/scilabAst.cmx
+src/scilint/scilintMain.cmx : src/scilint/config/scilintConfig.cmx \
+    src/scilint/scilabUtils.cmx src/parser/scilabPreParser.cmx \
     src/parser/scilabParser.cmx src/parser/scilabLexer.cmx \
     src/scilint/scilabFunctionAnalyze.cmx \
     src/scilint/scilabDeffRefactoring.cmx src/scilint/scilabAstStats.cmx \
-    src/common/scilabAstPrinter.cmx src/common/scilabAst.cmx
+    src/common/scilabAst.cmx
 src/parser/uutf.cmi :
 src/parser/scilabParser.cmi : src/common/scilabAst.cmx
