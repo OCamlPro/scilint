@@ -1,0 +1,7 @@
+
+Version 0.2:
+ - Add warnings W003 to W007
+ - Add documentation of warnings in doc
+
+Version 0.1:
+ - Two warnings: detection of unused arguments & uninitialized variables
