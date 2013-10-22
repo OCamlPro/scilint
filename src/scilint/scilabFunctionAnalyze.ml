@@ -73,6 +73,8 @@ let table_unsafe_fun = ref UnsafeFunSy.empty
 
 let cpt_analyze_fun = ref 0
 
+let level = ref 0
+
 let print_warning (code, msg, (file, loc)) = 
   ScilabUtils.print_warning (code ^ " : " ^ msg) file loc
 
@@ -191,6 +193,7 @@ and analyze_cntrl = function
 and analyze_dec = function
   | VarDec vd -> ()
   | FunctionDec fd ->
+      incr level;
       incr cpt_analyze_fun;
       let cur_escaped_sy = !escaped_sy in
       escaped_sy := SetSyWithLoc.empty;
@@ -280,9 +283,12 @@ and analyze_dec = function
             let w = 
               create_warning (!file, loc) (Uninitialized_var sy.symbol_name) in
             w::acc) !escaped_sy [] in
+          decr level;
           List.iter print_warning list_w;
           add_unsafeFun sy !escaped_sy !returned_sy;
-          init_sy := SetSy.add sy cur_init_sy;
+          if !level <> 0 
+          then init_sy := SetSy.add sy cur_init_sy
+          else init_sy := cur_init_sy;
           args_sy := get_unused cur_args_sy !used_sy;
           escaped_sy := cur_escaped_sy;
           returned_sy := cur_returned_sy;
@@ -290,7 +296,10 @@ and analyze_dec = function
         end
       else 
         begin
-          init_sy := SetSy.add sy cur_init_sy;
+          decr level;
+          if !level <> 0 
+          then init_sy := SetSy.add sy cur_init_sy
+          else init_sy := cur_init_sy;
           escaped_sy := cur_escaped_sy;
           returned_sy := cur_returned_sy;
           args_sy := get_unused cur_args_sy !used_sy;
