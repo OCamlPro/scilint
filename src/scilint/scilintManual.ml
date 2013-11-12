@@ -88,7 +88,24 @@ endfunction"; ]
 ];
 
 0 , "variable defined but not used", [],
-[];
+[
+CODE "function f()
+  x = 1;  // W : variable \"x\" defined but not used
+  y = 2;
+  disp(y);
+endfunction"
+
+];
+
+0 , "variable redefined before being used", [],
+[
+CODE "function f()
+  x = 1;  // W : variable \"x\" redefined before being used
+  x = 2;
+  disp(x);
+endfunction"
+
+];
 
 0 , "use of ``exec'' function     ", [],
 [];
@@ -112,7 +129,30 @@ endfunction"; ]
 [];
 
 0 , "field of tlist not defined", [],
-[];
+[
+CODE "function f()
+  x = tlist(\"a\",\"b\")
+  x.c = 3 // W : \"c\" was not declared inside the tlist declaration
+endfunction"
+];
+
+0 , "break outside of loop", [],
+[
+CODE "function f()
+  x = 1
+  break; // W : break outside of loop
+  disp(x);
+endfunction"
+];
+
+0 , "continue outside of loop", [],
+[
+CODE "function f()
+  x = 1
+  continue; // W : continue outside of loop
+  disp(x);
+endfunction"
+];
 
 ]
 

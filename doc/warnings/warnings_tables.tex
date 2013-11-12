@@ -11,22 +11,25 @@ one function.
 
 \noindent\\\begin{tabular}{|c|p{8cm}|c|} \hline
 Identifier & Title & Implemented      \\ \hline
-  1 & variable not initialized & 0.1 \\ \hline
-  2 & unused function argument & 0.1 \\ \hline
-  3 & duplicate function argument & 0.2 \\ \hline
-  4 & duplicate return variable   & 0.2 \\ \hline
-  5 & function argument used as return variable   & 0.2 \\ \hline
-  6 & return variable is never set & 0.2 \\ \hline
-  7 & return variable used as a local variable & 0.2 \\ \hline
-  0 & variable defined but not used &  \\ \hline
-  0 & use of ``exec'' function      &  \\ \hline
-  0 & for variable modified in for loop &  \\ \hline
-  0 & for bounds modified during for loop &  \\ \hline
-  0 & keyword used as a variable &  \\ \hline
-  0 & use of return/resume should be avoided &  \\ \hline
-  0 & default value for argument never used &  \\ \hline
-  0 & variable is not initialized in all paths &  \\ \hline
-  0 & field of tlist not defined &  \\ \hline
+W001 & variable not initialized & 0.1 \\ \hline
+W002 & unused function argument & 0.1 \\ \hline
+W003 & duplicate function argument & 0.2 \\ \hline
+W004 & duplicate return variable   & 0.2 \\ \hline
+W005 & function argument used as return variable   & 0.2 \\ \hline
+W006 & return variable is never set & 0.2 \\ \hline
+W007 & return variable used as a local variable & 0.2 \\ \hline
+W000 & variable defined but not used &  \\ \hline
+W000 & variable redefined before being used &  \\ \hline
+W000 & use of ``exec'' function      &  \\ \hline
+W000 & for variable modified in for loop &  \\ \hline
+W000 & for bounds modified during for loop &  \\ \hline
+W000 & keyword used as a variable &  \\ \hline
+W000 & use of return/resume should be avoided &  \\ \hline
+W000 & default value for argument never used &  \\ \hline
+W000 & variable is not initialized in all paths &  \\ \hline
+W000 & field of tlist not defined &  \\ \hline
+W000 & break outside of loop &  \\ \hline
+W000 & continue outside of loop &  \\ \hline
 \end{tabular}
 
 \subsection{File Warnings}
@@ -38,13 +41,13 @@ these functions.
 
 \noindent\\\begin{tabular}{|c|p{8cm}|c|} \hline
 Identifier & Title & Implemented      \\ \hline
-  0 & duplicate function identifier &  \\ \hline
-  0 & too many arguments in function call &  \\ \hline
-  0 & too few arguments in function call  &  \\ \hline
-  0 & redefinition of primitive function &  \\ \hline
-  0 & redefinition of standard library function &  \\ \hline
-  0 & labeled argument does not exist &  \\ \hline
-  0 & toplevel expression in file &  \\ \hline
+W000 & duplicate function identifier &  \\ \hline
+W000 & too many arguments in function call &  \\ \hline
+W000 & too few arguments in function call  &  \\ \hline
+W000 & redefinition of primitive function &  \\ \hline
+W000 & redefinition of standard library function &  \\ \hline
+W000 & labeled argument does not exist &  \\ \hline
+W000 & toplevel expression in file &  \\ \hline
 \end{tabular}
 
 \subsection{Global Warnings}
@@ -55,7 +58,7 @@ project.
 
 \noindent\\\begin{tabular}{|c|p{8cm}|c|} \hline
 Identifier & Title & Implemented      \\ \hline
-  0 & undefined variable or function &  \\ \hline
+W000 & undefined variable or function &  \\ \hline
 \end{tabular}
 
 \subsection{Typing Warnings}
@@ -64,9 +67,9 @@ Identifier & Title & Implemented      \\ \hline
 
 \noindent\\\begin{tabular}{|c|p{8cm}|c|} \hline
 Identifier & Title & Implemented      \\ \hline
-  0 & variable with different types &  \\ \hline
-  0 & matrix is growing in loop &  \\ \hline
-  0 & matrix with different dimensions &  \\ \hline
+W000 & variable with different types &  \\ \hline
+W000 & matrix is growing in loop &  \\ \hline
+W000 & matrix with different dimensions &  \\ \hline
 \end{tabular}
 
 \subsection{Style Warnings}
@@ -83,8 +86,8 @@ See \url{http://wiki.scilab.org/Code%20Conventions%20for%20the%20Scilab%20Progra
 
 \noindent\\\begin{tabular}{|c|p{8cm}|c|} \hline
 Identifier & Title & Implemented      \\ \hline
-601 & functions should start with lowercase &  \\ \hline
-602 & functions should not contain numeric values &  \\ \hline
+W601 & functions should start with lowercase &  \\ \hline
+W602 & functions should not contain numeric values &  \\ \hline
 \end{tabular}
 
 \section{Function Warnings}
@@ -228,6 +231,25 @@ endfunction
 \subsection{W000 --- variable defined but not used}
 
 
+\begin{verbatim}
+function f()
+  x = 1;  // W : variable "x" defined but not used
+  y = 2;
+  disp(y);
+endfunction
+\end{verbatim}
+
+
+\subsection{W000 --- variable redefined before being used}
+
+
+\begin{verbatim}
+function f()
+  x = 1;  // W : variable "x" redefined before being used
+  x = 2;
+  disp(x);
+endfunction
+\end{verbatim}
 
 
 \subsection{W000 --- use of ``exec'' function     }
@@ -268,6 +290,36 @@ endfunction
 \subsection{W000 --- field of tlist not defined}
 
 
+\begin{verbatim}
+function f()
+  x = tlist("a","b")
+  x.c = 3 // W : "c" was not declared inside the tlist declaration
+endfunction
+\end{verbatim}
+
+
+\subsection{W000 --- break outside of loop}
+
+
+\begin{verbatim}
+function f()
+  x = 1
+  break; // W : break outside of loop
+  disp(x);
+endfunction
+\end{verbatim}
+
+
+\subsection{W000 --- continue outside of loop}
+
+
+\begin{verbatim}
+function f()
+  x = 1
+  continue; // W : continue outside of loop
+  disp(x);
+endfunction
+\end{verbatim}
 
 
 \section{File Warnings}
