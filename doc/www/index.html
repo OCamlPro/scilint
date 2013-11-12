@@ -5,6 +5,8 @@
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
   <link rel="stylesheet" href="css/bootstrap.min.css" />
   <link rel="stylesheet" href="css/main.css" />
+  <meta name="description"
+  content="Scilint is an open-source tool to analyze Scilab source files to detect potential error patterns." />
   <meta name="keywords"
   content="scilint,scilab,code,analysis,bugs,detection,open-source,free-software,native" />
    <title>Scilint: Scilab-Analyzer</title>
@@ -17,7 +19,7 @@
        <a class="brand" href="http://www.inria.fr/">INRIA</a>
        <ul class="nav pull-right">
          <li><a href="index.html">Scilint</a></li>
-         <li><a href="warnings.html">Warnings List</a></li>
+         <li><a href="warnings.html">Warnings Doc</a></li>
        </ul>
     </div>
   </div>
@@ -32,8 +34,9 @@
   </div>
   <div class="span4">
     <a class="btn btn-large btn-success btn-block" href="https://github.com/OCamlPro/scilint/releases">
-      <i class="icon-arrow-down icon-white"></i> Download version 0.1
+      <i class="icon-arrow-down icon-white"></i> Download
     </a>
+Current version: 0.2 (Nov 12, 2013)
   </div>
 </div>
 <div style="height: 8ex;"></div>
@@ -42,28 +45,18 @@
 <p class="text-info text-center">Scilint checks Scilab code files to
   find possible problems.</p>
 <hr />
-<h2>Local Analyzes</h2>
-<h5><i class="icon-arrow-right"></i>    Variable not
-  initialized    </h5>
-<div class="row">
-  <div class="span6">
-    <p> Although it is possible in Scilab to access
-    a variable in an upper scope, it is not a good practice (such
-    variables should be passed as arguments), since it is also often
-    an error (a mispelled variable, for example). Also, it can prevent
-    optimisation by a JIT compiler in the future.</p>
-  </div>
-</div>
-<h5><i class="icon-arrow-right"></i>    Unused arguments     </h5>
-<div class="row">
-  <div class="span6">
-    <p> An argument that appears as needed by a
-    function in its arguments and is not used is usually a good sign
-    of a mistake, somewhere in the function. </p>
-  </div>
 </div>
 
 <h2>Documentation</h2>
+<h3>Errors detected by Scilint</h2>
+<div class="row">
+  <div class="span6">
+    <p> Scilint displays warnings with their location in the source files.
+A complete list of implemented warnings is available from the
+<a href="warnings.html">Warnings Documentation Page</a>.
+</p>
+  </div>
+</div>
 <h3>Installation</h3>
 <div class="row">
 <div class="span6">

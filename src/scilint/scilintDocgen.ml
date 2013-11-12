@@ -85,9 +85,11 @@ let html_header =
   <meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />
   <link rel=\"stylesheet\" href=\"css/bootstrap.min.css\" />
   <link rel=\"stylesheet\" href=\"css/main.css\" />
+  <meta name=\"description\"
+  content=\"The documentation of all the warnings that Scilint may display on Scilab code\" />
   <meta name=\"keywords\"
   content=\"scilint,scilab,code,analysis,bugs,detection,open-source,free-software,native\" />
-   <title>Scilint: Scilab-Analyzer</title>
+   <title>Scilint Warnings Documentation</title>
 </head>
 <body>
  <div class=\"navbar navbar-inverse navbar-fixed-top\">
@@ -97,14 +99,14 @@ let html_header =
        <a class=\"brand\" href=\"http://www.inria.fr/\">INRIA</a>
        <ul class=\"nav pull-right\">
          <li><a href=\"index.html\">Scilint</a></li>
-         <li><a href=\"warnings.html\">Warnings List</a></li>
+         <li><a href=\"warnings.html\">Warnings Doc</a></li>
        </ul>
     </div>
   </div>
 </div>
 <div class=\"content\">
 <div class=\"container\">
-<h1>Scilint Warning List</h1>
+<h1>Scilint Warnings Documentation</h1>
 <div class=\"row\">
 <div class=\"span12\">
 "
