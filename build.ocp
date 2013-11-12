@@ -1,0 +1,39 @@
+
+begin library "scilintManual"
+  files =  [
+        "src/scilint/scilintManual.ml"
+  ]
+end
+
+begin program "scilint"
+  files = [
+
+	"src/common/scilabSymbol.ml"
+	"src/common/scilabAst.ml"
+	"src/common/scilabAstPrinter.ml"
+	"src/common/scilabPrettyPrinter.ml"
+
+	"src/parser/scilabPreParser.ml"
+	"src/parser/scilabParser.mly"
+	"src/parser/uutf.ml"
+	"src/parser/scilabLexer.mll"
+
+	"src/scilint/config/scilintTree.ml";
+	"src/scilint/config/scilintParser.mly";
+	"src/scilint/config/scilintLexer.mll";
+        "src/scilint/config/scilintConfig.ml";
+	"src/scilint/scilabUtils.ml"
+        "src/scilint/scilintWarning.ml";
+	"src/scilint/scilabFunctionAnalyze.ml"
+	"src/scilint/scilabDeffRefactoring.ml"
+	"src/scilint/scilabAstStats.ml"
+	"src/scilint/scilintMain.ml"
+  ]
+
+  requires = [ "scilintManual" ]
+end
+
+begin program "scilintDocgen"
+  requires = [ "scilintManual" ]
+  files = [ "src/scilint/scilintDocgen.ml" ]
+end

@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <link rel="stylesheet" href="css/bootstrap.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <meta name="keywords"
+  content="scilint,scilab,code,analysis,bugs,detection,open-source,free-software,native" />
+   <title>Scilint: Scilab-Analyzer</title>
+</head>
+<body>
+ <div class="navbar navbar-inverse navbar-fixed-top">
+   <div class="navbar-inner">
+     <div class="container">
+       <a class="brand" href="http://www.ocamlpro.com/">OCamlPro</a>
+       <a class="brand" href="http://www.inria.fr/">INRIA</a>
+       <ul class="nav pull-right">
+         <li><a href="index.html">Scilint</a></li>
+         <li><a href="warnings.html">Warnings List</a></li>
+       </ul>
+    </div>
+  </div>
+</div>
+<div class="content">
+<div class="container">
+<h1>Scilint Warning List</h1>
+<div class="row">
+<div class="span12">
+
+<h2>Warning Tables</h2><h3>Function Warnings</h3>
+<p>Local warnings are warnings that can be detected through a local analysis of
+one function.</p>
+
+<table class="wtable"><tr><th class="id">Identifier</th><th class="title">Title</th><th class="version">Implemented</th></tr>
+<tr><td class="id"><a href="#W001">W001</a></td><td class="title">variable not initialized<td class="version">0.1</td></tr>
+<tr><td class="id"><a href="#W002">W002</a></td><td class="title">unused function argument<td class="version">0.1</td></tr>
+<tr><td class="id"><a href="#W003">W003</a></td><td class="title">duplicate function argument<td class="version">0.2</td></tr>
+<tr><td class="id"><a href="#W004">W004</a></td><td class="title">duplicate return variable  <td class="version">0.2</td></tr>
+<tr><td class="id"><a href="#W005">W005</a></td><td class="title">function argument used as return variable  <td class="version">0.2</td></tr>
+<tr><td class="id"><a href="#W006">W006</a></td><td class="title">return variable is never set<td class="version">0.2</td></tr>
+<tr><td class="id"><a href="#W007">W007</a></td><td class="title">return variable used as a local variable<td class="version">0.2</td></tr>
+</table>
+<h3>File Warnings</h3>
+File warnings are warnings that can be detected through a local
+analysis of one file. In such an analysis, it is supposed that the
+identifiers of functions defined in the file can only be used to call
+these functions.
+<table class="wtable"><tr><th class="id">Identifier</th><th class="title">Title</th><th class="version">Implemented</th></tr>
+</table>
+<h3>Global Warnings</h3>
+Global warnings are warnings that can be detected through a global
+analysis of a whole project, i.e. knowning all the files used in the
+project.
+<table class="wtable"><tr><th class="id">Identifier</th><th class="title">Title</th><th class="version">Implemented</th></tr>
+</table>
+<h3>Typing Warnings</h3>
+
+<table class="wtable"><tr><th class="id">Identifier</th><th class="title">Title</th><th class="version">Implemented</th></tr>
+</table>
+<h3>Style Warnings</h3>
+<p>Style warnings are warnings caused by not following the style conventions.</p>
+<p>See <a href="http://wiki.scilab.org/Code%20Conventions%20for%20the%20Scilab%20Programming%20Language">http://wiki.scilab.org/Code%20Conventions%20for%20the%20Scilab%20Programming%20Language</a></p>
+
+<table class="wtable"><tr><th class="id">Identifier</th><th class="title">Title</th><th class="version">Implemented</th></tr>
+</table>
+<h2>Function Warnings</h2>
+<p>Local warnings are warnings that can be detected through a local analysis of
+one function.</p>
+
+<a name="W001"> </a><h3>W001 --- variable not initialized</h3>
+<pre>function z = f()
+  z = cos(x)  // W001: "x" not initialized
+endfunction</pre>
+
+<a name="W002"> </a><h3>W002 --- unused function argument</h3>
+<pre>function z = f(y)// W002: "y" is not used
+  z = cos(0)
+endfunction</pre>
+
+<a name="W003"> </a><h3>W003 --- duplicate function argument</h3>
+<p>Two arguments in a function definition have the same name.</p>
+<p>Note: it can only be an error !</p>
+<p>Example:<pre>function z = f(a,b,a)// W003: argument "a" appears twice
+  z = cos(a) + cos(b)
+endfunction</pre>
+</p>
+
+<a name="W004"> </a><h3>W004 --- duplicate return variable  </h3>
+<p>Two return variables in a function definition have the same name.</p>
+<p>Note: it can only be an error !</p>
+<p>Example:<pre>function [a,b,a] = f()  // W004: return variable "a" appears twice
+  a = cos(0)
+  b = cos(pi)
+  c = cos(pi*2)
+endfunction</pre>
+</p>
+
+<a name="W005"> </a><h3>W005 --- function argument used as return variable  </h3>
+<p>A function argument appears as a return variable.</p>
+<p>Example:<pre>function [a] = f(a)  // W005: return variable "a" is also an argument
+  a = cos(a)
+endfunction</pre>
+</p>
+
+<a name="W006"> </a><h3>W006 --- return variable is never set</h3>
+<p>A return variable is never set in the function, whatever the path taken.</p>
+<p>Example:<pre>function [a,b] = f()  // W006: return variable "a" is never set
+  if( a > 0 ) then
+    b = 1;
+  else
+    b = 0;
+  end;
+endfunction</pre>
+Note that, on this example, warnings W001 (variable ``a'' not initialized)
+and W007 (return variable used as a variable) should also be displayed.</p>
+
+<a name="W007"> </a><h3>W007 --- return variable used as a local variable</h3>
+<p>A return variable is used in the function as a local variable: return
+variables should only be assigned values, never read.</p>
+<p>Example:<pre>function [a] = f()
+  a = 0;
+  for i = 1:100,
+    a = a +1;   // W007: return variable "a" used as a local variable
+  end;
+endfunction</pre>
+</p>
+
+<h2>File Warnings</h2>
+File warnings are warnings that can be detected through a local
+analysis of one file. In such an analysis, it is supposed that the
+identifiers of functions defined in the file can only be used to call
+these functions.
+<h2>Global Warnings</h2>
+Global warnings are warnings that can be detected through a global
+analysis of a whole project, i.e. knowning all the files used in the
+project.
+<h2>Typing Warnings</h2>
+
+<h2>Style Warnings</h2>
+<p>Style warnings are warnings caused by not following the style conventions.</p>
+<p>See <a href="http://wiki.scilab.org/Code%20Conventions%20for%20the%20Scilab%20Programming%20Language">http://wiki.scilab.org/Code%20Conventions%20for%20the%20Scilab%20Programming%20Language</a></p>
+

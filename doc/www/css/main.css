@@ -151,3 +151,29 @@ pre {
   font-weight: bold;
   src: local('Droid Sans Bold'), local('DroidSans-Bold'), url('http://themes.googleusercontent.com/static/fonts/droidsans/v3/EFpQQyG9GqCrobXxL-KRMXbFhgvWbfSbdVg11QabG8w.woff') format('woff');
 }
+
+.wtable {
+  width: 80%;
+  border: 1px solid black;
+}
+
+.wtable .version {
+  width: 10%;
+  text-align: center;
+}
+
+.wtable .id {
+  width: 10%;
+  text-align: left;
+}
+
+.wtable td .title {
+  width: 80%;
+  text-align: left;
+}
+
+.wtable th {
+  text-align: center;
+  background: #fed;
+}
+
