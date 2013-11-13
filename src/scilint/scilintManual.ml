@@ -154,6 +154,30 @@ CODE "function f()
 endfunction"
 ];
 
+0, "labeled argument provided twice", [],
+[
+CODE "function f(a, b, c) endfunction
+f(a, b, b=3) // W : argument \"b\" provided twice"
+];
+
+0, "unlabeled argument after labeled argument", [],
+[
+CODE "f(a, b=2, c) // W : unlabeled argument after labeled argument \"b\""
+];
+
+0, "missing parenthesis for function call", [],
+[
+CODE "[a,b] = f // W : you should use \"f()\" instead of \"f\""
+];
+
+0, "non void return value of function not used", [],
+[
+CODE "function [x]=f() x=1; endfunction
+f(); // W : non void return value of function not used
+"
+];
+
+
 ]
 
 let file_warnings_info =

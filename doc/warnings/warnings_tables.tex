@@ -30,6 +30,10 @@ W000 & variable is not initialized in all paths &  \\ \hline
 W000 & field of tlist not defined &  \\ \hline
 W000 & break outside of loop &  \\ \hline
 W000 & continue outside of loop &  \\ \hline
+W000 & labeled argument provided twice &  \\ \hline
+W000 & unlabeled argument after labeled argument &  \\ \hline
+W000 & missing parenthesis for function call &  \\ \hline
+W000 & non void return value of function not used &  \\ \hline
 \end{tabular}
 
 \subsection{File Warnings}
@@ -48,6 +52,7 @@ W000 & redefinition of primitive function &  \\ \hline
 W000 & redefinition of standard library function &  \\ \hline
 W000 & labeled argument does not exist &  \\ \hline
 W000 & toplevel expression in file &  \\ \hline
+W000 & labeled argument in varargin &  \\ \hline
 \end{tabular}
 
 \subsection{Global Warnings}
@@ -322,6 +327,41 @@ endfunction
 \end{verbatim}
 
 
+\subsection{W000 --- labeled argument provided twice}
+
+
+\begin{verbatim}
+function f(a, b, c) endfunction
+f(a, b, b=3) // W : argument "b" provided twice
+\end{verbatim}
+
+
+\subsection{W000 --- unlabeled argument after labeled argument}
+
+
+\begin{verbatim}
+f(a, b=2, c) // W : unlabeled argument after labeled argument "b"
+\end{verbatim}
+
+
+\subsection{W000 --- missing parenthesis for function call}
+
+
+\begin{verbatim}
+[a,b] = f // W : you should use "f()" instead of "f"
+\end{verbatim}
+
+
+\subsection{W000 --- non void return value of function not used}
+
+
+\begin{verbatim}
+function [x]=f() x=1; endfunction
+f(); // W : non void return value of function not used
+
+\end{verbatim}
+
+
 \section{File Warnings}
 
 File warnings are warnings that can be detected through a local
@@ -411,11 +451,30 @@ x = max(1);  // W 202 : "max" used with too few arguments
 \subsection{W000 --- labeled argument does not exist}
 
 
+\begin{verbatim}
+function f(a, b)
+endfunction
+f(1, c=3)
+\end{verbatim}
 
 
 \subsection{W000 --- toplevel expression in file}
 
 
+
+
+\subsection{W000 --- labeled argument in varargin}
+
+
+
+
+Labeled arguments are not allowed in varargin
+
+\begin{verbatim}
+function f(a, b, varargin)
+endfunction
+f(1,2, c=3)
+\end{verbatim}
 
 
 \section{Global Warnings}
