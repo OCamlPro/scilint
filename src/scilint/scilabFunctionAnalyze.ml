@@ -7,21 +7,21 @@ open ScilintWarning
 
 module SetSy = Set.Make(
   struct
-    let compare = Pervasives.compare
+    let compare = ScilabSymbol.compare
     type t = ScilabSymbol.symbol
   end )
 
 
 module SetSyWithLoc = Set.Make(
   struct
-    let compare (sy1, loc1) (sy2, loc2) = Pervasives.compare sy1 sy2
+    let compare (sy1, loc1) (sy2, loc2) = ScilabSymbol.compare sy1 sy2
     type t = ScilabSymbol.symbol * ScilabAst.Location.t
   end )
 
 
 module UnsafeFunSy = Map.Make(
   struct
-    let compare = Pervasives.compare
+    let compare = ScilabSymbol.compare
     type t = ScilabSymbol.symbol
   end )
 
