@@ -211,8 +211,19 @@ x = max(1);  // W 202 : \"max\" used with too few arguments"];
 
 0, "redefinition of primitive function", [], [];
 0, "redefinition of standard library function", [], [];
-0, "labeled argument does not exist", [], [];
+0, "labeled argument does not exist", [], [
+CODE "function f(a, b)
+endfunction
+f(1, c=3)"
+];
 0, "toplevel expression in file", [], [];
+0, "labeled argument in varargin", [], [
+PAR [ S "Labeled arguments are not allowed in varargin" ];
+CODE "function f(a, b, varargin)
+endfunction
+f(1,2, c=3)"
+];
+
 ]
 
 let global_warnings_info = [
