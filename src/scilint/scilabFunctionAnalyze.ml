@@ -66,7 +66,8 @@ let rec get_assign_ident e = match e.exp_desc with
       begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
-          | _ -> failwith "can't ident from fun name"
+          | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident fieldExp_head
+          | _ -> failwith "can't extract ident from fun name"
       end
   | _ -> failwith "Can't extract ident from this"
 

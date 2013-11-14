@@ -46,7 +46,7 @@ let print_err = function
       print_parser_infos file tok line char
   | LexerError (file, tok, line, char) -> 
       print_lex_infos file tok line char
-  | _ -> ()
+  | _ as err -> raise err
 
 let get_length ic =
   let buf = Buffer.create 4 in
