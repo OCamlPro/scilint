@@ -63,7 +63,23 @@ let print_assert_error (str, line, cnum) =
 let get_location_from_var var =
   (var.var_location.first_line, var.var_location.first_column)
 
-let rec get_assign_ident e = match e.exp_desc with
+let rec add_used st sy loc =
+  st.used_sy <- SetSyWithLoc.add (sy, loc) st.used_sy;
+  if not (SetSy.mem sy st.init_sy)
+  then st.escaped_sy <- SetSyWithLoc.add (sy, loc) st.escaped_sy;
+  if SetSyWithLoc.mem (sy, loc) st.args_sy
+  then st.args_sy <- SetSyWithLoc.remove (sy, loc) st.args_sy
+
+let is_return_call e = match e.exp_desc with
+  | ControlExp (ReturnExp { returnExp_exp }) ->
+      begin
+        match returnExp_exp with
+          | Some _ -> true
+          | _ -> false
+      end
+  | _ -> false
+
+let rec get_assign_ident st e = match e.exp_desc with
   | Var var ->
       begin
         match var.var_desc with
@@ -81,12 +97,16 @@ let rec get_assign_ident e = match e.exp_desc with
               raise (IdentExtractError 
                        ("Can't extract ident from ArrayListVar", line, cnum))
       end
-  | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident fieldExp_head
+  | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident st fieldExp_head
   | CallExp exp ->
+      Array.iter (analyze_ast st) exp.callExp_args;
       begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
-          | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident fieldExp_head
+          | FieldExp { fieldExp_head; fieldExp_tail } -> 
+              let (sy, loc) = get_assign_ident st fieldExp_head in
+              add_used st sy loc;
+              sy, loc
           | Var _ -> assert false
           | AssignExp _ -> assert false
           | CallExp _ -> assert false
@@ -110,40 +130,25 @@ let rec get_assign_ident e = match e.exp_desc with
   | SeqExp _ -> assert false 
   | ArrayListExp _  -> assert false
   | AssignListExp _ -> assert false 
- 
-let is_return_call e = match e.exp_desc with
-  | ControlExp (ReturnExp { returnExp_exp }) ->
-      begin
-        match returnExp_exp with
-          | Some _ -> true
-          | _ -> false
-      end
-  | _ -> false
 
-let rec analyze_ast st e = match e.exp_desc with
+and analyze_ast st e = match e.exp_desc with
   | SeqExp list -> List.iter (analyze_ast st) list
   | ConstExp exp -> ()
   | CallExp exp | CellCallExp exp ->
       begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } ->
-              st.used_sy <- SetSyWithLoc.add (sy, loc) st.used_sy;
-              if not (SetSy.mem sy st.init_sy)
-              then 
-                st.escaped_sy <- 
-                  SetSyWithLoc.add (sy, loc) st.escaped_sy;
-              if SetSyWithLoc.mem (sy, loc) st.args_sy
-              then st.args_sy <- SetSyWithLoc.remove (sy, loc) st.args_sy;
+              add_used st sy loc;
               Array.iter (analyze_ast st) exp.callExp_args
           | FieldExp { fieldExp_head; fieldExp_tail } -> 
               analyze_ast st fieldExp_head
-          (* TODO : analyze_ast st tail should be a field of head *)
+          (* TODO : tail should be a field of head *)
           | _ -> assert false
       end
   | AssignExp { assignExp_left_exp; assignExp_right_exp } ->
       let arr_sy = match assignExp_left_exp.exp_desc with
-        | AssignListExp vars -> Array.map (get_assign_ident) vars
-        | _ -> [| get_assign_ident assignExp_left_exp |]
+        | AssignListExp vars -> Array.map (get_assign_ident st) vars
+        | _ -> [| get_assign_ident st assignExp_left_exp |]
       in
       analyze_ast st assignExp_right_exp;
       st.init_sy <- 
@@ -302,10 +307,7 @@ and analyze_var st v = match v.var_desc with
   | ColonVar -> ()
   | DollarVar -> ()
   | SimpleVar symbol ->
-      if not (SetSy.mem symbol st.init_sy)
-      then st.escaped_sy <- SetSyWithLoc.add (symbol, v.var_location) st.escaped_sy;
-      if SetSyWithLoc.mem (symbol, v.var_location) st.args_sy
-      then st.args_sy <- SetSyWithLoc.remove (symbol, v.var_location) st.args_sy;
+      add_used st symbol v.var_location;
       st.used_sy <- SetSyWithLoc.add (symbol, v.var_location) st.used_sy;
   | ArrayListVar arr -> Array.iter (analyze_var st) arr
 
