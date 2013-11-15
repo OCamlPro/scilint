@@ -5,6 +5,8 @@ open ScilintWarning
 (* TODO : Use of typed context... make context modulable
    We dont need type nor value here *)
 
+exception IdentExtractError of string * int * int
+
 module SetSy = Set.Make(
   struct
     let compare = ScilabSymbol.compare
@@ -52,14 +54,32 @@ let get_unused args used =
 let add_unsafeFun sy escaped returned =
   table_unsafe_fun := UnsafeFunSy.add sy (escaped, returned) !table_unsafe_fun
 
+let print_extract_error (str, line, cnum) =
+  ScilabUtils.print_loc !file line cnum str
+
+let print_assert_error (str, line, cnum) =
+  ScilabUtils.print_loc !file line cnum str
+
+let get_location_from_var var =
+  (var.var_location.first_line, var.var_location.first_column)
+
 let rec get_assign_ident e = match e.exp_desc with
   | Var var ->
       begin
         match var.var_desc with
-          | ColonVar  -> failwith "Can't extract ident from COLONVAR"
-          | DollarVar -> failwith "Can't extract ident from DOLLARVAR"
+          | ColonVar  -> 
+              let line, cnum = get_location_from_var var in
+              raise (IdentExtractError 
+                       ("Can't extract ident from COLONVAR", line, cnum))
+          | DollarVar -> 
+              let line, cnum = get_location_from_var var in
+              raise (IdentExtractError 
+                       ("Can't extract ident from DOLLARVAR", line, cnum))
           | SimpleVar symbol -> (symbol, var.var_location)
-          | ArrayListVar arr -> failwith "Can't extract ident from ARRAYLISTVAR"
+          | ArrayListVar arr -> 
+              let line, cnum = get_location_from_var var in
+              raise (IdentExtractError 
+                       ("Can't extract ident from ArrayListVar", line, cnum))
       end
   | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident fieldExp_head
   | CallExp exp ->
@@ -67,10 +87,30 @@ let rec get_assign_ident e = match e.exp_desc with
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
           | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident fieldExp_head
-          | _ -> failwith "can't extract ident from fun name"
+          | Var _ -> assert false
+          | AssignExp _ -> assert false
+          | CallExp _ -> assert false
+          | CellCallExp _ -> assert false
+          | ConstExp _ -> assert false
+          | ControlExp _ -> assert false
+          | Dec _ -> assert false
+          | ListExp _ -> assert false
+          | MathExp _ -> assert false
+          | SeqExp _ -> assert false
+          | ArrayListExp _ -> assert false
+          | AssignListExp _ -> assert false
       end
-  | _ -> failwith "Can't extract ident from this"
-
+  | AssignExp _ -> assert false 
+  | CellCallExp _ -> assert false
+  | ConstExp _  -> assert false
+  | ControlExp _ -> assert false
+  | Dec _  -> assert false
+  | ListExp _ -> assert false
+  | MathExp _  -> assert false
+  | SeqExp _ -> assert false 
+  | ArrayListExp _  -> assert false
+  | AssignListExp _ -> assert false 
+ 
 let is_return_call e = match e.exp_desc with
   | ControlExp (ReturnExp { returnExp_exp }) ->
       begin
@@ -95,7 +135,10 @@ let rec analyze_ast st e = match e.exp_desc with
               if SetSyWithLoc.mem (sy, loc) st.args_sy
               then st.args_sy <- SetSyWithLoc.remove (sy, loc) st.args_sy;
               Array.iter (analyze_ast st) exp.callExp_args
-          | _ -> failwith "can't extract fun name"
+          | FieldExp { fieldExp_head; fieldExp_tail } -> 
+              analyze_ast st fieldExp_head
+          (* TODO : analyze_ast st tail should be a field of head *)
+          | _ -> assert false
       end
   | AssignExp { assignExp_left_exp; assignExp_right_exp } ->
       let arr_sy = match assignExp_left_exp.exp_desc with
@@ -104,7 +147,7 @@ let rec analyze_ast st e = match e.exp_desc with
       in
       analyze_ast st assignExp_right_exp;
       st.init_sy <- 
-        Array.fold_left (fun acc (sy, _) -> SetSy.add sy acc) st.init_sy arr_sy;
+        Array.fold_left (fun acc (sy, _) ->  SetSy.add sy acc) st.init_sy arr_sy;
       if is_return_call assignExp_right_exp
       then
         st.returned_sy <- Array.fold_left (fun acc sy ->
@@ -206,7 +249,12 @@ and analyze_dec st = function
       ) SetSyWithLoc.empty ret in
       new_st.init_sy <- ini;
       new_st.args_sy <- args;
-      analyze_ast new_st body;
+      begin
+        try analyze_ast new_st body with 
+          | IdentExtractError (msg, lnum, cnum) -> 
+              print_extract_error (msg, lnum, cnum)
+          | Assert_failure _ as err -> print_endline (Printexc.to_string err)
+      end;
       let unused = get_unused new_st.args_sy new_st.used_sy in
       (* W006 and W007 *)
       SetSyWithLoc.iter (fun (sy, loc_ret) ->
@@ -282,7 +330,10 @@ and analyze_matrixExp st me =
 let analyze fn ast =
   file := fn;
   let st = new_state () in
-  analyze_ast st ast
+  try analyze_ast st ast with
+    | IdentExtractError (msg, lnum, cnum) -> print_extract_error (msg, lnum, cnum)
+    | Assert_failure _ as err -> print_endline (Printexc.to_string err)
+
 
 let print () =
   UnsafeFunSy.iter (fun fsy (esy, rsy) ->
@@ -298,3 +349,4 @@ let print () =
 
 
 
+    
