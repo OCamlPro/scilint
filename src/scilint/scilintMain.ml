@@ -70,27 +70,18 @@ let parse_file file =
     ast
   with
     | Parsing.Parse_error ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
+        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
         flush stdout;
         close_in ch;
         raise (ParserError (file, tok, line, cnum))
     | ScilabLexer.Err_str str_err ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
+        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
         print_string str_err;
         flush stdout;
         close_in ch;
         raise (LexerError (file, tok, line, cnum))
     | ScilabLexer.Lex_err str_lex ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
+        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
         print_string str_lex;
         flush stdout;
         close_in ch;
