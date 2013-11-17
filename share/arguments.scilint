@@ -1,0 +1,12 @@
+strsubst:3:r
+execstr:1:errcatch
+execstr:2:m:n
+strcat:2:r:c
+rand:0:_:uniform:normal
+rand:1:_:uniform:normal
+rand:2:_:uniform:normal
+rand:3:_:uniform:normal
+isdef:1:all:local:nolocal
+messagebox:2:_:error:hourglass:info:passwd:question:warning:scilab:modal
+messagebox:3:_:error:hourglass:info:passwd:question:warning:scilab:modal
+messagebox:4:_:error:hourglass:info:passwd:question:warning:scilab:modal

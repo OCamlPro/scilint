@@ -4,7 +4,10 @@ let analyze_flag = ref false
 let type_flag = ref false
 let cfg_flag = ref false
 let cfg_file = ref false
-let args = []
+let args = Arg.align [
+  "-I", Arg.String ScilintProject.add_to_path,
+  "DIRECTORY Add DIRECTORY to search path";
+]
 (* let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base"); *)
 (*             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code"); *)
 (*             ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab program"); *)
@@ -33,15 +36,15 @@ let richelieu_test_path = "/home/michael/dev_sci/richelieu/"
 
 let scilab_forge_test_path = "/home/michael/test_forge/mirror.forge.scilab.org-1.4GB/"
 
-let print_error file msg line char = 
-  ScilabUtils.print_loc file line char msg  
+let print_error file msg line char =
+  ScilabUtils.print_loc file line char msg
 
 let print_parser_infos file token line char =
   let msg = "Error : Parsing error at token " ^ token in
   print_error file msg line char
 
 let print_lex_infos file token line char =
-  let msg = "Error : Syntax error at token " ^ token  in 
+  let msg = "Error : Syntax error at token " ^ token  in
   print_error file msg line char
 
 let get_length ic =
@@ -286,10 +289,10 @@ let _ =
     else
       if !type_flag
       then run_type_file !file
-      else 
+      else
         if !cfg_flag
         then ScilintConfig.print_config ()
-        else 
+        else
           if !cfg_file
         then ScilintConfig.print_files (ScilintConfig.read_config !file)
 

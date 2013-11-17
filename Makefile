@@ -26,6 +26,7 @@ OCAML_SCILINT_MLS = \
 	src/scilint/config/scilintConfig.ml \
 	src/scilint/scilabUtils.ml \
 	src/scilint/scilintWarning.ml \
+	src/scilint/scilintProject.ml \
 	src/scilint/scilabFunctionAnalyze.ml \
 	src/scilint/scilabDeffRefactoring.ml \
 	src/scilint/scilabAstStats.ml \
