@@ -103,6 +103,7 @@ let find_function fun_name =
     find_in_path !path basename
 
 let find_argument fun_name arg_num =
+  init ();
   try
     Some (Hashtbl.find arguments (fun_name, arg_num))
   with Not_found -> None
