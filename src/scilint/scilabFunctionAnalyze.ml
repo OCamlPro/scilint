@@ -35,18 +35,19 @@ type state = { mutable escaped_sy : SetSyWithLoc.t ;
                mutable returned_sy : SetSyWithLoc.t;
                mutable init_sy : SetSy.t; 
                mutable args_sy : SetSyWithLoc.t; 
-               mutable used_sy : SetSyWithLoc.t }
+               mutable used_sy : SetSyWithLoc.t;
+               mutable level_fun : int;
+               mutable level_for : int }
 
 let new_state () = 
   { escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
     init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty; 
-    used_sy = SetSyWithLoc.empty }
+    used_sy = SetSyWithLoc.empty;
+    level_fun = 0; level_for = 0; }
 
 let table_unsafe_fun = ref UnsafeFunSy.empty
 
 let cpt_analyze_fun = ref 0
-
-let level = ref 0
 
 let get_unused args used =
   SetSyWithLoc.filter (fun (sy, loc) -> not (SetSyWithLoc.mem (sy, loc) used)) args
@@ -213,7 +214,7 @@ and analyze_cntrl st = function
 and analyze_dec st = function
   | VarDec vd -> ()
   | FunctionDec fd ->
-      incr level;
+      st.level_fun <- st.level_fun + 1;
       incr cpt_analyze_fun;
       let new_st = new_state () in
       let sy = fd.functionDec_symbol in
@@ -289,16 +290,16 @@ and analyze_dec st = function
           SetSyWithLoc.iter (fun (sy, loc) ->
             local_warning (!file, loc) (Uninitialized_var sy.symbol_name)
           ) new_st.escaped_sy;
-          decr level;
+          st.level_fun <- st.level_fun - 1;
           add_unsafeFun sy new_st.escaped_sy new_st.returned_sy;
-          if !level <> 0
+          if st.level_fun <> 0
           then st.init_sy <- SetSy.add sy st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
       else
         begin
-          decr level;
-          if !level <> 0
+          st.level_fun <- st.level_fun - 1;
+          if st.level_fun <> 0
           then st.init_sy <- SetSy.add sy st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
@@ -351,4 +352,5 @@ let print () =
 
 
 
+    
     
