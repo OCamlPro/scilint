@@ -13,6 +13,7 @@ type local_warning =
   | Overriding_declared_function of string * location
   | Overriding_toplevel_function of string * string
   | Unexpected_string_argument of string * int * string * string list
+  | Primitive_with_too_many_arguments of string * int
 
 val local_warning : location -> local_warning -> unit
 

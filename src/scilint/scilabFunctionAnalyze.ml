@@ -83,6 +83,15 @@ let is_return_call e = match e.exp_desc with
       end
   | _ -> false
 
+let exit = Exit
+let array_forall f t =
+  try
+    for i = 0 to Array.length t - 1 do
+      if not (f t.(i)) then raise exit
+    done;
+    true
+  with _ -> false
+
 let rec get_assign_ident st e = match e.exp_desc with
   | Var var ->
       begin
@@ -142,25 +151,73 @@ and analyze_ast st e = match e.exp_desc with
       begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } ->
-              add_used st sy loc;
               let fun_name = symbol_name sy in
+              begin match find_function fun_name with
+                  FunUnknown -> add_used st sy loc
+                |  _ -> ()
+              end;
               Array.iter (analyze_ast st) exp.callExp_args;
 
-              Array.iteri (fun i arg ->
-                match arg.exp_desc with
-                  ConstExp (StringExp { stringExp_value = s }) ->
-                  begin match find_argument fun_name i with
-                    None -> ()
-                    | Some list ->
+              begin try
+
+                match fun_name with
+                "tlist" ->
+                  let max_args =
+                    match exp.callExp_args.(0).exp_desc with
+
+                    | MathExp (MatrixExp
+                          { matrixExp_lines =
+                              [| { matrixLineExp_columns = array } |] } ) when
+                      array_forall (fun exp ->
+                        match exp.exp_desc with
+                         ConstExp (StringExp _) -> true
+                        | _ -> false
+                      ) array ->
+
+                          Array.length array
+
+                    | MathExp (MatrixExp
+                          { matrixExp_lines = array }) when
+                        array_forall (fun line ->
+                          match line.matrixLineExp_columns with
+                            [| { exp_desc = ConstExp (StringExp _) } |] -> true
+                          | _ -> false
+                        ) array ->
+                          Array.length array
+
+                      | Var _ -> max_int
+                      | ConstExp (StringExp _) -> 1
+
+                      | _ -> max_int (* assert false *)
+                  in
+                  if Array.length exp.callExp_args > max_args then
+                    local_warning (!file,
+                      exp.callExp_args.(max_args).exp_location)
+                      (Primitive_with_too_many_arguments (fun_name, max_args));
+
+                | _ ->
+
+                  Array.iteri (fun i arg ->
+                    begin match find_argument fun_name i with
+                        None -> ()
+                      | Some spec ->
+                    match spec, arg.exp_desc with
+                      StrEnum list,
+                      ConstExp (StringExp { stringExp_value = s }) ->
                       let s = ScilabUtils.string_of_string s in
                       if not (List.mem s list) then
                         local_warning (!file, arg.exp_location)
                           (Unexpected_string_argument
-                            (fun_name, i, s, list))
-                  end;
-                | _ -> ()
+                             (fun_name, i, s, list))
+                    | StrEnum _, _ -> ()
+                    | TooMany, _ ->
+                      local_warning (!file, arg.exp_location)
+                        (Primitive_with_too_many_arguments (fun_name, i));
+                      raise Exit
+                end;
               ) exp.callExp_args;
-
+              with Exit -> ()
+              end;
           | FieldExp { fieldExp_head; fieldExp_tail } ->
               analyze_ast st fieldExp_head
           (* TODO : tail should be a field of head *)

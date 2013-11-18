@@ -42,6 +42,10 @@ type fun_status =
   | FunPrimitive
   | FunUnknown
 
+type arg_spec =
+    StrEnum of string list
+  | TooMany
+
 let funs = Hashtbl.create 1113
 let arguments = Hashtbl.create 1113
 
@@ -58,12 +62,23 @@ let init_primitives () =
 
 let init_arguments () =
   try
-    let prims = ScilabUtils.lines_of_file
-        (Filename.concat scilint_home "arguments.scilint") in
-    List.iter (fun p ->
+    let arg_filename = Filename.concat scilint_home "arguments.scilint" in
+    let prims = ScilabUtils.lines_of_file arg_filename in
+    List.iteri (fun i p ->
       match ScilabUtils.split_simplify p ':' with
-        prim :: arg_num :: enum ->
-        Hashtbl.add arguments (prim, int_of_string arg_num) enum
+        prim :: arg_num :: spec ->
+        let spec = match spec with
+          | "STRENUM" :: list -> Some (StrEnum list)
+          | "TOOMANY" :: _ -> Some TooMany
+          | _ -> None
+        in
+        begin match spec with
+            None ->
+            Printf.eprintf "Warning: discarding line %d of file %S\n%!"
+              i arg_filename;
+          | Some spec ->
+            Hashtbl.add arguments (prim, int_of_string arg_num) spec
+        end
       | _ -> assert false
     ) prims
   with exc ->

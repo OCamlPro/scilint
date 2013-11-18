@@ -110,6 +110,7 @@ let run_test file =
   with _ as err -> print_err err
 
 let run_type_file file =
+  Printf.printf "File %S\n%!" file;
   try
     let ast = parse_file file in
     match ast with
@@ -146,6 +147,7 @@ let rec run_tests fun_iter dirname =
   ) files
 
 let _ =
+  Printf.printf "scilint: scilab code checker, by OCamlPro SAS\n%!";
   Arg.parse args (fun s -> run_type_file s) usage;
   if !test_flag
   then

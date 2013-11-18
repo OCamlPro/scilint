@@ -17,9 +17,13 @@ type fun_status =
 val find_function : string -> fun_status
 
 
+type arg_spec =
+    StrEnum of string list
+  | TooMany
+
 (* returns None, if there is no hint for the argument.
    returns Some list, if there is a list of possible string choices
       If "_" is first in the list, it means other types are possible
       If "_" is not the first in the list, a warning should be displayed
          if some other constant else than a string is given. *)
-val find_argument : string -> int -> string list option
+val find_argument : string -> int -> arg_spec option

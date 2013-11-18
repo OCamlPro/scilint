@@ -569,6 +569,7 @@ triu
 tr_zer
 type
 typename
+typeof
 uicontextmenu
 uicontrol
 uiDisplayTree
@@ -671,3 +672,5 @@ zeros
 znaupd
 zneupd
 zoom_rect
+sprintf
+scicos_model

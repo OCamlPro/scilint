@@ -14,6 +14,7 @@ type local_warning =
   | Overriding_declared_function of string * location
   | Overriding_toplevel_function of string * string
   | Unexpected_string_argument of string * int * string * string list
+  | Primitive_with_too_many_arguments of string * int
 
 let print_warning code locs =
   List.iteri (fun i ((file, loc), msg) ->
@@ -28,7 +29,7 @@ let local_warning loc w =
     match w with
     | Uninitialized_var s -> 1,
       [ loc, "\"" ^ s ^ "\" not initialized" ]
-    | Unused_arg s -> 1,
+    | Unused_arg s -> 2,
       [ loc, "\"" ^ s ^ "\" not used" ]
     | Duplicate_arg s -> 3,
       [ loc, "argument \"" ^ s ^ "\" appears several times" ]
@@ -41,6 +42,10 @@ let local_warning loc w =
     | Return_as_var s -> 7,
       [ loc, "return variable \"" ^ s ^ "\" is used as a local variable" ]
 
+    | Primitive_with_too_many_arguments (fun_name, i) -> 995,
+      [ loc,
+        Printf.sprintf "primitive %S called with too many arguments (>= %d)"
+          fun_name i ]
     | Overriding_primitive fun_name -> 996,
       [ loc, Printf.sprintf "overriding primitive %S" fun_name ]
 
@@ -56,6 +61,7 @@ let local_warning loc w =
         Printf.sprintf "Function %S does not expect %S as argument %d,\nShould be one of: %s"
           fun_name s (i+1) (String.concat ", " possible)
       ]
+
   in
   print_warning code msg
 
