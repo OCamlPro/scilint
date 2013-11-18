@@ -32,8 +32,8 @@ let add_to_path dir =
 
 type fun_decl = {
   fun_name : string;
-  fun_args : string list;
-  fun_loc : string;
+  fun_args : string array;
+  fun_loc : string * ScilabAst.location;
 }
 
 type fun_status =

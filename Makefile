@@ -69,7 +69,7 @@ OPTFLAGS = -g -c -fPIC $(OCAML_INCL)
 all: scilint.asm
 
 scilint.asm : $(SCILINT_CMXS)
-	$(OCAMLOPT) bigarray.cmxa str.cmxa \
+	$(OCAMLOPT) unix.cmxa \
 	  -o scilint.asm $(SCILINT_CMXS)
 
 

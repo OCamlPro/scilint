@@ -31,7 +31,7 @@ begin program "scilint"
 	"src/scilint/scilintMain.ml"
   ]
 
-  requires = [ "scilintManual" ]
+  requires = [ "scilintManual"  "unix" ]
 end
 
 begin program "scilintDocgen"

@@ -3,8 +3,8 @@ val add_to_path : (* directory *) string -> unit
 
 type fun_decl = {
   fun_name : string;
-  fun_args : string list;
-  fun_loc : string;
+  fun_args : string array;
+  fun_loc : string * ScilabAst.location;
 }
 val declare_function : fun_decl -> unit
 

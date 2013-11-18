@@ -1,3 +1,5 @@
+open ScilintProject
+
 open ScilabAst
 open ScilabSymbol
 open ScilintWarning
@@ -31,22 +33,24 @@ module UnsafeFunSy = Map.Make(
 let file = ref ""
 
 
-type state = { mutable escaped_sy : SetSyWithLoc.t ; 
-               mutable returned_sy : SetSyWithLoc.t;
-               mutable init_sy : SetSy.t; 
-               mutable args_sy : SetSyWithLoc.t; 
-               mutable used_sy : SetSyWithLoc.t }
+type state = {
+  level : int;
+  mutable escaped_sy : SetSyWithLoc.t ;
+  mutable returned_sy : SetSyWithLoc.t;
+  mutable init_sy : SetSy.t;
+  mutable args_sy : SetSyWithLoc.t;
+  mutable used_sy : SetSyWithLoc.t }
 
-let new_state () = 
-  { escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
-    init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty; 
+let new_state level =
+  {
+    level = level;
+    escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
+    init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty;
     used_sy = SetSyWithLoc.empty }
 
 let table_unsafe_fun = ref UnsafeFunSy.empty
 
 let cpt_analyze_fun = ref 0
-
-let level = ref 0
 
 let get_unused args used =
   SetSyWithLoc.filter (fun (sy, loc) -> not (SetSyWithLoc.mem (sy, loc) used)) args
@@ -83,18 +87,18 @@ let rec get_assign_ident st e = match e.exp_desc with
   | Var var ->
       begin
         match var.var_desc with
-          | ColonVar  -> 
+          | ColonVar  ->
               let line, cnum = get_location_from_var var in
-              raise (IdentExtractError 
+              raise (IdentExtractError
                        ("Can't extract ident from COLONVAR", line, cnum))
-          | DollarVar -> 
+          | DollarVar ->
               let line, cnum = get_location_from_var var in
-              raise (IdentExtractError 
+              raise (IdentExtractError
                        ("Can't extract ident from DOLLARVAR", line, cnum))
           | SimpleVar symbol -> (symbol, var.var_location)
-          | ArrayListVar arr -> 
+          | ArrayListVar arr ->
               let line, cnum = get_location_from_var var in
-              raise (IdentExtractError 
+              raise (IdentExtractError
                        ("Can't extract ident from ArrayListVar", line, cnum))
       end
   | FieldExp { fieldExp_head; fieldExp_tail } -> get_assign_ident st fieldExp_head
@@ -103,7 +107,7 @@ let rec get_assign_ident st e = match e.exp_desc with
       begin
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
-          | FieldExp { fieldExp_head; fieldExp_tail } -> 
+          | FieldExp { fieldExp_head; fieldExp_tail } ->
               let (sy, loc) = get_assign_ident st fieldExp_head in
               add_used st sy loc;
               sy, loc
@@ -120,16 +124,16 @@ let rec get_assign_ident st e = match e.exp_desc with
           | ArrayListExp _ -> assert false
           | AssignListExp _ -> assert false
       end
-  | AssignExp _ -> assert false 
+  | AssignExp _ -> assert false
   | CellCallExp _ -> assert false
   | ConstExp _  -> assert false
   | ControlExp _ -> assert false
   | Dec _  -> assert false
   | ListExp _ -> assert false
   | MathExp _  -> assert false
-  | SeqExp _ -> assert false 
+  | SeqExp _ -> assert false
   | ArrayListExp _  -> assert false
-  | AssignListExp _ -> assert false 
+  | AssignListExp _ -> assert false
 
 and analyze_ast st e = match e.exp_desc with
   | SeqExp list -> List.iter (analyze_ast st) list
@@ -139,8 +143,25 @@ and analyze_ast st e = match e.exp_desc with
         match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } ->
               add_used st sy loc;
-              Array.iter (analyze_ast st) exp.callExp_args
-          | FieldExp { fieldExp_head; fieldExp_tail } -> 
+              let fun_name = symbol_name sy in
+              Array.iter (analyze_ast st) exp.callExp_args;
+
+              Array.iteri (fun i arg ->
+                match arg.exp_desc with
+                  ConstExp (StringExp { stringExp_value = s }) ->
+                  begin match find_argument fun_name i with
+                    None -> ()
+                    | Some list ->
+                      let s = ScilabUtils.string_of_string s in
+                      if not (List.mem s list) then
+                        local_warning (!file, arg.exp_location)
+                          (Unexpected_string_argument
+                            (fun_name, i, s, list))
+                  end;
+                | _ -> ()
+              ) exp.callExp_args;
+
+          | FieldExp { fieldExp_head; fieldExp_tail } ->
               analyze_ast st fieldExp_head
           (* TODO : tail should be a field of head *)
           | _ -> assert false
@@ -151,7 +172,7 @@ and analyze_ast st e = match e.exp_desc with
         | _ -> [| get_assign_ident st assignExp_left_exp |]
       in
       analyze_ast st assignExp_right_exp;
-      st.init_sy <- 
+      st.init_sy <-
         Array.fold_left (fun acc (sy, _) ->  SetSy.add sy acc) st.init_sy arr_sy;
       if is_return_call assignExp_right_exp
       then
@@ -213,25 +234,28 @@ and analyze_cntrl st = function
 and analyze_dec st = function
   | VarDec vd -> ()
   | FunctionDec fd ->
-      incr level;
       incr cpt_analyze_fun;
-      let new_st = new_state () in
+      let new_st = new_state (st.level+1) in
       let sy = fd.functionDec_symbol in
+      let fun_name = symbol_name sy in
       let body = fd.functionDec_body in
       let args = fd.functionDec_args.arrayListVar_vars in
       let ret = fd.functionDec_returns.arrayListVar_vars in
-      let ini, args =
-        Array.fold_left (fun (acc1, acc2) arg ->
+
+      let args = Array.map (fun arg ->
           match arg.var_desc with
-            | SimpleVar sy_arg ->
-                if SetSy.mem sy_arg acc1
-                then
-                    (* W003 *)
-                    local_warning
-                      (!file, arg.var_location)
-                      (Duplicate_arg sy_arg.symbol_name);
-                (SetSy.add sy_arg acc1, SetSyWithLoc.add (sy_arg, arg.var_location) acc2)
-            | _ -> failwith "FunctionDecArgs : Not supposed to happen"
+          | SimpleVar sy_arg ->
+            (sy_arg, arg.var_location)
+          | _ -> failwith "FunctionDecArgs : Not supposed to happen"
+        ) args in
+      let ini, args_set =
+        Array.fold_left (fun (ini, args_set) (sy_arg, loc) ->
+          if SetSy.mem sy_arg ini then
+            (* W003 *)
+            local_warning (!file, loc)
+              (Duplicate_arg sy_arg.symbol_name);
+                (SetSy.add sy_arg ini,
+                 SetSyWithLoc.add (sy_arg, loc) args_set)
         ) (SetSy.singleton sy, SetSyWithLoc.empty) args in
       let ret_vars = Array.fold_left (fun acc ret_var ->
         match ret_var.var_desc with
@@ -253,10 +277,47 @@ and analyze_dec st = function
           | _ -> failwith "FunctionDecRet : Not suppose to happen"
       ) SetSyWithLoc.empty ret in
       new_st.init_sy <- ini;
-      new_st.args_sy <- args;
+      new_st.args_sy <- args_set;
+
+      begin match ScilintProject.find_function fun_name with
+          FunPrimitive ->
+          local_warning
+            (!file, fd.functionDec_location)
+            (Overriding_primitive fun_name)
+
+        | FunDeclared fun_decl ->
+          local_warning
+            (!file, fd.functionDec_location)
+            (Overriding_declared_function (fun_name,fun_decl.fun_loc))
+
+        | FunFile old_file ->
+          let is_current_file = try
+            Unix.lstat old_file = Unix.lstat !file
+          with _ -> true (* Skip warning in case of system error *)
+          in
+          if not is_current_file then
+          local_warning
+            (!file, fd.functionDec_location)
+            (Overriding_toplevel_function (fun_name, old_file))
+
+        | FunUnknown -> ()
+
+      end;
+
+      if st.level = 0 then begin
+        let fun_decl = {
+          fun_name = symbol_name sy;
+          fun_args = Array.map (fun (sy, _) ->
+              symbol_name sy
+            ) args;
+          fun_loc= (!file, fd.functionDec_location);
+        } in
+        declare_function fun_decl
+      end;
+
       begin
-        try analyze_ast new_st body with 
-          | IdentExtractError (msg, lnum, cnum) -> 
+        try analyze_ast new_st body with
+          | IdentExtractError (msg, lnum, cnum) ->
               print_extract_error (msg, lnum, cnum)
           | Assert_failure _ as err -> print_endline (Printexc.to_string err)
       end;
@@ -281,7 +342,7 @@ and analyze_dec st = function
         SetSyWithLoc.iter (fun (sy, loc) ->
           local_warning (!file, loc) (Unused_arg sy.symbol_name)
         ) unused;
-      if (SetSyWithLoc.cardinal new_st.escaped_sy) <> 0 
+      if (SetSyWithLoc.cardinal new_st.escaped_sy) <> 0
         || (SetSyWithLoc.cardinal new_st.returned_sy) <> 0
       then
         begin
@@ -289,16 +350,14 @@ and analyze_dec st = function
           SetSyWithLoc.iter (fun (sy, loc) ->
             local_warning (!file, loc) (Uninitialized_var sy.symbol_name)
           ) new_st.escaped_sy;
-          decr level;
           add_unsafeFun sy new_st.escaped_sy new_st.returned_sy;
-          if !level <> 0
+          if st.level <> 0
           then st.init_sy <- SetSy.add sy st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
       else
         begin
-          decr level;
-          if !level <> 0
+          if st.level <> 0
           then st.init_sy <- SetSy.add sy st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
@@ -331,7 +390,7 @@ and analyze_matrixExp st me =
 
 let analyze fn ast =
   file := fn;
-  let st = new_state () in
+  let st = new_state 0 in
   try analyze_ast st ast with
     | IdentExtractError (msg, lnum, cnum) -> print_extract_error (msg, lnum, cnum)
     | Assert_failure _ as err -> print_endline (Printexc.to_string err)
@@ -351,4 +410,4 @@ let print () =
 
 
 
-    
+

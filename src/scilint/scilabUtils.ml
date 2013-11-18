@@ -449,6 +449,14 @@ let get_location_from_lexbuf lexbuf =
   let tok = Lexing.lexeme lexbuf in
   (tok, line, cnum)
 
+let string_of_string s =
+  let len = String.length s in
+  let ss = String.create (len/4) in
+  for i = 0 to String.length ss - 1 do
+    ss.[i] <- s.[4*i]
+  done;
+  ss
+
 
 
 
