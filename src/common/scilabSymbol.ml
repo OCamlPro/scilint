@@ -61,3 +61,5 @@ let new_symbol name = {
 
 
 let symbol_name sy = sy.symbol_name
+
+let compare sy1 sy2 = compare sy1.symbol_name sy2.symbol_name

@@ -442,8 +442,12 @@ let print_loc file line startchar msg =
 let print_warning msg file loc =
   Printf.printf "File \"%s\", line %i, characters %i-%i:\n%s" file loc.first_line loc.first_column loc.last_column msg
 
-
-
+let get_location_from_lexbuf lexbuf =
+  let curr = lexbuf.Lexing.lex_curr_p in
+  let line = curr.Lexing.pos_lnum in
+  let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
+  let tok = Lexing.lexeme lexbuf in
+  (tok, line, cnum)
 
 
 

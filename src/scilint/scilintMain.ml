@@ -16,12 +16,6 @@ let args = Arg.align [
 (* let usage = "Usage: " ^ Sys.argv.(0) ^ " [-t] [-a file] [-typ file] [-cfg] [-load] [file]" *)
 let usage = "Usage: " ^ Sys.argv.(0) ^ " [file]"
 
-(* let test_parser ast = *)
-(*   (\* ast -> binary format *\) *)
-(*   let s = ScilabAst2String.string_of_ast ast in *)
-(*   print_endline s *)
-(*   (\* read binary file generates by scilab's parser *\) *)
-
 let cpt_files = ref 0
 
 let list_ext = [ ".sci"; ".sce"; ".tst" ]
@@ -36,6 +30,9 @@ let richelieu_test_path = "/home/michael/dev_sci/richelieu/"
 
 let scilab_forge_test_path = "/home/michael/test_forge/mirror.forge.scilab.org-1.4GB/"
 
+exception ParserError of string * string * int * int
+exception LexerError of string * string * int * int
+
 let print_error file msg line char =
   ScilabUtils.print_loc file line char msg
 
@@ -47,6 +44,13 @@ let print_lex_infos file token line char =
   let msg = "Error : Syntax error at token " ^ token  in
   print_error file msg line char
 
+let print_err = function
+  | ParserError (file, tok, line, char) ->
+      print_parser_infos file tok line char
+  | LexerError (file, tok, line, char) ->
+      print_lex_infos file tok line char
+  | _ as err -> raise err
+
 let get_length ic =
   let buf = Buffer.create 4 in
   Buffer.add_channel buf ic 4;
@@ -57,189 +61,74 @@ let get_length ic =
   let c3 = int_of_char (String.unsafe_get s 3) in
   c0 + ((c1 + ((c2 + (c3 lsl 8)) lsl 8)) lsl 8)
 
-let run_deff file =
+let parse_file file =
   let ch = if file = "" then stdin else open_in file in
   let new_prog = ScilabPreParser.pre_parse ch in
-  Printf.printf "Testing %s : \n" file;
   let lexbuf = Lexing.from_string new_prog in
   ScilabLexer.init_lexer_var ();
   try
     let ast = ScilabParser.program ScilabLexer.token lexbuf in
-    begin
-      match ast with
-        | ScilabAst.Exp exp ->
-            print_endline "-> OK\n";
-            ScilabDeffRefactoring.refactor_deff exp
-        | _ -> print_endline "-> Error not an Exp\n"
-    end;
     flush stdout;
-    close_in ch
+    close_in ch;
+    ast
   with
     | Parsing.Parse_error ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_parser_infos file tok line cnum;
+        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
         flush stdout;
-        close_in ch
+        close_in ch;
+        raise (ParserError (file, tok, line, cnum))
     | ScilabLexer.Err_str str_err ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
+        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
         print_string str_err;
-        print_lex_infos file tok line cnum;
         flush stdout;
-        close_in ch
+        close_in ch;
+        raise (LexerError (file, tok, line, cnum))
     | ScilabLexer.Lex_err str_lex ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
+        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
         print_string str_lex;
-        print_lex_infos file tok line cnum;
         flush stdout;
-        close_in ch
+        close_in ch;
+        raise (LexerError (file, tok, line, cnum))
     | _ as err -> raise err
 
+let run_deff file =
+  try
+    let ast = parse_file file in
+    match ast with
+      | ScilabAst.Exp exp ->
+          print_endline "-> OK\n";
+          ScilabDeffRefactoring.refactor_deff exp
+      | _ -> print_endline "-> Error not an Exp\n"
+  with _ as err -> print_err err
 
 let run_test file =
-  let ch = if file = "" then stdin else open_in file in
-  let new_prog = ScilabPreParser.pre_parse ch in
-  Printf.printf "Testing %s : \n" file;
-  let lexbuf = Lexing.from_string new_prog in
-  ScilabLexer.init_lexer_var ();
   try
-    let ast = ScilabParser.program ScilabLexer.token lexbuf in
-    begin
-      match ast with
-        | ScilabAst.Exp exp -> print_endline "-> OK\n"
-        | _ -> print_endline "-> Error not an Exp\n"
-    end;
-    flush stdout;
-    close_in ch
-  with
-    | Parsing.Parse_error ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_parser_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | ScilabLexer.Err_str str_err ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_string str_err;
-        print_lex_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | ScilabLexer.Lex_err str_lex ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_string str_lex;
-        print_lex_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | _ as err -> raise err
+    let ast = parse_file file in
+    match ast with
+      | ScilabAst.Exp exp -> print_endline "-> OK\n"
+      | _ -> print_endline "-> Error not an Exp\n"
+  with _ as err -> print_err err
 
 let run_type_file file =
-  let ch = if file = "" then stdin else open_in file in
-  let new_prog = ScilabPreParser.pre_parse ch in
-  let lexbuf = Lexing.from_string new_prog in
-  ScilabLexer.init_lexer_var ();
   try
-    let ast = ScilabParser.program ScilabLexer.token lexbuf in
-    begin
-      match ast with
-        | ScilabAst.Exp exp ->
-            ScilabFunctionAnalyze.analyze file exp
-            (* ScilabTyper.type_ast exp *)
-        | _ -> print_endline "-> Error not an Exp\n"
-    end;
-    flush stdout;
-    close_in ch
-  with
-    | Parsing.Parse_error ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_parser_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | ScilabLexer.Err_str str_err ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_string str_err;
-        print_lex_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | ScilabLexer.Lex_err str_lex ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_string str_lex;
-        print_lex_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | _ as err -> raise err
+    let ast = parse_file file in
+    match ast with
+      | ScilabAst.Exp exp ->
+          ScilabFunctionAnalyze.analyze file exp
+      | _ -> print_endline "-> Error not an Exp\n"
+  with _ as err -> print_err err
 
 let run_analyze_file file =
-  let ch = if file = "" then stdin else open_in file in
-  let new_prog = ScilabPreParser.pre_parse ch in
-  Printf.printf "Analyzing %s : \n" file;
-  let lexbuf = Lexing.from_string new_prog in
-  ScilabLexer.init_lexer_var ();
   try
-    let ast = ScilabParser.program ScilabLexer.token lexbuf in
-    begin
-      match ast with
-        | ScilabAst.Exp exp ->
-            print_endline "-> OK\n";
-            incr cpt_files;
-            ScilabAstStats.analyze_ast exp;
-            ScilabFunctionAnalyze.analyze file exp
-        | _ -> print_endline "-> Error not an Exp\n"
-    end;
-    flush stdout;
-    close_in ch
-  with
-    | Parsing.Parse_error ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_parser_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | ScilabLexer.Err_str str_err ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_string str_err;
-        print_lex_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | ScilabLexer.Lex_err str_lex ->
-        let curr = lexbuf.Lexing.lex_curr_p in
-        let line = curr.Lexing.pos_lnum in
-        let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
-        let tok = Lexing.lexeme lexbuf in
-        print_string str_lex;
-        print_lex_infos file tok line cnum;
-        flush stdout;
-        close_in ch
-    | _ as err -> raise err
+    let ast = parse_file file in
+    match ast with
+      | ScilabAst.Exp exp ->
+          print_endline "-> OK\n";
+          incr cpt_files;
+          ScilabAstStats.analyze_ast exp;
+          ScilabFunctionAnalyze.analyze file exp
+      | _ -> print_endline "-> Error not an Exp\n"
+  with _ as err -> print_err err
 
 let rec run_tests fun_iter dirname =
   let files = Sys.readdir dirname in
@@ -257,7 +146,7 @@ let rec run_tests fun_iter dirname =
   ) files
 
 let _ =
-  Arg.parse args (fun s ->  run_type_file s) usage;
+  Arg.parse args (fun s -> run_type_file s) usage;
   if !test_flag
   then
     begin
