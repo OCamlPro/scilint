@@ -4,7 +4,10 @@ let analyze_flag = ref false
 let type_flag = ref false
 let cfg_flag = ref false
 let cfg_file = ref false
-let args = []
+let args = Arg.align [
+  "-I", Arg.String ScilintProject.add_to_path,
+  "DIRECTORY Add DIRECTORY to search path";
+]
 (* let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base"); *)
 (*             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code"); *)
 (*             ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab program"); *)
@@ -38,13 +41,20 @@ let print_parser_infos file token line char =
   print_error file msg line char
     
 let print_lex_infos file token line char =
-  let msg = "Error : Syntax error at token " ^ token  in 
+  let msg = "Error : Syntax error at token " ^ token  in
   print_error file msg line char
     
 let print_err = function
   | ParserError (file, tok, line, char) -> 
       print_parser_infos file tok line char
   | LexerError (file, tok, line, char) -> 
+      print_lex_infos file tok line char
+  | _ as err -> raise err
+
+let print_err = function
+  | ParserError (file, tok, line, char) ->
+      print_parser_infos file tok line char
+  | LexerError (file, tok, line, char) ->
       print_lex_infos file tok line char
   | _ as err -> raise err
 
@@ -86,7 +96,11 @@ let parse_file file =
         flush stdout;
         close_in ch;
         raise (LexerError (file, tok, line, cnum))
+<<<<<<< HEAD
     | _ as err -> raise err  
+=======
+    | _ as err -> raise err
+>>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
 
 let run_deff file =
   try
@@ -107,10 +121,18 @@ let run_test file =
   with _ as err -> print_err err
 
 let run_type_file file =
+<<<<<<< HEAD
   try
     let ast = parse_file file in
     match ast with
       | ScilabAst.Exp exp -> 
+=======
+  Printf.printf "File %S\n%!" file;
+  try
+    let ast = parse_file file in
+    match ast with
+      | ScilabAst.Exp exp ->
+>>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
           ScilabFunctionAnalyze.analyze file exp
       | _ -> print_endline "-> Error not an Exp\n"
   with _ as err -> print_err err
@@ -119,7 +141,11 @@ let run_analyze_file file =
   try
     let ast = parse_file file in
     match ast with
+<<<<<<< HEAD
       | ScilabAst.Exp exp -> 
+=======
+      | ScilabAst.Exp exp ->
+>>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
           print_endline "-> OK\n";
           incr cpt_files;
           ScilabAstStats.analyze_ast exp;
@@ -143,6 +169,10 @@ let rec run_tests fun_iter dirname =
   ) files
 
 let _ =
+<<<<<<< HEAD
+=======
+  Printf.printf "scilint: scilab code checker, by OCamlPro SAS\n%!";
+>>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
   Arg.parse args (fun s -> run_type_file s) usage;
   if !test_flag
   then
@@ -175,10 +205,10 @@ let _ =
     else
       if !type_flag
       then run_type_file !file
-      else 
+      else
         if !cfg_flag
         then ScilintConfig.print_config ()
-        else 
+        else
           if !cfg_file
         then ScilintConfig.print_files (ScilintConfig.read_config !file)
 

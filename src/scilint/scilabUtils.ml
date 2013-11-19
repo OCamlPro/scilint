@@ -433,13 +433,13 @@ let is_equal ast1 ast2 =
     | _ ,_ -> raise (Not_equal "Ast1 <> Ast2")
 
 
-let print_loc_with_endchar file line startchar endchar msg = 
+let print_loc_with_endchar file line startchar endchar msg =
   Printf.printf "File \"%s\", line %i, characters %i-%i:\n%s" file line startchar endchar msg
 
-let print_loc file line startchar msg = 
+let print_loc file line startchar msg =
   Printf.printf "File \"%s\", line %i, characters %i:\n%s" file line startchar msg
 
-let print_warning msg file loc = 
+let print_warning msg file loc =
   Printf.printf "File \"%s\", line %i, characters %i-%i:\n%s" file loc.first_line loc.first_column loc.last_column msg
 
 let get_location_from_lexbuf lexbuf =
@@ -448,6 +448,18 @@ let get_location_from_lexbuf lexbuf =
   let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
   let tok = Lexing.lexeme lexbuf in
   (tok, line, cnum)
+<<<<<<< HEAD
+=======
+
+let string_of_string s =
+  let len = String.length s in
+  let ss = String.create (len/4) in
+  for i = 0 to String.length ss - 1 do
+    ss.[i] <- s.[4*i]
+  done;
+  ss
+
+>>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
 
 
 
@@ -458,5 +470,30 @@ let get_location_from_lexbuf lexbuf =
 
 
 
+(* From ocplib-lang *)
 
+let lines_of_file filename =
+  let ic = open_in filename in
+  let lines = ref [] in
+  try
+    while true do
+      lines := input_line ic :: !lines
+    done; assert false
+  with End_of_file ->
+    close_in ic;
+    List.rev !lines
 
+let split_simplify s c =
+  let len = String.length s in
+  let rec iter pos to_rev =
+    if pos = len then List.rev to_rev else
+      match try
+              Some ( String.index_from s pos c )
+        with Not_found -> None
+      with
+          Some pos2 ->
+            if pos2 = pos then iter (pos+1) to_rev else
+              iter (pos2+1) ((String.sub s pos (pos2-pos)) :: to_rev)
+        | None -> List.rev ( String.sub s pos (len-pos) :: to_rev )
+  in
+  iter 0 []

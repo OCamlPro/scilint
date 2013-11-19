@@ -20,16 +20,19 @@ W006 & return variable is never set & 0.2 \\ \hline
 W007 & return variable used as a local variable & 0.2 \\ \hline
 W000 & variable defined but not used &  \\ \hline
 W000 & variable redefined before being used &  \\ \hline
-W000 & use of ``exec'' function      &  \\ \hline
+W000 & use of ``execstr'' function      &  \\ \hline
 W000 & for variable modified in for loop &  \\ \hline
 W000 & for bounds modified during for loop &  \\ \hline
 W000 & keyword used as a variable &  \\ \hline
-W000 & use of return/resume should be avoided &  \\ \hline
-W000 & default value for argument never used &  \\ \hline
+W000 & use of return/resume to define variables should be avoided &  \\ \hline
 W000 & variable is not initialized in all paths &  \\ \hline
 W000 & field of tlist not defined &  \\ \hline
 W000 & break outside of loop &  \\ \hline
 W000 & continue outside of loop &  \\ \hline
+W000 & labeled argument provided twice &  \\ \hline
+W000 & unlabeled argument after labeled argument &  \\ \hline
+W000 & missing parenthesis for function call &  \\ \hline
+W000 & non void return value of function not used &  \\ \hline
 \end{tabular}
 
 \subsection{File Warnings}
@@ -42,12 +45,14 @@ these functions.
 \noindent\\\begin{tabular}{|c|p{8cm}|c|} \hline
 Identifier & Title & Implemented      \\ \hline
 W000 & duplicate function identifier &  \\ \hline
+W000 & type not defined in redefinition &  \\ \hline
 W000 & too many arguments in function call &  \\ \hline
 W000 & too few arguments in function call  &  \\ \hline
 W000 & redefinition of primitive function &  \\ \hline
 W000 & redefinition of standard library function &  \\ \hline
 W000 & labeled argument does not exist &  \\ \hline
 W000 & toplevel expression in file &  \\ \hline
+W000 & labeled argument in varargin &  \\ \hline
 \end{tabular}
 
 \subsection{Global Warnings}
@@ -107,6 +112,10 @@ function z = f()
   z = cos(x)  // W001: "x" not initialized
 endfunction
 \end{verbatim}
+
+
+Remarks : referencing global variables should be avoided, variables should be passed as arguments. This variable can also have been introduced by a 'resume' in a function called from the current context, or an 'execstr' function
+
 
 
 \subsection{W002 --- unused function argument}
@@ -183,12 +192,18 @@ endfunction
 
 
 
+However, this is often used as an optimization to avoid
+a useless copy when returning a matrix.
+
+
+
 \subsection{W006 --- return variable is never set}
 
 
 
 
-A return variable is never set in the function, whatever the path taken.
+A return variable is never set in the function,
+whatever the path taken.
 
 
 
@@ -201,7 +216,8 @@ function [a,b] = f()  // W006: return variable "a" is never set
   end;
 endfunction
 \end{verbatim}
-Note that, on this example, warnings W001 (variable ``a'' not initialized)
+Note that, on this example, warnings W001
+(variable ``a'' not initialized)
 and W007 (return variable used as a variable) should also be displayed.
 
 
@@ -211,8 +227,8 @@ and W007 (return variable used as a variable) should also be displayed.
 
 
 
-A return variable is used in the function as a local variable: return
-variables should only be assigned values, never read.
+A return variable is used in the function as a local variable:
+ return variables should only be assigned values, never read.
 
 
 
@@ -228,6 +244,11 @@ endfunction
 
 
 
+However, this is often used as an optimization to avoid
+a useless copy when returning a matrix.
+
+
+
 \subsection{W000 --- variable defined but not used}
 
 
@@ -238,6 +259,11 @@ function f()
   disp(y);
 endfunction
 \end{verbatim}
+
+
+The variable might be used in another function, but it is
+a bad practice to pass values like that instead of by argument.
+
 
 
 \subsection{W000 --- variable redefined before being used}
@@ -252,9 +278,12 @@ endfunction
 \end{verbatim}
 
 
-\subsection{W000 --- use of ``exec'' function     }
+\subsection{W000 --- use of ``execstr'' function     }
 
 
+\begin{verbatim}
+x = execstr(instr, 'catcherr'); // W: avoid use of 'execstr' 
+\end{verbatim}
 
 
 \subsection{W000 --- for variable modified in for loop}
@@ -262,9 +291,32 @@ endfunction
 
 
 
+Modifying the variable of a 'for' loop does not change the
+loop behavior.
+
+\begin{verbatim}
+for i=1:100
+   i=i+2; // W: modifying variable of 'for' loop does not change loop behavior
+   disp(i);
+end
+\end{verbatim}
+
+
 \subsection{W000 --- for bounds modified during for loop}
 
 
+
+
+Modifying the bounds of a loop does not change the behavior of
+the 'for' loop
+
+\begin{verbatim}
+a = 3;
+for i=1:a
+  disp(i);
+  a = 5; // W: modifying bound of 'for' loop does not change loop behavior
+end
+\end{verbatim}
 
 
 \subsection{W000 --- keyword used as a variable}
@@ -272,19 +324,36 @@ endfunction
 
 
 
-\subsection{W000 --- use of return/resume should be avoided}
+Keywords should not be used as names of variables.
+
+\begin{verbatim}
+function f(if) // W : 'if' should not be used as a variable
+  disp(if)
+endfunction
+\end{verbatim}
 
 
+\subsection{W000 --- use of return/resume to define variables should be avoided}
 
 
-\subsection{W000 --- default value for argument never used}
-
-
+\begin{verbatim}
+function x_is_one()
+  x = resume(1) // W : 'resume' should not be used
+endfunction
+\end{verbatim}
 
 
 \subsection{W000 --- variable is not initialized in all paths}
 
 
+\begin{verbatim}
+function f(a,b)
+  if (a > 3) then
+    x = b
+  end
+  disp(x) // W: 'x' is not initialized in all paths
+endfunction
+\end{verbatim}
 
 
 \subsection{W000 --- field of tlist not defined}
@@ -292,7 +361,7 @@ endfunction
 
 \begin{verbatim}
 function f()
-  x = tlist("a","b")
+  x = tlist(["obj", "a","b"])
   x.c = 3 // W : "c" was not declared inside the tlist declaration
 endfunction
 \end{verbatim}
@@ -322,6 +391,41 @@ endfunction
 \end{verbatim}
 
 
+\subsection{W000 --- labeled argument provided twice}
+
+
+\begin{verbatim}
+function f(a, b, c) endfunction
+f(a, b, b=3) // W : argument "b" provided twice
+\end{verbatim}
+
+
+\subsection{W000 --- unlabeled argument after labeled argument}
+
+
+\begin{verbatim}
+f(a, b=2, c) // W : unlabeled argument after labeled argument "b"
+\end{verbatim}
+
+
+\subsection{W000 --- missing parenthesis for function call}
+
+
+\begin{verbatim}
+[a,b] = f // W : you should use "f()" instead of "f"
+\end{verbatim}
+
+
+\subsection{W000 --- non void return value of function not used}
+
+
+\begin{verbatim}
+function [x]=f() x=1; endfunction
+f(); // W : non void return value of function not used
+
+\end{verbatim}
+
+
 \section{File Warnings}
 
 File warnings are warnings that can be detected through a local
@@ -334,9 +438,21 @@ these functions.
 
 
 
-The same name is used by two definitions of functions in two different
-files.
+The same name is used by two definitions of functions in
+two different files.
 
+
+
+\subsection{W000 --- type not defined in redefinition}
+
+
+\begin{verbatim}
+
+  x = tlist(["object", "a","b"])
+function %objcet_p(mytlist) // 'objcet was not defined as a type
+  mprintf("a=%s\n", x.a);
+endfunction
+\end{verbatim}
 
 
 \subsection{W000 --- too many arguments in function call}
@@ -349,8 +465,8 @@ arguments, compared to the number specified in the function definition.
 
 
 
-Extra arguments will usually not be used. Changing the behavior of a
-function depending on its number of arguments is usually a bad
+Extra arguments will usually not be used. Changing the behavior
+of a function depending on its number of arguments is usually a bad
 practice.
 
 
@@ -408,14 +524,42 @@ x = max(1);  // W 202 : "max" used with too few arguments
 
 
 
+Where is the list of standard library functions ?
+
+
+
 \subsection{W000 --- labeled argument does not exist}
 
 
+\begin{verbatim}
+function f(a, b)
+endfunction
+f(1, c=3)
+\end{verbatim}
 
 
 \subsection{W000 --- toplevel expression in file}
 
 
+
+
+It is better to avoid execution of expressions in files, and
+to call an initialization function at the beginning.
+
+
+
+\subsection{W000 --- labeled argument in varargin}
+
+
+
+
+Labeled arguments are not allowed in varargin
+
+\begin{verbatim}
+function f(a, b, varargin)
+endfunction
+f(1,2, c=3)
+\end{verbatim}
 
 
 \section{Global Warnings}

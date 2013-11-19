@@ -11,3 +11,5 @@
 _obuild
 scilint.asm
 
+src/parser/scilabParser.ml
+src/parser/scilabParser.mli

@@ -26,6 +26,7 @@ OCAML_SCILINT_MLS = \
 	src/scilint/config/scilintConfig.ml \
 	src/scilint/scilabUtils.ml \
 	src/scilint/scilintWarning.ml \
+	src/scilint/scilintProject.ml \
 	src/scilint/scilabFunctionAnalyze.ml \
 	src/scilint/scilabDeffRefactoring.ml \
 	src/scilint/scilabAstStats.ml \
@@ -68,7 +69,7 @@ OPTFLAGS = -g -c -fPIC $(OCAML_INCL)
 all: scilint.asm
 
 scilint.asm : $(SCILINT_CMXS)
-	$(OCAMLOPT) bigarray.cmxa str.cmxa \
+	$(OCAMLOPT) unix.cmxa \
 	  -o scilint.asm $(SCILINT_CMXS)
 
 

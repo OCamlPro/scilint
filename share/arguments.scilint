@@ -1,0 +1,14 @@
+strsubst:3:STRENUM:r
+execstr:1:STRENUM:errcatch
+execstr:2:STRENUM:m:n
+strcat:2:STRENUM:r:c
+rand:0:STRENUM:_:uniform:normal:seed:info
+rand:1:STRENUM:_:uniform:normal
+rand:2:STRENUM:_:uniform:normal
+rand:3:STRENUM:_:uniform:normal
+isdef:1:STRENUM:all:local:nolocal
+messagebox:2:STRENUM:_:error:hourglass:info:passwd:question:warning:scilab:modal
+messagebox:3:STRENUM:_:error:hourglass:info:passwd:question:warning:scilab:modal
+messagebox:4:STRENUM:_:error:hourglass:info:passwd:question:warning:scilab:modal
+messagebox:5:TOOMANY
+strcat:3:TOOMANY

@@ -24,13 +24,14 @@ begin program "scilint"
         "src/scilint/config/scilintConfig.ml";
 	"src/scilint/scilabUtils.ml"
         "src/scilint/scilintWarning.ml";
+        "src/scilint/scilintProject.ml";
 	"src/scilint/scilabFunctionAnalyze.ml"
 	"src/scilint/scilabDeffRefactoring.ml"
 	"src/scilint/scilabAstStats.ml"
 	"src/scilint/scilintMain.ml"
   ]
 
-  requires = [ "scilintManual" ]
+  requires = [ "scilintManual"  "unix" ]
 end
 
 begin program "scilintDocgen"
