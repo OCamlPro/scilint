@@ -15,6 +15,7 @@ type local_warning =
   | Overriding_toplevel_function of string * string
   | Unexpected_string_argument of string * int * string * string list
   | Primitive_with_too_many_arguments of string * int
+  | For_var_modif
 
 let print_warning code locs =
   List.iteri (fun i ((file, loc), msg) ->
@@ -41,7 +42,10 @@ let local_warning loc w =
       [ loc, "return variable \"" ^ s ^ "\" is never set" ]
     | Return_as_var s -> 7,
       [ loc, "return variable \"" ^ s ^ "\" is used as a local variable" ]
-
+    | For_var_modif -> 995,
+      [ loc,
+        Printf.sprintf "modifying variable of 'for' loop does not change loop behavior" 
+      ]
     | Primitive_with_too_many_arguments (fun_name, i) -> 995,
       [ loc,
         Printf.sprintf "primitive %S called with too many arguments (>= %d)"

@@ -38,13 +38,15 @@ type state = { mutable escaped_sy : SetSyWithLoc.t ;
                mutable args_sy : SetSyWithLoc.t; 
                mutable used_sy : SetSyWithLoc.t;
                mutable level_fun : int;
-               mutable level_for : int }
+               mutable level_for : int;
+               mutable for_sy : SetSyWithLoc.t }
 
 let new_state level_fun = 
   { escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
     init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty; 
     used_sy = SetSyWithLoc.empty;
-    level_fun = level_fun; level_for = 0; }
+    level_fun = level_fun; 
+    level_for = 0; for_sy = SetSyWithLoc.empty; }
 
 let table_unsafe_fun = ref UnsafeFunSy.empty
 
@@ -228,7 +230,10 @@ and analyze_ast st e = match e.exp_desc with
       in
       analyze_ast st assignExp_right_exp;
       st.init_sy <- 
-        Array.fold_left (fun acc (sy, _) ->  SetSy.add sy acc) st.init_sy arr_sy;
+        Array.fold_left (fun acc (sy, loc) ->  
+          if st.level_for <> 0 && SetSyWithLoc.mem (sy, loc) st.for_sy
+          then local_warning (!file, loc) For_var_modif;
+          SetSy.add sy acc) st.init_sy arr_sy;
       if is_return_call assignExp_right_exp
       then
         st.returned_sy <- Array.fold_left (fun acc sy ->
@@ -251,9 +256,14 @@ and analyze_cntrl st = function
   | ForExp forExp ->
       let varDec = forExp.forExp_vardec in (* name, init, kind *)
       let sy = varDec.varDec_name in
+      let loc = forExp.forExp_vardec_location in
       analyze_ast st varDec.varDec_init;
       st.init_sy <- SetSy.add sy st.init_sy;
-      analyze_ast st forExp.forExp_body
+      st.for_sy <- SetSyWithLoc.add (sy, loc) st.for_sy;
+      st.level_for <- st.level_for + 1;
+      analyze_ast st forExp.forExp_body;
+      st.level_for <- st.level_for - 1;
+      st.for_sy <- SetSyWithLoc.remove (sy, loc) st.for_sy
   | IfExp ifExp ->
       analyze_ast st ifExp.ifExp_test;
       analyze_ast st ifExp.ifExp_then;
