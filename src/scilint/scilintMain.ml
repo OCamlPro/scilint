@@ -96,11 +96,7 @@ let parse_file file =
         flush stdout;
         close_in ch;
         raise (LexerError (file, tok, line, cnum))
-<<<<<<< HEAD
-    | _ as err -> raise err  
-=======
     | _ as err -> raise err
->>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
 
 let run_deff file =
   try
@@ -121,18 +117,11 @@ let run_test file =
   with _ as err -> print_err err
 
 let run_type_file file =
-<<<<<<< HEAD
-  try
-    let ast = parse_file file in
-    match ast with
-      | ScilabAst.Exp exp -> 
-=======
   Printf.printf "File %S\n%!" file;
   try
     let ast = parse_file file in
     match ast with
       | ScilabAst.Exp exp ->
->>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
           ScilabFunctionAnalyze.analyze file exp
       | _ -> print_endline "-> Error not an Exp\n"
   with _ as err -> print_err err
@@ -141,11 +130,7 @@ let run_analyze_file file =
   try
     let ast = parse_file file in
     match ast with
-<<<<<<< HEAD
       | ScilabAst.Exp exp -> 
-=======
-      | ScilabAst.Exp exp ->
->>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
           print_endline "-> OK\n";
           incr cpt_files;
           ScilabAstStats.analyze_ast exp;
@@ -169,10 +154,7 @@ let rec run_tests fun_iter dirname =
   ) files
 
 let _ =
-<<<<<<< HEAD
-=======
   Printf.printf "scilint: scilab code checker, by OCamlPro SAS\n%!";
->>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
   Arg.parse args (fun s -> run_type_file s) usage;
   if !test_flag
   then

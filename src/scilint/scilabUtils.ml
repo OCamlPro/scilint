@@ -448,8 +448,6 @@ let get_location_from_lexbuf lexbuf =
   let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1 in
   let tok = Lexing.lexeme lexbuf in
   (tok, line, cnum)
-<<<<<<< HEAD
-=======
 
 let string_of_string s =
   let len = String.length s in
@@ -458,17 +456,6 @@ let string_of_string s =
     ss.[i] <- s.[4*i]
   done;
   ss
-
->>>>>>> ab1b90d66e7f50eb7d712dc293ffdaaf4354506c
-
-
-
-
-
-
-
-
-
 
 (* From ocplib-lang *)
 

@@ -32,8 +32,6 @@ module UnsafeFunSy = Map.Make(
 (* To print warning with location *)
 let file = ref ""
 
-
-<<<<<<< HEAD
 type state = { mutable escaped_sy : SetSyWithLoc.t ; 
                mutable returned_sy : SetSyWithLoc.t;
                mutable init_sy : SetSy.t; 
@@ -292,7 +290,7 @@ and analyze_dec st = function
   | VarDec vd -> ()
   | FunctionDec fd ->
       incr cpt_analyze_fun;
-      let new_st = new_state (st.level+1) in
+      let new_st = new_state (st.level_fun+1) in
       let sy = fd.functionDec_symbol in
       let fun_name = symbol_name sy in
       let body = fd.functionDec_body in
@@ -361,7 +359,7 @@ and analyze_dec st = function
 
       end;
 
-      if st.level = 0 then begin
+      if st.level_fun = 0 then begin
         let fun_decl = {
           fun_name = symbol_name sy;
           fun_args = Array.map (fun (sy, _) ->
@@ -408,7 +406,7 @@ and analyze_dec st = function
             local_warning (!file, loc) (Uninitialized_var sy.symbol_name)
           ) new_st.escaped_sy;
           add_unsafeFun sy new_st.escaped_sy new_st.returned_sy;
-          if st.level <> 0
+          if st.level_fun <> 0
           then st.init_sy <- SetSy.add sy st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
