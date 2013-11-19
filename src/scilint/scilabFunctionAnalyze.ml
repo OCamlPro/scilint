@@ -114,7 +114,7 @@ let rec get_assign_ident st e = match e.exp_desc with
   | CallExp exp ->
       Array.iter (analyze_ast st) exp.callExp_args;
       begin
-        match exp.callExp_name.exp_desc with
+      match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
           | FieldExp { fieldExp_head; fieldExp_tail } ->
               let (sy, loc) = get_assign_ident st fieldExp_head in
@@ -221,9 +221,31 @@ and analyze_ast st e = match e.exp_desc with
           | FieldExp { fieldExp_head; fieldExp_tail } ->
               analyze_ast st fieldExp_head
           (* TODO : tail should be a field of head *)
-          | _ -> assert false
+          | ArrayListExp _ -> () (* TODO:
+            dace-scilab/macros/dacefit.sci:92
+     92   ij(ll,:) = [(ones(m-k,1) .*. k) (k+1 : m)']; // indices for sparse matrix
+
+           *)
+          | CallExp _ -> () (* TODO:
+            cuter/macros/%tabul_e.sci:13
+             a(f(k))=a(f(k))(i)
+           *)
+
+          | MathExp(TransposeExp _) -> () (* TODO ? *)
+(*
+          | ConstExp(DoubleExp _) -> ()
+          *)
+          | _ ->
+(* TODO: use this to print unexepected expression and debug the parser
+            ScilabUtils.print_warning
+            (Printf.sprintf "Unexpected CallExp(%s)\n%!"
+              (ScilabUtils.to_string_err exp.callExp_name))
+            !file exp.callExp_name.exp_location
+*)
+            ()
       end
   | AssignExp { assignExp_left_exp; assignExp_right_exp } ->
+    begin try
       let arr_sy = match assignExp_left_exp.exp_desc with
         | AssignListExp vars -> Array.map (get_assign_ident st) vars
         | _ -> [| get_assign_ident st assignExp_left_exp |]
@@ -235,6 +257,16 @@ and analyze_ast st e = match e.exp_desc with
       then
         st.returned_sy <- Array.fold_left (fun acc sy ->
           SetSyWithLoc.add sy acc) st.returned_sy arr_sy
+    with exc ->
+(* TODO: we should always succeed at finding the assigned exp,
+    even if we don't use the information afterwards.
+      ScilabUtils.print_warning
+        (Printf.sprintf "Cannot find assigned %s\n%!"
+              (ScilabUtils.to_string_err assignExp_left_exp))
+            !file e.exp_location
+*)
+      ()
+    end
   | ControlExp controlExp -> analyze_cntrl st controlExp
   | FieldExp { fieldExp_head; fieldExp_tail } -> ()
   | ListExp { listExp_start; listExp_step; listExp_end } ->
