@@ -28,10 +28,15 @@
     Printf.printf "%i %i %i" pos.pos_lnum pos.pos_bol pos.pos_cnum
 
   let print_lexbuf lexbuf =
-    Printf.printf "st :"; print_pos lexbuf.lex_start_p;
-    Printf.printf "; curr :"; print_pos lexbuf.lex_curr_p;
-    Printf.printf "; st_pos :%i" lexbuf.lex_start_pos;
-    Printf.printf "; curr_pos :%i \n" lexbuf.lex_curr_pos
+    Printf.printf "======================\n";
+    Printf.printf "lex_buffer : %s\n" lexbuf.lex_buffer;
+    Printf.printf "lex_buffer_len : %i\n" lexbuf.lex_buffer_len;
+    Printf.printf "lex_abs_pos : %i\n" lexbuf.lex_abs_pos;
+    Printf.printf "lex_start_pos : %i\n" lexbuf.lex_start_pos;
+    Printf.printf "lex_curr_pos : %i\n" lexbuf.lex_curr_pos;
+    Printf.printf "lex_last_pos : %i\n" lexbuf.lex_last_pos;    
+    Printf.printf "lex_start_p :"; print_pos lexbuf.lex_start_p; Printf.printf "\n";
+    Printf.printf "lex_curr_p :"; print_pos lexbuf.lex_curr_p; Printf.printf "\n======================\n\n"
 
   let return_token tok =
     if !shellmode_on then shellmode_on := false;
@@ -51,6 +56,12 @@
     last_token := tok;
     shellmode_on := false;
     tok
+
+  let lexbuf_to_prev_tok lexbuf =
+    lexbuf.lex_curr_pos <- lexbuf.lex_start_p.pos_cnum;
+    lexbuf.lex_curr_p <- lexbuf.lex_start_p;
+    lexbuf.lex_start_p <- lexbuf.lex_start_p
+    
 
 
   let is_transposable () = match !last_token with
@@ -78,7 +89,7 @@
     !matrix_level <> 0
 
   let set_last_token_spaces () =
-    if (in_matrix () & (!last_token = COMMA || !last_token = PLUS)) ||
+    if (in_matrix () && (!last_token = COMMA || !last_token = PLUS)) ||
        (!last_token = EOL  || !last_token = SOF)
     then ()
     else
@@ -257,7 +268,7 @@ let shellmode_arg = [^ ' ''\t''\r''\n'','';''\'''\"' '(' '=' '/' '+' '|' '&'][^ 
 let assign = "="
 
 rule token = parse
-  | spaces                       { set_last_token_spaces ();
+  | spaces                       { print_lexbuf lexbuf; set_last_token_spaces ();
                                    if !shellmode_on
                                    then shellmode lexbuf
                                    else token lexbuf }
@@ -394,7 +405,8 @@ rule token = parse
   | floating as float            { let f = (float_of_string (convert_scientific_notation float)) in
                                    (* Printf.printf "float[%s = %f]\n" float f; *)
                                    NUM f }
-  | lparen                       { if !shellmode_on then shellmode_on := false; return_token LPAREN }
+  | lparen                       { if in_matrix () && !last_token = SPACES then begin print_endline "comma"; lexbuf_to_prev_tok lexbuf; return_token COMMA end
+                                   else if !shellmode_on then begin shellmode_on := false; return_token LPAREN end else (print_endline "LPAREN"; return_token LPAREN) }
   | rparen                       { return_token RPAREN }
   | lbrace                       { incr matrix_level; return_token LBRACE }
   | rbrace                       { decr matrix_level; return_token RBRACE }
@@ -408,7 +420,7 @@ rule token = parse
   | boolandand                   { return_token ANDAND }
   | boolor                       { return_token OR }
   | booloror                     { return_token OROR }
-  | id as ident                  { if (not (in_matrix ())) & (is_EOL () || is_SOF ())
+  | id as ident                  { if (not (in_matrix ())) && (is_EOL () || is_SOF ())
                                    then shellmode_on := true;
                                    let id8 = (* utf_8_normalize *) ident in
                                    return_id (ID id8)
