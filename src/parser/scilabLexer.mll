@@ -268,7 +268,7 @@ let shellmode_arg = [^ ' ''\t''\r''\n'','';''\'''\"' '(' '=' '/' '+' '|' '&'][^ 
 let assign = "="
 
 rule token = parse
-  | spaces                       { print_lexbuf lexbuf; set_last_token_spaces ();
+  | spaces                       { set_last_token_spaces ();
                                    if !shellmode_on
                                    then shellmode lexbuf
                                    else token lexbuf }
@@ -405,8 +405,8 @@ rule token = parse
   | floating as float            { let f = (float_of_string (convert_scientific_notation float)) in
                                    (* Printf.printf "float[%s = %f]\n" float f; *)
                                    NUM f }
-  | lparen                       { if in_matrix () && !last_token = SPACES then begin print_endline "comma"; lexbuf_to_prev_tok lexbuf; return_token COMMA end
-                                   else if !shellmode_on then begin shellmode_on := false; return_token LPAREN end else (print_endline "LPAREN"; return_token LPAREN) }
+  | lparen                       { if in_matrix () && !last_token = SPACES then begin lexbuf_to_prev_tok lexbuf; return_token COMMA end
+                                   else if !shellmode_on then begin shellmode_on := false; return_token LPAREN end else return_token LPAREN }
   | rparen                       { return_token RPAREN }
   | lbrace                       { incr matrix_level; return_token LBRACE }
   | rbrace                       { decr matrix_level; return_token RBRACE }

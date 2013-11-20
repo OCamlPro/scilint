@@ -6165,7 +6165,7 @@ and __ocaml_lex_token_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
 # 271 "src/parser/scilabLexer.mll"
-                                 ( print_lexbuf lexbuf; set_last_token_spaces ();
+                                 ( set_last_token_spaces ();
                                    if !shellmode_on
                                    then shellmode lexbuf
                                    else token lexbuf )
@@ -6572,8 +6572,8 @@ let
 
   | 64 ->
 # 408 "src/parser/scilabLexer.mll"
-                                 ( if in_matrix () && !last_token = SPACES then begin print_endline "comma"; lexbuf_to_prev_tok lexbuf; return_token COMMA end
-                                   else if !shellmode_on then begin shellmode_on := false; return_token LPAREN end else (print_endline "LPAREN"; return_token LPAREN) )
+                                 ( if in_matrix () && !last_token = SPACES then begin lexbuf_to_prev_tok lexbuf; return_token COMMA end
+                                   else if !shellmode_on then begin shellmode_on := false; return_token LPAREN end else return_token LPAREN )
 # 6578 "src/parser/scilabLexer.ml"
 
   | 65 ->
