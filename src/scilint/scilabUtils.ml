@@ -457,16 +457,6 @@ let string_of_string s =
   done;
   ss
 
-
-
-
-
-
-
-
-
-
-
 (* From ocplib-lang *)
 
 let lines_of_file filename =

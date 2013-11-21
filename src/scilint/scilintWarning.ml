@@ -15,14 +15,28 @@ type local_warning =
   | Overriding_toplevel_function of string * string
   | Unexpected_string_argument of string * int * string * string list
   | Primitive_with_too_many_arguments of string * int
+  | For_var_modif
 
-let print_warning code locs =
+type output_format = TextFormat | XmlFormat
+
+let output_format = ref TextFormat
+
+let is_format_xml () = !output_format = XmlFormat
+
+let set_format_to_xml () = output_format := XmlFormat
+
+let print_warning_in_text code locs =
   List.iteri (fun i ((file, loc), msg) ->
     Printf.printf "File \"%s\", line %i, characters %i-%i:\n"
       file loc.first_line loc.first_column loc.last_column;
     if i = 0 then Printf.printf "Warning W%03d: " code;
     Printf.printf "%s\n" msg
   ) locs
+
+let print_warning code locs = match !output_format with
+  | TextFormat -> print_warning_in_text code locs
+  | XmlFormat -> let str = ScilintFirehosegen.warning_to_firehose code locs in
+                 Printf.printf "%s" str
 
 let local_warning loc w =
   let (code, msg) =
@@ -41,7 +55,10 @@ let local_warning loc w =
       [ loc, "return variable \"" ^ s ^ "\" is never set" ]
     | Return_as_var s -> 7,
       [ loc, "return variable \"" ^ s ^ "\" is used as a local variable" ]
-
+    | For_var_modif -> 995,
+      [ loc,
+        Printf.sprintf "modifying variable of 'for' loop does not change loop behavior" 
+      ]
     | Primitive_with_too_many_arguments (fun_name, i) -> 995,
       [ loc,
         Printf.sprintf "primitive %S called with too many arguments (>= %d)"

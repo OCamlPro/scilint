@@ -32,21 +32,21 @@ module UnsafeFunSy = Map.Make(
 (* To print warning with location *)
 let file = ref ""
 
+type state = { mutable escaped_sy : SetSyWithLoc.t ; 
+               mutable returned_sy : SetSyWithLoc.t;
+               mutable init_sy : SetSy.t; 
+               mutable args_sy : SetSyWithLoc.t; 
+               mutable used_sy : SetSyWithLoc.t;
+               mutable level_fun : int;
+               mutable level_for : int;
+               mutable for_sy : SetSyWithLoc.t }
 
-type state = {
-  level : int;
-  mutable escaped_sy : SetSyWithLoc.t ;
-  mutable returned_sy : SetSyWithLoc.t;
-  mutable init_sy : SetSy.t;
-  mutable args_sy : SetSyWithLoc.t;
-  mutable used_sy : SetSyWithLoc.t }
-
-let new_state level =
-  {
-    level = level;
-    escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
-    init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty;
-    used_sy = SetSyWithLoc.empty }
+let new_state level_fun = 
+  { escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
+    init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty; 
+    used_sy = SetSyWithLoc.empty;
+    level_fun = level_fun; 
+    level_for = 0; for_sy = SetSyWithLoc.empty; }
 
 let table_unsafe_fun = ref UnsafeFunSy.empty
 
@@ -116,7 +116,7 @@ let rec get_assign_ident st e = match e.exp_desc with
       begin
       match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
-          | FieldExp { fieldExp_head; fieldExp_tail } ->
+          | FieldExp { fieldExp_head; fieldExp_tail } -> 
               let (sy, loc) = get_assign_ident st fieldExp_head in
               add_used st sy loc;
               sy, loc
@@ -133,16 +133,16 @@ let rec get_assign_ident st e = match e.exp_desc with
           | ArrayListExp _ -> assert false
           | AssignListExp _ -> assert false
       end
-  | AssignExp _ -> assert false
+  | AssignExp _ -> assert false 
   | CellCallExp _ -> assert false
   | ConstExp _  -> assert false
   | ControlExp _ -> assert false
   | Dec _  -> assert false
   | ListExp _ -> assert false
   | MathExp _  -> assert false
-  | SeqExp _ -> assert false
+  | SeqExp _ -> assert false 
   | ArrayListExp _  -> assert false
-  | AssignListExp _ -> assert false
+  | AssignListExp _ -> assert false 
 
 and analyze_ast st e = match e.exp_desc with
   | SeqExp list -> List.iter (analyze_ast st) list
@@ -251,8 +251,11 @@ and analyze_ast st e = match e.exp_desc with
         | _ -> [| get_assign_ident st assignExp_left_exp |]
       in
       analyze_ast st assignExp_right_exp;
-      st.init_sy <-
-        Array.fold_left (fun acc (sy, _) ->  SetSy.add sy acc) st.init_sy arr_sy;
+      st.init_sy <- 
+        Array.fold_left (fun acc (sy, loc) ->  
+          if st.level_for <> 0 && SetSyWithLoc.mem (sy, loc) st.for_sy
+          then local_warning (!file, loc) For_var_modif;
+          SetSy.add sy acc) st.init_sy arr_sy;
       if is_return_call assignExp_right_exp
       then
         st.returned_sy <- Array.fold_left (fun acc sy ->
@@ -285,9 +288,14 @@ and analyze_cntrl st = function
   | ForExp forExp ->
       let varDec = forExp.forExp_vardec in (* name, init, kind *)
       let sy = varDec.varDec_name in
+      let loc = forExp.forExp_vardec_location in
       analyze_ast st varDec.varDec_init;
       st.init_sy <- SetSy.add sy st.init_sy;
-      analyze_ast st forExp.forExp_body
+      st.for_sy <- SetSyWithLoc.add (sy, loc) st.for_sy;
+      st.level_for <- st.level_for + 1;
+      analyze_ast st forExp.forExp_body;
+      st.level_for <- st.level_for - 1;
+      st.for_sy <- SetSyWithLoc.remove (sy, loc) st.for_sy
   | IfExp ifExp ->
       analyze_ast st ifExp.ifExp_test;
       analyze_ast st ifExp.ifExp_then;
@@ -324,7 +332,7 @@ and analyze_dec st = function
   | VarDec vd -> ()
   | FunctionDec fd ->
       incr cpt_analyze_fun;
-      let new_st = new_state (st.level+1) in
+      let new_st = new_state (st.level_fun+1) in
       let sy = fd.functionDec_symbol in
       let fun_name = symbol_name sy in
       let body = fd.functionDec_body in
@@ -393,7 +401,7 @@ and analyze_dec st = function
 
       end;
 
-      if st.level = 0 then begin
+      if st.level_fun = 0 then begin
         let fun_decl = {
           fun_name = symbol_name sy;
           fun_args = Array.map (fun (sy, _) ->
@@ -431,7 +439,7 @@ and analyze_dec st = function
         SetSyWithLoc.iter (fun (sy, loc) ->
           local_warning (!file, loc) (Unused_arg sy.symbol_name)
         ) unused;
-      if (SetSyWithLoc.cardinal new_st.escaped_sy) <> 0
+      if (SetSyWithLoc.cardinal new_st.escaped_sy) <> 0 
         || (SetSyWithLoc.cardinal new_st.returned_sy) <> 0
       then
         begin
@@ -440,13 +448,13 @@ and analyze_dec st = function
             local_warning (!file, loc) (Uninitialized_var sy.symbol_name)
           ) new_st.escaped_sy;
           add_unsafeFun sy new_st.escaped_sy new_st.returned_sy;
-          if st.level <> 0
+          if st.level_fun <> 0
           then st.init_sy <- SetSy.add sy st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
       else
         begin
-          if st.level <> 0
+          if st.level_fun <> 0
           then st.init_sy <- SetSy.add sy st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
@@ -491,12 +499,5 @@ let print () =
     SetSyWithLoc.iter (fun (sy, loc) -> print_endline ("  > " ^ sy.symbol_name)) esy;
     SetSyWithLoc.iter (fun (sy, loc) -> print_endline ("  < " ^ sy.symbol_name)) rsy
   ) !table_unsafe_fun
-
-
-
-
-
-
-
 
 

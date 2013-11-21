@@ -14,6 +14,10 @@ type local_warning =
   | Overriding_toplevel_function of string * string
   | Unexpected_string_argument of string * int * string * string list
   | Primitive_with_too_many_arguments of string * int
+  | For_var_modif
 
 val local_warning : location -> local_warning -> unit
 
+val set_format_to_xml : unit -> unit
+
+val is_format_xml : unit -> bool
