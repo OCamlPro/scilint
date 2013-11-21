@@ -18,3 +18,6 @@ type local_warning =
 
 val local_warning : location -> local_warning -> unit
 
+val set_format_to_xml : unit -> unit
+
+val is_format_xml : unit -> bool

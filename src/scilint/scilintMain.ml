@@ -7,6 +7,8 @@ let cfg_file = ref false
 let args = Arg.align [
   "-I", Arg.String ScilintProject.add_to_path,
   "DIRECTORY Add DIRECTORY to search path";
+  "-xml", Arg.Unit ScilintWarning.set_format_to_xml,
+  "Set the output format to xml";
 ]
 (* let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base"); *)
 (*             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code"); *)
@@ -112,17 +114,26 @@ let run_test file =
   try
     let ast = parse_file file in
     match ast with
-      | ScilabAst.Exp exp -> print_endline "-> OK\n"
+      | ScilabAst.Exp exp -> 
+          print_endline "-> OK\n";
+          print_endline (ScilabAstPrinter.to_string exp)
       | _ -> print_endline "-> Error not an Exp\n"
   with _ as err -> print_err err
 
 let run_type_file file =
-  Printf.printf "File %S\n%!" file;
+  if not (ScilintWarning.is_format_xml ()) then Printf.printf "File %S\n%!" file;
   try
     let ast = parse_file file in
     match ast with
       | ScilabAst.Exp exp ->
-          ScilabFunctionAnalyze.analyze file exp
+          if ScilintWarning.is_format_xml ()
+          then 
+            begin 
+              ScilintFirehosegen.print_header ();
+              ScilabFunctionAnalyze.analyze file exp;
+              ScilintFirehosegen.print_trailer ()
+            end
+          else ScilabFunctionAnalyze.analyze file exp
       | _ -> print_endline "-> Error not an Exp\n"
   with _ as err -> print_err err
 
@@ -154,7 +165,7 @@ let rec run_tests fun_iter dirname =
   ) files
 
 let _ =
-  Printf.printf "scilint: scilab code checker, by OCamlPro SAS\n%!";
+  (* Printf.printf "scilint: scilab code checker, by OCamlPro SAS\n%!"; *)
   Arg.parse args (fun s -> run_type_file s) usage;
   if !test_flag
   then
@@ -177,7 +188,7 @@ let _ =
 
          (* "/home/michael/git_scilab/richelieu/scilab/modules/jit_ocaml/test_stats" *)
         ] in
-      List.iter (run_tests run_analyze_file) dir_tests;
+      List.iter (run_tests run_type_file) dir_tests;
       ScilabAstStats.print_fun_stats ();
       Printf.printf "\n Analyzes run on %i files.\n" !cpt_files
     end

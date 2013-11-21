@@ -17,7 +17,8 @@ OCAML_PARSER_MLS = \
 
 OCAML_PARSER_MLIS= \
 	src/parser/uutf.mli \
-	src/parser/scilabParser.mli
+	src/parser/scilabParser.mli \
+	src/scilint/config/scilintParser.mli
 
 OCAML_SCILINT_MLS = \
 	src/scilint/config/scilintTree.ml \
@@ -25,6 +26,7 @@ OCAML_SCILINT_MLS = \
 	src/scilint/config/scilintLexer.ml \
 	src/scilint/config/scilintConfig.ml \
 	src/scilint/scilabUtils.ml \
+	src/scilint/scilintFirehosegen.ml \
 	src/scilint/scilintWarning.ml \
 	src/scilint/scilintProject.ml \
 	src/scilint/scilabFunctionAnalyze.ml \

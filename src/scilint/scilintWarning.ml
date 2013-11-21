@@ -17,13 +17,26 @@ type local_warning =
   | Primitive_with_too_many_arguments of string * int
   | For_var_modif
 
-let print_warning code locs =
+type output_format = TextFormat | XmlFormat
+
+let output_format = ref TextFormat
+
+let is_format_xml () = !output_format = XmlFormat
+
+let set_format_to_xml () = output_format := XmlFormat
+
+let print_warning_in_text code locs =
   List.iteri (fun i ((file, loc), msg) ->
     Printf.printf "File \"%s\", line %i, characters %i-%i:\n"
       file loc.first_line loc.first_column loc.last_column;
     if i = 0 then Printf.printf "Warning W%03d: " code;
     Printf.printf "%s\n" msg
   ) locs
+
+let print_warning code locs = match !output_format with
+  | TextFormat -> print_warning_in_text code locs
+  | XmlFormat -> let str = ScilintFirehosegen.warning_to_firehose code locs in
+                 Printf.printf "%s" str
 
 let local_warning loc w =
   let (code, msg) =
