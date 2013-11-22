@@ -9,12 +9,12 @@ type local_warning =
   | Var_arg_ret of string (* W005 *)
   | Unset_ret of string (* W006 *)
   | Return_as_var of string (* W007 *)
+  | For_var_modif
   | Overriding_primitive of string
   | Overriding_declared_function of string * location
   | Overriding_toplevel_function of string * string
   | Unexpected_string_argument of string * int * string * string list
   | Primitive_with_too_many_arguments of string * int
-  | For_var_modif
 
 val local_warning : location -> local_warning -> unit
 

@@ -32,20 +32,20 @@ module UnsafeFunSy = Map.Make(
 (* To print warning with location *)
 let file = ref ""
 
-type state = { mutable escaped_sy : SetSyWithLoc.t ; 
+type state = { mutable escaped_sy : SetSyWithLoc.t ;
                mutable returned_sy : SetSyWithLoc.t;
-               mutable init_sy : SetSy.t; 
-               mutable args_sy : SetSyWithLoc.t; 
+               mutable init_sy : SetSy.t;
+               mutable args_sy : SetSyWithLoc.t;
                mutable used_sy : SetSyWithLoc.t;
                mutable level_fun : int;
                mutable level_for : int;
                mutable for_sy : SetSyWithLoc.t }
 
-let new_state level_fun = 
+let new_state level_fun =
   { escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
-    init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty; 
+    init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty;
     used_sy = SetSyWithLoc.empty;
-    level_fun = level_fun; 
+    level_fun = level_fun;
     level_for = 0; for_sy = SetSyWithLoc.empty; }
 
 let table_unsafe_fun = ref UnsafeFunSy.empty
@@ -92,6 +92,8 @@ let array_forall f t =
     true
   with _ -> false
 
+let function_call_analysis = Hashtbl.create 113
+
 let rec get_assign_ident st e = match e.exp_desc with
   | Var var ->
       begin
@@ -116,7 +118,7 @@ let rec get_assign_ident st e = match e.exp_desc with
       begin
       match exp.callExp_name.exp_desc with
           | Var { var_desc = SimpleVar sy; var_location = loc } -> (sy, loc)
-          | FieldExp { fieldExp_head; fieldExp_tail } -> 
+          | FieldExp { fieldExp_head; fieldExp_tail } ->
               let (sy, loc) = get_assign_ident st fieldExp_head in
               add_used st sy loc;
               sy, loc
@@ -133,16 +135,16 @@ let rec get_assign_ident st e = match e.exp_desc with
           | ArrayListExp _ -> assert false
           | AssignListExp _ -> assert false
       end
-  | AssignExp _ -> assert false 
+  | AssignExp _ -> assert false
   | CellCallExp _ -> assert false
   | ConstExp _  -> assert false
   | ControlExp _ -> assert false
   | Dec _  -> assert false
   | ListExp _ -> assert false
   | MathExp _  -> assert false
-  | SeqExp _ -> assert false 
+  | SeqExp _ -> assert false
   | ArrayListExp _  -> assert false
-  | AssignListExp _ -> assert false 
+  | AssignListExp _ -> assert false
 
 and analyze_ast st e = match e.exp_desc with
   | SeqExp list -> List.iter (analyze_ast st) list
@@ -159,44 +161,6 @@ and analyze_ast st e = match e.exp_desc with
               Array.iter (analyze_ast st) exp.callExp_args;
 
               begin try
-
-                match fun_name with
-                "tlist" ->
-                  let max_args =
-                    match exp.callExp_args.(0).exp_desc with
-
-                    | MathExp (MatrixExp
-                          { matrixExp_lines =
-                              [| { matrixLineExp_columns = array } |] } ) when
-                      array_forall (fun exp ->
-                        match exp.exp_desc with
-                         ConstExp (StringExp _) -> true
-                        | _ -> false
-                      ) array ->
-
-                          Array.length array
-
-                    | MathExp (MatrixExp
-                          { matrixExp_lines = array }) when
-                        array_forall (fun line ->
-                          match line.matrixLineExp_columns with
-                            [| { exp_desc = ConstExp (StringExp _) } |] -> true
-                          | _ -> false
-                        ) array ->
-                          Array.length array
-
-                      | Var _ -> max_int
-                      | ConstExp (StringExp _) -> 1
-
-                      | _ -> max_int (* assert false *)
-                  in
-                  if Array.length exp.callExp_args > max_args then
-                    local_warning (!file,
-                      exp.callExp_args.(max_args).exp_location)
-                      (Primitive_with_too_many_arguments (fun_name, max_args));
-
-                | _ ->
-
                   Array.iteri (fun i arg ->
                     begin match find_argument fun_name i with
                         None -> ()
@@ -218,6 +182,16 @@ and analyze_ast st e = match e.exp_desc with
               ) exp.callExp_args;
               with Exit -> ()
               end;
+
+              begin try
+                let fs = Hashtbl.find_all function_call_analysis fun_name in
+                List.iter (fun f -> try
+                  f fun_name exp
+                with _ -> ()
+                ) fs
+              with Not_found -> ()
+              end;
+
           | FieldExp { fieldExp_head; fieldExp_tail } ->
               analyze_ast st fieldExp_head
           (* TODO : tail should be a field of head *)
@@ -251,8 +225,8 @@ and analyze_ast st e = match e.exp_desc with
         | _ -> [| get_assign_ident st assignExp_left_exp |]
       in
       analyze_ast st assignExp_right_exp;
-      st.init_sy <- 
-        Array.fold_left (fun acc (sy, loc) ->  
+      st.init_sy <-
+        Array.fold_left (fun acc (sy, loc) ->
           if st.level_for <> 0 && SetSyWithLoc.mem (sy, loc) st.for_sy
           then local_warning (!file, loc) For_var_modif;
           SetSy.add sy acc) st.init_sy arr_sy;
@@ -439,7 +413,7 @@ and analyze_dec st = function
         SetSyWithLoc.iter (fun (sy, loc) ->
           local_warning (!file, loc) (Unused_arg sy.symbol_name)
         ) unused;
-      if (SetSyWithLoc.cardinal new_st.escaped_sy) <> 0 
+      if (SetSyWithLoc.cardinal new_st.escaped_sy) <> 0
         || (SetSyWithLoc.cardinal new_st.returned_sy) <> 0
       then
         begin
@@ -501,3 +475,46 @@ let print () =
   ) !table_unsafe_fun
 
 
+
+
+
+let tlist_warnings fun_name exp =
+  let max_args =
+    match exp.callExp_args.(0).exp_desc with
+
+    | MathExp (MatrixExp
+          { matrixExp_lines =
+              [| { matrixLineExp_columns = array } |] } ) when
+        array_forall (fun exp ->
+          match exp.exp_desc with
+            ConstExp (StringExp _) -> true
+          | _ -> false
+        ) array ->
+
+      Array.length array
+
+    | MathExp (MatrixExp
+          { matrixExp_lines = array }) when
+        array_forall (fun line ->
+          match line.matrixLineExp_columns with
+            [| { exp_desc = ConstExp (StringExp _) } |] -> true
+          | _ -> false
+        ) array ->
+      Array.length array
+
+    | Var _ -> max_int
+    | ConstExp (StringExp _) -> 1
+
+    | _ -> max_int (* assert false *)
+  in
+  if Array.length exp.callExp_args > max_args then
+    local_warning (!file,
+      exp.callExp_args.(max_args).exp_location)
+      (Primitive_with_too_many_arguments (fun_name, max_args))
+
+let _ =
+  List.iter (fun (fun_name, f) ->
+    Hashtbl.add function_call_analysis fun_name f
+  ) [
+    "tlist", tlist_warnings;
+  ]

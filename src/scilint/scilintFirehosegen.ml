@@ -7,18 +7,21 @@ let print_header () =
 
 let warning_to_firehose code locs =
   let buf = Buffer.create 1024 in
-  let ((file, loc), msg) = List.hd locs in
   Printf.bprintf buf "<issue test-id=\"W%03d\">\n" code;
-  Printf.bprintf buf "<message>%s</message>\n" msg;
-  Printf.bprintf buf "<location>\n";
-  Printf.bprintf buf "<file given-path=\"%s\"></file>\n" file;
-  Printf.bprintf buf "<range>\n";
-  Printf.bprintf buf "<point line=\"%i\" column=\"%i\"/>\n" loc.first_line loc.first_column;
-  Printf.bprintf buf "<point line=\"%i\" column=\"%i\"/>\n" loc.first_line loc.last_column;
-  Printf.bprintf buf "</range>\n</location>\n</issue>\n";
+  List.iter (fun ((file, loc), msg) ->
+    Printf.bprintf buf "<message>%s</message>\n" msg;
+    Buffer.add_string buf "<location>\n";
+    Printf.bprintf buf "<file given-path=\"%s\"></file>\n" file;
+    Buffer.add_string buf "<range>\n";
+    Printf.bprintf buf "<point line=\"%i\" column=\"%i\"/>\n" loc.first_line loc.first_column;
+    Printf.bprintf buf "<point line=\"%i\" column=\"%i\"/>\n" loc.first_line loc.last_column;
+    Buffer.add_string buf "</range>\n</location>\n";
+  ) locs;
+  Buffer.add_string buf "</issue>\n";
+
   Buffer.contents buf
 
-let print_trailer () = 
+let print_trailer () =
   Printf.printf "\n</results>\n</analysis>"
 
 

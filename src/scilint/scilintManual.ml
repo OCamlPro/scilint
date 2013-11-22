@@ -98,6 +98,64 @@ a useless copy when returning a matrix." ]
 
   ];
 
+  008 , "for variable modified in for loop", [0;3],
+  [
+    PAR [ S
+            "Modifying the variable of a 'for' loop does not change the
+loop behavior."; ];
+    CODE "for i=1:100
+   i=i+2; // W: modifying variable of 'for' loop does not change loop behavior
+   disp(i);
+end";
+  ];
+
+  009, "redefinition of primitive function", [0;3],
+  [ PAR [ S "Redefining a primitive is usually a bad idea" ];
+    CODE "function disp(x) // W009: redefinition of primitive 'disp'
+  disp(x+1)
+endfunction"
+        ];
+
+  010, "redefinition of local function", [0;3], [
+    PAR [ S "The code is redefining a function that was already defined in this scope." ];
+    CODE "function f()
+  function pr(x), disp(x),endfunction
+  function pr(x,y) // W010: redefinition of local function 'pr'
+    disp(x,y)
+  endfunction
+endfunction
+"
+
+  ];
+
+  011, "redefinition of library function", [0;3], [
+    PAR [ S "The code is redefining a function that was already defined in the toplevel scope." ];
+    CODE "function pr(x), disp(x),endfunction
+function f()
+   function pr(x,y) // W010: redefinition of library function 'pr'
+     disp(x,y)
+   endfunction
+endfunction
+"
+
+  ];
+
+  012 , "unexpected string argument", [0;3],
+  [
+    PAR [ S "Some functions expect a limited list of strings as flags. If another string is passed, it is usually an error." ];
+    CODE "function f()
+   execstr(\"x=1\", \"x=2\"); // W012: \"x=2\" instead of \"catcherr\"
+endfunction";
+  ];
+
+  013 , "primitive with too many arguments", [0;3],
+  [
+    PAR [ S "Some primitives expect a limited number of arguments. Providing more arguments will usually trigger an error at runtime." ];
+    CODE "function f(a,b)
+   disp(strcat('a=',a,'b=',b); // W013: 'strcat' expects fewer arguments
+endfunction";
+  ];
+
   0 , "variable defined but not used", [],
   [
     CODE "function f()
@@ -122,17 +180,6 @@ endfunction"
   0 , "use of ``execstr'' function     ", [],
   [
     CODE "x = execstr(instr, 'catcherr'); // W: avoid use of 'execstr' "
-  ];
-
-  0 , "for variable modified in for loop", [],
-  [
-    PAR [ S
-            "Modifying the variable of a 'for' loop does not change the
-loop behavior."; ];
-    CODE "for i=1:100
-   i=i+2; // W: modifying variable of 'for' loop does not change loop behavior
-   disp(i);
-end";
   ];
 
   0 , "for bounds modified during for loop", [],
@@ -285,12 +332,6 @@ endfunction;
 x = max(1);  // W 202 : \"max\" used with too few arguments"];
   ];
 
-  0, "redefinition of primitive function", [], [];
-
-  0, "redefinition of standard library function", [], [
-    PAR [ S "Where is the list of standard library functions ?" ];
-  ];
-
   0, "labeled argument does not exist", [], [
     CODE "function f(a, b)
 endfunction
@@ -367,3 +408,51 @@ let warnings = [
   style_warnings;
 
 ]
+
+let changelog = [
+    "0.1", "Sep 20, 2013", [
+      "General", [
+        "First public appearance of Scilint" ;
+      ];
+      "Warnings", [
+        "Warning W001: variable not initialized";
+        "Warning W002: unused function argument";
+      ];
+    ];
+
+    "0.2", "Nov 12, 2013", [
+      "Warnings:", [
+        "Warning W003: duplicate function argument";
+        "Warning W004:duplicate return variable";
+        "Warning W005: function argument used as return variable";
+        "Warning W006: return variable is never set";
+        "Warning W007: return variable used as a local variable";
+      ]
+    ];
+
+    "0.3", "Nov 22, 2013", [
+      "General:", [
+        "Support for FireHose output format";
+      ];
+
+      "Arguments:", [
+        "New argument -I, to add a directory to the search path";
+        "New argument -xml, to output in FireHost format";
+      ];
+
+      "Fixes:", [
+        "Remove assertion failures during analysis";
+      ];
+
+      "Warnings:", [
+        "Warning W008: for variable modified in for loop";
+        "Warning W009: redefinition of primitive function";
+        "Warning W010: redefinition of local function";
+        "Warning W011: redefinition of library function";
+        "Warning W012: unexpected string argument";
+        "Warning W013: primitive with too many arguments";
+      ];
+    ];
+  ]
+
+

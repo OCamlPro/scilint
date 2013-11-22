@@ -18,10 +18,15 @@ W004 & duplicate return variable   & 0.2 \\ \hline
 W005 & function argument used as return variable   & 0.2 \\ \hline
 W006 & return variable is never set & 0.2 \\ \hline
 W007 & return variable used as a local variable & 0.2 \\ \hline
+W008 & for variable modified in for loop & 0.3 \\ \hline
+W009 & redefinition of primitive function & 0.3 \\ \hline
+W010 & redefinition of local function & 0.3 \\ \hline
+W011 & redefinition of library function & 0.3 \\ \hline
+W012 & unexpected string argument & 0.3 \\ \hline
+W013 & primitive with too many arguments & 0.3 \\ \hline
 W000 & variable defined but not used &  \\ \hline
 W000 & variable redefined before being used &  \\ \hline
 W000 & use of ``execstr'' function      &  \\ \hline
-W000 & for variable modified in for loop &  \\ \hline
 W000 & for bounds modified during for loop &  \\ \hline
 W000 & keyword used as a variable &  \\ \hline
 W000 & use of return/resume to define variables should be avoided &  \\ \hline
@@ -48,8 +53,6 @@ W000 & duplicate function identifier &  \\ \hline
 W000 & type not defined in redefinition &  \\ \hline
 W000 & too many arguments in function call &  \\ \hline
 W000 & too few arguments in function call  &  \\ \hline
-W000 & redefinition of primitive function &  \\ \hline
-W000 & redefinition of standard library function &  \\ \hline
 W000 & labeled argument does not exist &  \\ \hline
 W000 & toplevel expression in file &  \\ \hline
 W000 & labeled argument in varargin &  \\ \hline
@@ -249,6 +252,100 @@ a useless copy when returning a matrix.
 
 
 
+\subsection{W008 --- for variable modified in for loop}
+
+
+
+
+Modifying the variable of a 'for' loop does not change the
+loop behavior.
+
+\begin{verbatim}
+for i=1:100
+   i=i+2; // W: modifying variable of 'for' loop does not change loop behavior
+   disp(i);
+end
+\end{verbatim}
+
+
+\subsection{W009 --- redefinition of primitive function}
+
+
+
+
+Redefining a primitive is usually a bad idea
+
+\begin{verbatim}
+function disp(x) // W009: redefinition of primitive 'disp'
+  disp(x+1)
+endfunction
+\end{verbatim}
+
+
+\subsection{W010 --- redefinition of local function}
+
+
+
+
+The code is redefining a function that was already defined in this scope.
+
+\begin{verbatim}
+function f()
+  function pr(x), disp(x),endfunction
+  function pr(x,y) // W010: redefinition of local function 'pr'
+    disp(x,y)
+  endfunction
+endfunction
+
+\end{verbatim}
+
+
+\subsection{W011 --- redefinition of library function}
+
+
+
+
+The code is redefining a function that was already defined in the toplevel scope.
+
+\begin{verbatim}
+function pr(x), disp(x),endfunction
+function f()
+   function pr(x,y) // W010: redefinition of library function 'pr'
+     disp(x,y)
+   endfunction
+endfunction
+
+\end{verbatim}
+
+
+\subsection{W012 --- unexpected string argument}
+
+
+
+
+Some functions expect a limited list of strings as flags. If another string is passed, it is usually an error.
+
+\begin{verbatim}
+function f()
+   execstr("x=1", "x=2"); // W012: "x=2" instead of "catcherr"
+endfunction
+\end{verbatim}
+
+
+\subsection{W013 --- primitive with too many arguments}
+
+
+
+
+Some primitives expect a limited number of arguments. Providing more arguments will usually trigger an error at runtime.
+
+\begin{verbatim}
+function f(a,b)
+   disp(strcat('a=',a,'b=',b); // W013: 'strcat' expects fewer arguments
+endfunction
+\end{verbatim}
+
+
 \subsection{W000 --- variable defined but not used}
 
 
@@ -283,22 +380,6 @@ endfunction
 
 \begin{verbatim}
 x = execstr(instr, 'catcherr'); // W: avoid use of 'execstr' 
-\end{verbatim}
-
-
-\subsection{W000 --- for variable modified in for loop}
-
-
-
-
-Modifying the variable of a 'for' loop does not change the
-loop behavior.
-
-\begin{verbatim}
-for i=1:100
-   i=i+2; // W: modifying variable of 'for' loop does not change loop behavior
-   disp(i);
-end
 \end{verbatim}
 
 
@@ -511,20 +592,6 @@ endfunction;
 x = max(1);  // W 202 : "max" used with too few arguments
 \end{verbatim}
 
-
-
-
-\subsection{W000 --- redefinition of primitive function}
-
-
-
-
-\subsection{W000 --- redefinition of standard library function}
-
-
-
-
-Where is the list of standard library functions ?
 
 
 
