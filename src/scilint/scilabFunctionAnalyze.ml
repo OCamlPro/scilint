@@ -165,19 +165,45 @@ and analyze_ast st e = match e.exp_desc with
                     begin match find_argument fun_name i with
                         None -> ()
                       | Some spec ->
-                    match spec, arg.exp_desc with
-                      StrEnum list,
-                      ConstExp (StringExp { stringExp_value = s }) ->
-                      let s = ScilabUtils.string_of_string s in
-                      if not (List.mem s list) then
-                        local_warning (!file, arg.exp_location)
-                          (Unexpected_string_argument
-                             (fun_name, i, s, list))
-                    | StrEnum _, _ -> ()
-                    | TooMany, _ ->
-                      local_warning (!file, arg.exp_location)
-                        (Primitive_with_too_many_arguments (fun_name, i));
-                      raise Exit
+                        match spec, arg.exp_desc with
+
+                        | StrEnum list,
+                          ConstExp (StringExp { stringExp_value = s }) ->
+                          let s = ScilabUtils.string_of_string s in
+                          if not (List.mem s list) then
+                            local_warning (!file, arg.exp_location)
+                              (Unexpected_string_argument
+                                 (fun_name, i, s, list))
+                        | StrEnum _, _ -> ()
+
+                        | Type TString, ConstExp (StringExp _) -> ()
+                        | Type TString, ConstExp _ ->
+                          local_warning (!file, arg.exp_location)
+                              (Unexpected_argument_type
+                                 (fun_name, i, "string"))
+                        | Type TString, _ -> ()
+
+                        | Type TInt, ConstExp (DoubleExp _) -> ()
+                        | Type TInt, ConstExp _ ->
+                          local_warning (!file, arg.exp_location)
+                              (Unexpected_argument_type
+                                 (fun_name, i, "int"))
+                        | Type TInt, _ -> ()
+
+                        | IntEnum (min, max),
+                          ConstExp (DoubleExp { doubleExp_value = v }) ->
+                          let v' = int_of_float (v +. 0.1) in
+                          if v' < min || v' > max then
+                          local_warning (!file, arg.exp_location)
+                            (Int_argument_out_of_range
+                               (fun_name, i, v, min, max));
+                        | IntEnum _, _ -> ()
+
+                        | TooMany, _ ->
+                          local_warning (!file, arg.exp_location)
+                            (Primitive_with_too_many_arguments (fun_name, i));
+                          raise Exit
+
                 end;
               ) exp.callExp_args;
               with Exit -> ()

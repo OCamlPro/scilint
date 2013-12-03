@@ -42,9 +42,15 @@ type fun_status =
   | FunPrimitive
   | FunUnknown
 
+type type_desc =
+  | TString
+  | TInt
+
 type arg_spec =
-    StrEnum of string list
+  | StrEnum of string list
+  | IntEnum of int * int
   | TooMany
+  | Type of type_desc
 
 let funs = Hashtbl.create 1113
 let arguments = Hashtbl.create 1113
@@ -54,7 +60,8 @@ let init_primitives () =
     let prims = ScilabUtils.lines_of_file
         (Filename.concat scilint_home "primitives.scilint") in
     List.iter (fun p ->
-      Hashtbl.add funs p FunPrimitive
+      if String.length p > 0 && p.[0] <> '#' then
+        Hashtbl.add funs p FunPrimitive
     ) prims
   with exc ->
     Printf.eprintf "Warning: exception %S during initialization\n%!"
@@ -65,11 +72,16 @@ let init_arguments () =
     let arg_filename = Filename.concat scilint_home "arguments.scilint" in
     let prims = ScilabUtils.lines_of_file arg_filename in
     List.iteri (fun i p ->
+      if String.length p > 0 && p.[0] <> '#' then
       match ScilabUtils.split_simplify p ':' with
         prim :: arg_num :: spec ->
         let spec = match spec with
           | "STRENUM" :: list -> Some (StrEnum list)
+          | "INTENUM" :: min::max::_ ->
+            Some (IntEnum (int_of_string min, int_of_string max))
           | "TOOMANY" :: _ -> Some TooMany
+          | "INT" :: _ -> Some (Type TInt)
+          | "STRING" :: _ -> Some (Type TString)
           | _ -> None
         in
         begin match spec with

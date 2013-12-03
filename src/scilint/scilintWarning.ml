@@ -11,12 +11,13 @@ type local_warning =
   | Unset_ret of string (* W006 *)
   | Return_as_var of string (* W007 *)
   | For_var_modif (* W008 *)
-  | Overriding_primitive of string (* W009 *)
-  | Overriding_declared_function of string * location (* W010 *)
-  | Overriding_toplevel_function of string * string (* W011 *)
-  | Unexpected_string_argument of string * int * string * string list (* W012 *)
-  | Primitive_with_too_many_arguments of string * int (* W013 *)
-
+  | Primitive_with_too_many_arguments of string * int (* W009 *)
+  | Overriding_primitive of string (* W010 *)
+  | Overriding_declared_function of string * location (* W011 *)
+  | Overriding_toplevel_function of string * string (* W012 *)
+  | Unexpected_string_argument of string * int * string * string list (* W013 *)
+  | Unexpected_argument_type of string * int * string (* W014 *)
+  | Int_argument_out_of_range of string * int * float * int * int (* W015 *)
 
 type output_format = TextFormat | XmlFormat
 
@@ -78,6 +79,16 @@ let local_warning loc w =
       [ loc,
         Printf.sprintf "Function %S does not expect %S as argument %d,\nShould be one of: %s"
           fun_name s (i+1) (String.concat ", " possible)
+      ]
+    | Unexpected_argument_type (fun_name, i, expected_type) -> 14,
+      [ loc,
+        Printf.sprintf "Function %S expects type %s as argument %d\n"
+          fun_name expected_type (i+1)
+      ]
+    | Int_argument_out_of_range (fun_name, i, v, min, max) -> 15,
+      [ loc,
+        Printf.sprintf "Function %S does not expect %.1f as argument %d\nShould be between %d and %d"
+          fun_name v (i+1) min max
       ]
 
   in

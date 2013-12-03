@@ -2,17 +2,18 @@ _
 about
 abs
 acos
-addcb
+# addcb NOT FOUND
 addf
 addhistory
 addinter
 amell
 and
 argn
-arl2_ius
+# arl2_ius NOT FOUND
 ascii
 asin
 atan
+# After here are primitives not yet added to arguments.scilint
 backslash
 balanc
 banner
