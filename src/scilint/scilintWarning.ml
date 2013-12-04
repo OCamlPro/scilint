@@ -27,16 +27,28 @@ let set_format_to_xml () = output_format := XmlFormat
 
 let print_warning_in_text code locs =
   List.iteri (fun i ((file, loc), msg) ->
-    Printf.printf "File \"%s\", line %i, characters %i-%i:\n"
-      file loc.first_line loc.first_column loc.last_column;
-    if i = 0 then Printf.printf "Warning W%03d: " code;
-    Printf.printf "%s\n" msg
+    if loc.first_line = loc.last_line
+    then
+      begin
+        Printf.printf "File \"%s\", line %i, characters %i-%i:\n"
+          file loc.first_line loc.first_column loc.last_column;
+        if i = 0 then Printf.printf "Warning W%03d: " code;
+        Printf.printf "%s\n" msg
+      end
+    else
+      begin
+        Printf.printf "File \"%s\", line %i-%i, characters %i-%i:\n"
+          file loc.first_line loc.last_line loc.first_column loc.last_column;
+        if i = 0 then Printf.printf "Warning W%03d: " code;
+        Printf.printf "%s\n" msg
+      end
   ) locs
 
 let print_warning code locs = match !output_format with
   | TextFormat -> print_warning_in_text code locs
-  | XmlFormat -> let str = ScilintFirehosegen.warning_to_firehose code locs in
-                 Printf.printf "%s" str
+  | XmlFormat -> 
+      let str = ScilintFirehosegen.warning_to_firehose code locs in
+      Printf.printf "%s" str
 
 let local_warning loc w =
   let (code, msg) =

@@ -6,8 +6,13 @@ let add_flag = ref false
 
 let add = ref ""
 
-let list_white_space = [' '; '\012'; '\n'; '\r'; '\t']
+let corrupt_zone = ref []
 
+let corrupt = ref []
+
+let cpt_line = ref 1
+
+let list_white_space = [' '; '\012'; '\n'; '\r'; '\t']
 
 (* To deal with '..       \n' *)
 let rec find_last_index index str =
@@ -55,8 +60,6 @@ let rec get_lc_with_dotdot_index index str =
       else -1
     else get_lc_with_dotdot_index (index - 1) str
    
-  
-
 let rec pre_parse_aux buf ch =
   try
     let line = input_line ch in
@@ -76,11 +79,14 @@ let rec pre_parse_aux buf ch =
             let new_line = line ^ !add ^ "\n" in
             add_flag := false;
             add := "";
+            incr cpt_line;
+            incr cpt_line;
             Buffer.add_string buf new_line;
             pre_parse_aux buf ch
           end
         else 
           begin
+            incr cpt_line;
             Buffer.add_string buf (line ^ "\n");
             pre_parse_aux buf ch
           end
@@ -104,18 +110,22 @@ let rec pre_parse_aux buf ch =
         if last_2_char = '.'
         then
           begin
-            (* "   \n" *)
+            (* "..\n" *)
+            if List.length !corrupt <> 0 then incr cpt_line;
+            corrupt := (!cpt_line, last_2_index)::!corrupt;
             add_flag := true;
-            add := !add ^ "   \n";
+            add := !add ^ "  \n";
             let line_without = String.sub line 0 last_2_index in
             Buffer.add_string buf line_without;
             pre_parse_aux buf ch
           end
         else
           begin
-            (* "  \n" *)
+            (* "...\n" *)
+            if List.length !corrupt <> 0 then incr cpt_line;
+            corrupt := (!cpt_line, last_1_index)::!corrupt;
             add_flag := true;
-            add := !add ^ "  \n";
+            add := !add ^ "   \n";
             let line_without = String.sub line 0 last_1_index in
             Buffer.add_string buf line_without;
             pre_parse_aux buf ch
@@ -124,14 +134,19 @@ let rec pre_parse_aux buf ch =
         if !add_flag
         then 
           begin
+            if List.length !corrupt <> 0 then corrupt_zone := (List.rev !corrupt)::!corrupt_zone;
+            corrupt := [];
             let new_line = line ^ !add ^ "\n" in
             add_flag := false;
             add := "";
+            incr cpt_line;
+            incr cpt_line;
             Buffer.add_string buf new_line;
             pre_parse_aux buf ch
           end
         else 
           begin 
+            incr cpt_line;
             Buffer.add_string buf (line ^ "\n");
             pre_parse_aux buf ch
           end
@@ -144,6 +159,8 @@ let rec pre_parse_aux buf ch =
         then
           begin
             (* "  \n" *)
+            if List.length !corrupt <> 0 then incr cpt_line;
+            corrupt := (!cpt_line, last_1_index)::!corrupt;
             add_flag := true;
             add := !add ^ "  \n";
             let line_without = String.sub line 0 last_1_index in
@@ -154,21 +171,43 @@ let rec pre_parse_aux buf ch =
           if !add_flag
           then
             begin
+              if List.length !corrupt <> 0 then corrupt_zone := (List.rev !corrupt)::!corrupt_zone;
+              corrupt := [];
               let new_line = line ^ !add ^ "\n" in
               add_flag := false;
               add := "";
+              incr cpt_line;
+              incr cpt_line;
               Buffer.add_string buf new_line;
               pre_parse_aux buf ch
             end
           else
             begin
+              incr cpt_line;
               Buffer.add_string buf (line ^ "\n");
               pre_parse_aux buf ch
             end
       else
         begin 
-          Buffer.add_string buf (line ^ "\n");
-          pre_parse_aux buf ch
+           if !add_flag
+          then
+            begin
+              if List.length !corrupt <> 0 then corrupt_zone := (List.rev !corrupt)::!corrupt_zone;
+              corrupt := [];
+              let new_line = line ^ !add ^ "\n" in
+              add_flag := false;
+              add := "";
+              incr cpt_line;
+              incr cpt_line;
+              Buffer.add_string buf new_line;
+              pre_parse_aux buf ch
+            end
+           else
+             begin
+               incr cpt_line;
+               Buffer.add_string buf (line ^ "\n");
+               pre_parse_aux buf ch
+             end
         end
   with 
     | End_of_file -> 
@@ -190,4 +229,5 @@ let pre_parse ch =
   let buf = Buffer.create 1024 in
   add := "";
   add_flag := false;
-  pre_parse_aux buf ch
+  let new_src = pre_parse_aux buf ch in
+  new_src, List.rev !corrupt_zone

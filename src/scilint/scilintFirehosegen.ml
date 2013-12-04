@@ -14,7 +14,7 @@ let warning_to_firehose code locs =
   Printf.bprintf buf "<file given-path=\"%s\"></file>\n" file;
   Printf.bprintf buf "<range>\n";
   Printf.bprintf buf "<point line=\"%i\" column=\"%i\"/>\n" loc.first_line loc.first_column;
-  Printf.bprintf buf "<point line=\"%i\" column=\"%i\"/>\n" loc.first_line loc.last_column;
+  Printf.bprintf buf "<point line=\"%i\" column=\"%i\"/>\n" loc.last_line loc.last_column;
   Printf.bprintf buf "</range>\n</location>\n</issue>\n";
   Buffer.contents buf
 

@@ -1,6 +1,7 @@
 %{
   open ScilabAst
   open Lexing
+  open ScilabParserUtils
 
   module Sy = ScilabSymbol
 
@@ -8,16 +9,78 @@
     | ConstExp (StringExp strexp) -> strexp.stringExp_value
     | _ -> failwith "shouldn't happen"
 
-  let create_loc start_pos end_pos =
-    { first_line = start_pos.pos_lnum;
-      first_column = (start_pos.pos_cnum - start_pos.pos_bol);
+  let uncorrupt_loc start_pos end_pos =
+    let start_line = start_pos.pos_lnum and
+        start_col = start_pos.pos_cnum - start_pos.pos_bol in
+    { first_line = start_line;
+      first_column = start_col;
       last_line = end_pos.pos_lnum;
       last_column = (end_pos.pos_cnum - end_pos.pos_bol) }
+      
+  let check_overlap start_pos end_pos list_bl = 
+    let start_col = start_pos.pos_cnum - start_pos.pos_bol in
+    let end_col = end_pos.pos_cnum - end_pos.pos_bol in
+    let zone_overlaped = 
+      List.filter (fun (line, col) -> 
+        start_col < col && end_col > col) (List.hd list_bl) in
+    List.length zone_overlaped <> 0  
 
+  let add_overlap start_pos end_pos nbr_line char_last_breakline list_bl =
+    let start_line = start_pos.pos_lnum in
+    let start_col = start_pos.pos_cnum - start_pos.pos_bol in
+    let end_col = end_pos.pos_cnum - end_pos.pos_bol in
+    let zone_overlaped = 
+      List.filter (fun (line, col) -> 
+        start_col < col && end_col > col) (List.hd list_bl) in
+    if List.length zone_overlaped <> 0
+    then 
+      let nbr_ol_line = List.length zone_overlaped in
+        { first_line = start_line + nbr_line;
+          first_column = start_col - char_last_breakline;
+          last_line = start_line + nbr_line + nbr_ol_line;
+          last_column = end_col - start_col - 1 }
+    else uncorrupt_loc start_pos end_pos
+  
+  let create_loc start_pos end_pos =
+    let start_line = start_pos.pos_lnum in 
+    let start_col = start_pos.pos_cnum - start_pos.pos_bol in
+    if start_line < !list_line_corrupt_min || start_line > !list_line_corrupt_max
+    then uncorrupt_loc start_pos end_pos
+    else
+      let list_line_breakline = 
+        List.filter (fun zone -> 
+          let (line, col) = List.hd zone in line = start_line
+        ) !list_line_corrupt in
+      let list_breakline = 
+        List.filter (fun zone -> 
+          let (line, col) = List.hd zone in col <= start_col
+        ) list_line_breakline in
+      if List.length list_line_breakline <> 0
+      then
+        if List.length list_breakline <> 0
+        then 
+          let list_char = 
+            List.filter (fun (_, c) ->  c <= start_col) (List.hd list_breakline) in
+          let nbr_line = List.length list_char in
+          let (_, char_last_breakline) = List.hd (List.rev list_char) in
+          if check_overlap start_pos end_pos list_breakline 
+          then add_overlap start_pos end_pos nbr_line char_last_breakline list_line_breakline
+          else
+            { first_line = start_line + nbr_line;
+              first_column = start_col - char_last_breakline;
+              last_line = start_line + nbr_line;
+              last_column = 
+                (start_col - char_last_breakline) 
+              + (end_pos.pos_cnum - end_pos.pos_bol) 
+              - start_col }
+        else add_overlap start_pos end_pos 0 0 list_line_breakline
+      else uncorrupt_loc start_pos end_pos
+        
+        
   let create_exp loc desc =
     let infos = { is_verbose = false } in
-    {exp_location = loc; exp_desc = desc; exp_info = infos}
-
+    { exp_location = loc; exp_desc = desc; exp_info = infos }
+      
   let create_dummy_exp () =
     create_exp dummy_loc (ConstExp (CommentExp { commentExp_comment = "dummy exp" }))
 
