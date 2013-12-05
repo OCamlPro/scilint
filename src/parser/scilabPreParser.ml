@@ -70,12 +70,13 @@ let rec pre_parse_aux buf ch =
     if is_line_comment last_index line
     then
       let index_dd = get_lc_with_dotdot_index last_index line in
-      (* Printf.printf "index_dd : %i\n" index_dd; *)
       if index_dd = -1
       then
         if !add_flag
         then 
           begin
+            if List.length !corrupt <> 0 then corrupt_zone := (List.rev !corrupt)::!corrupt_zone;
+            corrupt := [];
             let new_line = line ^ !add ^ "\n" in
             add_flag := false;
             add := "";
@@ -92,7 +93,10 @@ let rec pre_parse_aux buf ch =
           end
       else
         begin
+          if List.length !corrupt <> 0 then incr cpt_line;
+          corrupt := (!cpt_line, index_dd)::!corrupt;
           add_flag := true;
+          add := !add ^ "  \n";
           let line_without = String.sub line 0 index_dd in
           Buffer.add_string buf line_without;
           pre_parse_aux buf ch
@@ -136,6 +140,7 @@ let rec pre_parse_aux buf ch =
           begin
             if List.length !corrupt <> 0 then corrupt_zone := (List.rev !corrupt)::!corrupt_zone;
             corrupt := [];
+            Printf.printf "nl = %s + %s + \\n\n" line !add;
             let new_line = line ^ !add ^ "\n" in
             add_flag := false;
             add := "";
