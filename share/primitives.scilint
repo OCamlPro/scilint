@@ -13,13 +13,9 @@ argn
 ascii
 asin
 atan
-# After here are primitives not yet added to arguments.scilint
 backslash
 balanc
-banner
 basename
-bdiag
-beep
 besselh
 besseli
 besselj
@@ -27,6 +23,10 @@ besselk
 bessely
 beta
 bezout
+# After here are primitives not yet added to arguments.scilint
+banner
+bdiag
+beep
 bfinit
 blkfc1i
 blkslvi

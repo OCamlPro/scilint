@@ -13,8 +13,24 @@ and:2:TOOMANY
 argn:0:INTENUM:0:2
 argn:1:TOOMANY
 ascii:1:TOOMANY
-asin:1:TOOMANY
-atan:2:TOOMANY
+asin:1:TOOMANY:1:1
+atan:2:TOOMANY:1:2
+backslash:2:TOOMANY:2:2
+balanc:2:TOOMANY:2:2
+basename:3:TOOMANY:1:3
+basename:1:BOOL
+basename:2:BOOL
+besselh:4:TOOMANY:2:4
+besseli:3:TOOMANY:2:3
+besseli:3:INT
+besselj:3:TOOMANY:2:3
+besselj:3:INT
+besselk:3:TOOMANY:2:3
+besselk:3:INT
+bessely:3:TOOMANY:2:3
+bessely:3:INT
+beta:2:TOOMANY:2:2
+bezout:2:TOOMANY:2:2
 # Before here are alphabetically added primitives from primitives.scilint
 strsubst:3:STRENUM:r
 execstr:1:STRENUM:errcatch
