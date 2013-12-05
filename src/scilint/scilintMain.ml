@@ -4,12 +4,9 @@ let analyze_flag = ref false
 let type_flag = ref false
 let cfg_flag = ref false
 let cfg_file = ref false
-let args = Arg.align [
-  "-I", Arg.String ScilintProject.add_to_path,
-  "DIRECTORY Add DIRECTORY to search path";
-  "-xml", Arg.Unit ScilintWarning.set_format_to_xml,
-  "Set the output format to xml";
-]
+let args = Arg.align [("-I", Arg.String ScilintProject.add_to_path,"DIRECTORY Add DIRECTORY to search path");
+		      ("-xml", Arg.Unit ScilintWarning.set_format_to_xml, " Set the output format to xml");]
+
 (* let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base"); *)
 (*             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code"); *)
 (*             ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab program"); *)

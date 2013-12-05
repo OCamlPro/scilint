@@ -82,6 +82,9 @@ depend: $(OCAML_PARSER_MLS)
 		$(SCILINT_MLS) $(SCILINT_MLIS) > .depend_ocaml
 include .depend_ocaml
 
+ChangeLog.txt: _obuild/scilintDocgen/scilintDocgen.byte
+	_obuild/scilintDocgen/scilintDocgen.byte -changelog-txt ChangeLog.txt
+
 ########## COMMON
 .SUFFIXES: .ml .mli .mll .mly .cmi .cmx
 

@@ -2,23 +2,20 @@ _
 about
 abs
 acos
-addcb
+# addcb NOT FOUND
 addf
 addhistory
 addinter
 amell
 and
 argn
-arl2_ius
+# arl2_ius NOT FOUND
 ascii
 asin
 atan
 backslash
 balanc
-banner
 basename
-bdiag
-beep
 besselh
 besseli
 besselj
@@ -26,6 +23,10 @@ besselk
 bessely
 beta
 bezout
+# After here are primitives not yet added to arguments.scilint
+banner
+bdiag
+beep
 bfinit
 blkfc1i
 blkslvi
