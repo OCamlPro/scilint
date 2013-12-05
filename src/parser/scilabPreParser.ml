@@ -140,7 +140,6 @@ let rec pre_parse_aux buf ch =
           begin
             if List.length !corrupt <> 0 then corrupt_zone := (List.rev !corrupt)::!corrupt_zone;
             corrupt := [];
-            Printf.printf "nl = %s + %s + \\n\n" line !add;
             let new_line = line ^ !add ^ "\n" in
             add_flag := false;
             add := "";
