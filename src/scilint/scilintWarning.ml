@@ -18,6 +18,7 @@ type local_warning =
   | Unexpected_string_argument of string * int * string * string list (* W013 *)
   | Unexpected_argument_type of string * int * string (* W014 *)
   | Int_argument_out_of_range of string * int * float * int * int (* W015 *)
+  | Var_def_not_used of string (* W016 *)
 
 type output_format = TextFormat | XmlFormat
 
@@ -101,8 +102,20 @@ let local_warning loc w =
         Printf.sprintf "Function %S does not expect %.1f as argument %d\nShould be between %d and %d"
           fun_name v (i+1) min max
       ]
-
+    | Var_def_not_used var_name -> 16,
+      [ loc,
+        Printf.sprintf "variable %S defined but not used" var_name]
   in
   print_warning code msg
+
+
+
+
+
+
+
+
+
+
 
 
