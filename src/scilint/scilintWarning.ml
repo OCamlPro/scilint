@@ -20,6 +20,8 @@ type local_warning =
   | Int_argument_out_of_range of string * int * float * int * int (* W015 *)
   | Var_def_not_used of string (* W016 *)
   | Var_redef_not_used of string (* 017 *)
+  | Break_outside_loop of unit (* W018 *)
+  | Continue_outside_loop of unit (* W019 *)
 
 type output_format = TextFormat | XmlFormat
 
@@ -111,6 +113,14 @@ let local_warning loc w =
       [ loc,
         Printf.sprintf "variable %S redefined before being used" var_name
       ]
+    | Break_outside_loop () -> 18,
+      [ loc,
+        Printf.sprintf "break outside of loop"
+      ] 
+    | Continue_outside_loop () -> 19,
+      [ loc,
+        Printf.sprintf "continue outside of loop"
+      ] 
   in
   print_warning code msg
 

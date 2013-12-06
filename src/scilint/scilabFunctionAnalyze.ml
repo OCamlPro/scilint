@@ -39,14 +39,16 @@ type state = { mutable escaped_sy : SetSyWithLoc.t ;
                mutable used_sy : SetSyWithLoc.t;
                mutable level_fun : int;
                mutable level_for : int;
-               mutable for_sy : SetSyWithLoc.t }
+               mutable for_sy : SetSyWithLoc.t;
+               mutable level_while : int}
 
 let new_state level_fun =
   { escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
     init_sy = SetSyWithLoc.empty; args_sy = SetSyWithLoc.empty;
     used_sy = SetSyWithLoc.empty;
     level_fun = level_fun;
-    level_for = 0; for_sy = SetSyWithLoc.empty; }
+    level_for = 0; for_sy = SetSyWithLoc.empty;
+    level_while = 0}
 
 let table_unsafe_fun = ref UnsafeFunSy.empty
 
@@ -272,7 +274,7 @@ and analyze_ast st e = match e.exp_desc with
 *)
       ()
     end
-  | ControlExp controlExp -> analyze_cntrl st controlExp
+  | ControlExp controlExp -> analyze_cntrl e.exp_location st controlExp
   | FieldExp { fieldExp_head; fieldExp_tail } -> ()
   | ListExp { listExp_start; listExp_step; listExp_end } ->
       analyze_ast st listExp_start;
@@ -284,9 +286,13 @@ and analyze_ast st e = match e.exp_desc with
   | MathExp mathExp -> analyze_math st mathExp
   | Dec dec -> analyze_dec st dec
 
-and analyze_cntrl st = function
-  | BreakExp -> ()
-  | ContinueExp -> ()
+and analyze_cntrl loc st = function
+  | BreakExp -> 
+      if st.level_for = 0 && st.level_while = 0
+      then local_warning (!file, loc) (Break_outside_loop ())
+  | ContinueExp -> 
+      if st.level_for = 0 && st.level_while = 0
+      then local_warning (!file, loc) (Continue_outside_loop ())
   | ForExp forExp ->
       let varDec = forExp.forExp_vardec in (* name, init, kind *)
       let sy = varDec.varDec_name in
@@ -328,7 +334,9 @@ and analyze_cntrl st = function
       List.iter (analyze_ast st) tryCatchExp.tryCatchExp_catchme
   | WhileExp whileExp ->
       analyze_ast st whileExp.whileExp_test;
-      analyze_ast st whileExp.whileExp_body
+      st.level_while <- st.level_while + 1;
+      analyze_ast st whileExp.whileExp_body;
+      st.level_while <- st.level_while - 1
 
 and analyze_dec st = function
   | VarDec vd -> ()
