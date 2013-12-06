@@ -255,6 +255,8 @@ and analyze_ast st e = match e.exp_desc with
         Array.fold_left (fun acc (sy, loc) ->
           if st.level_for <> 0 && SetSyWithLoc.mem (sy, loc) st.for_sy
           then local_warning (!file, loc) For_var_modif;
+          if SetSyWithLoc.mem (sy, loc) acc && not (SetSyWithLoc.mem (sy, loc) st.used_sy)
+          then local_warning (!file, loc) (Var_redef_not_used sy.symbol_name);
           SetSyWithLoc.add (sy, loc) acc) st.init_sy arr_sy;
       if is_return_call assignExp_right_exp
       then

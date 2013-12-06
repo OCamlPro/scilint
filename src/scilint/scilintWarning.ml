@@ -19,6 +19,7 @@ type local_warning =
   | Unexpected_argument_type of string * int * string (* W014 *)
   | Int_argument_out_of_range of string * int * float * int * int (* W015 *)
   | Var_def_not_used of string (* W016 *)
+  | Var_redef_not_used of string (* 017 *)
 
 type output_format = TextFormat | XmlFormat
 
@@ -104,7 +105,12 @@ let local_warning loc w =
       ]
     | Var_def_not_used var_name -> 16,
       [ loc,
-        Printf.sprintf "variable %S defined but not used" var_name]
+        Printf.sprintf "variable %S defined but not used" var_name
+      ]
+    | Var_redef_not_used var_name -> 17,
+      [ loc,
+        Printf.sprintf "variable %S redefined before being used" var_name
+      ]
   in
   print_warning code msg
 
