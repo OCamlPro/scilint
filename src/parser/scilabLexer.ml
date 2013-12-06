@@ -4,7 +4,6 @@
   open Lexing
   open ScilabParser
 
-
   exception Err_str of string
 
   exception Lex_err of string
@@ -163,7 +162,7 @@
 
 
 
-# 167 "src/parser/scilabLexer.ml"
+# 166 "src/parser/scilabLexer.ml"
 let __ocaml_lex_tables = {
   Lexing.lex_base = 
    "\000\000\175\255\176\255\000\000\129\000\000\000\193\000\001\001\
@@ -6164,219 +6163,219 @@ let rec token lexbuf =
 and __ocaml_lex_token_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 271 "src/parser/scilabLexer.mll"
+# 270 "src/parser/scilabLexer.mll"
                                  ( set_last_token_spaces ();
                                    if !shellmode_on
                                    then shellmode lexbuf
                                    else token lexbuf )
-# 6173 "src/parser/scilabLexer.ml"
+# 6172 "src/parser/scilabLexer.ml"
 
   | 1 ->
-# 275 "src/parser/scilabLexer.mll"
+# 274 "src/parser/scilabLexer.mll"
                                  ( newline_lex lexbuf;
                                    if !shellmode_on then shellmode_on := false;
                                    if (is_EOL ()) then token lexbuf else return_token EOL )
-# 6180 "src/parser/scilabLexer.ml"
+# 6179 "src/parser/scilabLexer.ml"
 
   | 2 ->
-# 278 "src/parser/scilabLexer.mll"
+# 277 "src/parser/scilabLexer.mll"
                                  ( newline_lex lexbuf;
                                    if !shellmode_on then shellmode_on := false;
                                    if (is_EOL ()) then token lexbuf else return_token EOL )
-# 6187 "src/parser/scilabLexer.ml"
+# 6186 "src/parser/scilabLexer.ml"
 
   | 3 ->
-# 281 "src/parser/scilabLexer.mll"
+# 280 "src/parser/scilabLexer.mll"
                                  ( newline_lex lexbuf;
                                    newline_lex lexbuf;
                                    if !shellmode_on then shellmode_on := false;
                                    if (is_EOL ()) then token lexbuf else return_token EOL )
-# 6195 "src/parser/scilabLexer.ml"
+# 6194 "src/parser/scilabLexer.ml"
 
   | 4 ->
-# 285 "src/parser/scilabLexer.mll"
+# 284 "src/parser/scilabLexer.mll"
                                  ( str_cmt := ""; comment lexbuf )
-# 6200 "src/parser/scilabLexer.ml"
+# 6199 "src/parser/scilabLexer.ml"
 
   | 5 ->
-# 286 "src/parser/scilabLexer.mll"
+# 285 "src/parser/scilabLexer.mll"
                                  ( str_cmt := ""; commentblock lexbuf )
-# 6205 "src/parser/scilabLexer.ml"
+# 6204 "src/parser/scilabLexer.ml"
 
   | 6 ->
-# 287 "src/parser/scilabLexer.mll"
+# 286 "src/parser/scilabLexer.mll"
                                  ( str := ""; doublestr lexbuf )
-# 6210 "src/parser/scilabLexer.ml"
+# 6209 "src/parser/scilabLexer.ml"
 
   | 7 ->
-# 288 "src/parser/scilabLexer.mll"
+# 287 "src/parser/scilabLexer.mll"
                                  ( if (is_transposable ())
                                    then return_token QUOTE
                                    else begin str := ""; simplestr lexbuf end )
-# 6217 "src/parser/scilabLexer.ml"
+# 6216 "src/parser/scilabLexer.ml"
 
   | 8 ->
-# 291 "src/parser/scilabLexer.mll"
+# 290 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token IF
                                    else return_token (ID ("if")) )
-# 6224 "src/parser/scilabLexer.ml"
+# 6223 "src/parser/scilabLexer.ml"
 
   | 9 ->
-# 294 "src/parser/scilabLexer.mll"
+# 293 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token THEN
                                    else return_token (ID ("then")) )
-# 6231 "src/parser/scilabLexer.ml"
+# 6230 "src/parser/scilabLexer.ml"
 
   | 10 ->
-# 297 "src/parser/scilabLexer.mll"
+# 296 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token ELSE
                                    else return_token (ID ("else")) )
-# 6238 "src/parser/scilabLexer.ml"
+# 6237 "src/parser/scilabLexer.ml"
 
   | 11 ->
-# 300 "src/parser/scilabLexer.mll"
+# 299 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token ELSEIF
                                    else return_token (ID ("elseif")) )
-# 6245 "src/parser/scilabLexer.ml"
+# 6244 "src/parser/scilabLexer.ml"
 
   | 12 ->
-# 303 "src/parser/scilabLexer.mll"
+# 302 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token END
                                    else return_token (ID ("end")) )
-# 6252 "src/parser/scilabLexer.ml"
+# 6251 "src/parser/scilabLexer.ml"
 
   | 13 ->
-# 306 "src/parser/scilabLexer.mll"
+# 305 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token SELECT
                                    else return_token (ID ("select")) )
-# 6259 "src/parser/scilabLexer.ml"
+# 6258 "src/parser/scilabLexer.ml"
 
   | 14 ->
-# 309 "src/parser/scilabLexer.mll"
+# 308 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token SWITCH
                                    else return_token (ID ("switch")) )
-# 6266 "src/parser/scilabLexer.ml"
+# 6265 "src/parser/scilabLexer.ml"
 
   | 15 ->
-# 312 "src/parser/scilabLexer.mll"
+# 311 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token OTHERWISE
                                    else return_token (ID ("otherwise")) )
-# 6273 "src/parser/scilabLexer.ml"
+# 6272 "src/parser/scilabLexer.ml"
 
   | 16 ->
-# 315 "src/parser/scilabLexer.mll"
+# 314 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token CASE
                                    else return_token (ID ("case")) )
-# 6280 "src/parser/scilabLexer.ml"
+# 6279 "src/parser/scilabLexer.ml"
 
   | 17 ->
-# 318 "src/parser/scilabLexer.mll"
+# 317 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token WHILE
                                    else return_token (ID ("while")) )
-# 6287 "src/parser/scilabLexer.ml"
+# 6286 "src/parser/scilabLexer.ml"
 
   | 18 ->
-# 321 "src/parser/scilabLexer.mll"
+# 320 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token DO
                                    else return_token (ID ("do")) )
-# 6294 "src/parser/scilabLexer.ml"
+# 6293 "src/parser/scilabLexer.ml"
 
   | 19 ->
-# 324 "src/parser/scilabLexer.mll"
+# 323 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token TRY
                                    else return_token (ID ("try")) )
-# 6301 "src/parser/scilabLexer.ml"
+# 6300 "src/parser/scilabLexer.ml"
 
   | 20 ->
-# 327 "src/parser/scilabLexer.mll"
+# 326 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token CATCH
                                    else return_token (ID ("catch")) )
-# 6308 "src/parser/scilabLexer.ml"
+# 6307 "src/parser/scilabLexer.ml"
 
   | 21 ->
-# 330 "src/parser/scilabLexer.mll"
+# 329 "src/parser/scilabLexer.mll"
                                  ( return_token RETURN )
-# 6313 "src/parser/scilabLexer.ml"
+# 6312 "src/parser/scilabLexer.ml"
 
   | 22 ->
-# 331 "src/parser/scilabLexer.mll"
+# 330 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token BREAK
                                    else return_token (ID ("break")) )
-# 6320 "src/parser/scilabLexer.ml"
+# 6319 "src/parser/scilabLexer.ml"
 
   | 23 ->
-# 334 "src/parser/scilabLexer.mll"
+# 333 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token CONTINUE
                                    else return_token (ID ("continue")) )
-# 6327 "src/parser/scilabLexer.ml"
+# 6326 "src/parser/scilabLexer.ml"
 
   | 24 ->
-# 337 "src/parser/scilabLexer.mll"
+# 336 "src/parser/scilabLexer.mll"
                                  ( return_token ASSIGN )
-# 6332 "src/parser/scilabLexer.ml"
+# 6331 "src/parser/scilabLexer.ml"
 
   | 25 ->
-# 338 "src/parser/scilabLexer.mll"
+# 337 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token FOR
                                    else return_token (ID ("for")) )
-# 6339 "src/parser/scilabLexer.ml"
+# 6338 "src/parser/scilabLexer.ml"
 
   | 26 ->
-# 341 "src/parser/scilabLexer.mll"
+# 340 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token HIDDEN
                                    else return_token (ID ("hidden")) )
-# 6346 "src/parser/scilabLexer.ml"
+# 6345 "src/parser/scilabLexer.ml"
 
   | 27 ->
-# 344 "src/parser/scilabLexer.mll"
+# 343 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token FUNCTION
                                    else return_token (ID ("function")) )
-# 6353 "src/parser/scilabLexer.ml"
+# 6352 "src/parser/scilabLexer.ml"
 
   | 28 ->
-# 347 "src/parser/scilabLexer.mll"
+# 346 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token HIDDENFUNCTION
                                    else return_token (ID ("hiddenfunction")) )
-# 6360 "src/parser/scilabLexer.ml"
+# 6359 "src/parser/scilabLexer.ml"
 
   | 29 ->
-# 350 "src/parser/scilabLexer.mll"
+# 349 "src/parser/scilabLexer.mll"
                                  ( if not (in_matrix ())
                                    then return_token ENDFUNCTION
                                    else return_token (ID ("endfunction")) )
-# 6367 "src/parser/scilabLexer.ml"
+# 6366 "src/parser/scilabLexer.ml"
 
   | 30 ->
-# 353 "src/parser/scilabLexer.mll"
+# 352 "src/parser/scilabLexer.mll"
                                  ( return_token DOT )
-# 6372 "src/parser/scilabLexer.ml"
+# 6371 "src/parser/scilabLexer.ml"
 
   | 31 ->
-# 354 "src/parser/scilabLexer.mll"
+# 353 "src/parser/scilabLexer.mll"
                                  ( return_token DOTQUOTE )
-# 6377 "src/parser/scilabLexer.ml"
+# 6376 "src/parser/scilabLexer.ml"
 
   | 32 ->
-# 355 "src/parser/scilabLexer.mll"
+# 354 "src/parser/scilabLexer.mll"
                                  ( newline_lex lexbuf; token lexbuf
                                    (* if is_plus () || is_comma () *)
                                    (* then token lexbuf *)
@@ -6384,270 +6383,270 @@ and __ocaml_lex_token_rec lexbuf __ocaml_lex_state =
                                    (*   if !matrix_level > 0  *)
                                    (*   then return_token EOL  *)
                                    (*   else token lexbuf *) )
-# 6388 "src/parser/scilabLexer.ml"
+# 6387 "src/parser/scilabLexer.ml"
 
   | 33 ->
-# 368 "src/parser/scilabLexer.mll"
+# 367 "src/parser/scilabLexer.mll"
                                  ( discardcomment lexbuf )
-# 6393 "src/parser/scilabLexer.ml"
+# 6392 "src/parser/scilabLexer.ml"
 
   | 34 ->
-# 369 "src/parser/scilabLexer.mll"
+# 368 "src/parser/scilabLexer.mll"
                                  ( return_token LINEBREAK )
-# 6398 "src/parser/scilabLexer.ml"
+# 6397 "src/parser/scilabLexer.ml"
 
   | 35 ->
-# 370 "src/parser/scilabLexer.mll"
+# 369 "src/parser/scilabLexer.mll"
                                  ( return_token PLUS )
-# 6403 "src/parser/scilabLexer.ml"
+# 6402 "src/parser/scilabLexer.ml"
 
   | 36 ->
-# 371 "src/parser/scilabLexer.mll"
+# 370 "src/parser/scilabLexer.mll"
                                  ( return_token MINUS )
-# 6408 "src/parser/scilabLexer.ml"
+# 6407 "src/parser/scilabLexer.ml"
 
   | 37 ->
-# 372 "src/parser/scilabLexer.mll"
+# 371 "src/parser/scilabLexer.mll"
                                  ( return_token RDIVIDE )
-# 6413 "src/parser/scilabLexer.ml"
+# 6412 "src/parser/scilabLexer.ml"
 
   | 38 ->
-# 373 "src/parser/scilabLexer.mll"
+# 372 "src/parser/scilabLexer.mll"
                                  ( return_token DOTRDIVIDE )
-# 6418 "src/parser/scilabLexer.ml"
+# 6417 "src/parser/scilabLexer.ml"
 
   | 39 ->
-# 374 "src/parser/scilabLexer.mll"
+# 373 "src/parser/scilabLexer.mll"
                                  ( return_control lexbuf; return_token CONTROLRDIVIDE )
-# 6423 "src/parser/scilabLexer.ml"
+# 6422 "src/parser/scilabLexer.ml"
 
   | 40 ->
-# 375 "src/parser/scilabLexer.mll"
+# 374 "src/parser/scilabLexer.mll"
                                  ( return_token KRONRDIVIDE )
-# 6428 "src/parser/scilabLexer.ml"
+# 6427 "src/parser/scilabLexer.ml"
 
   | 41 ->
-# 376 "src/parser/scilabLexer.mll"
+# 375 "src/parser/scilabLexer.mll"
                                  ( return_token LDIVIDE )
-# 6433 "src/parser/scilabLexer.ml"
+# 6432 "src/parser/scilabLexer.ml"
 
   | 42 ->
-# 377 "src/parser/scilabLexer.mll"
+# 376 "src/parser/scilabLexer.mll"
                                  ( return_token DOTLDIVIDE )
-# 6438 "src/parser/scilabLexer.ml"
+# 6437 "src/parser/scilabLexer.ml"
 
   | 43 ->
-# 378 "src/parser/scilabLexer.mll"
+# 377 "src/parser/scilabLexer.mll"
                                  ( return_control lexbuf; return_token CONTROLLDIVIDE )
-# 6443 "src/parser/scilabLexer.ml"
+# 6442 "src/parser/scilabLexer.ml"
 
   | 44 ->
-# 379 "src/parser/scilabLexer.mll"
+# 378 "src/parser/scilabLexer.mll"
                                  ( return_token KRONLDIVIDE )
-# 6448 "src/parser/scilabLexer.ml"
+# 6447 "src/parser/scilabLexer.ml"
 
   | 45 ->
-# 380 "src/parser/scilabLexer.mll"
+# 379 "src/parser/scilabLexer.mll"
                                  ( return_token TIMES )
-# 6453 "src/parser/scilabLexer.ml"
+# 6452 "src/parser/scilabLexer.ml"
 
   | 46 ->
-# 381 "src/parser/scilabLexer.mll"
+# 380 "src/parser/scilabLexer.mll"
                                  ( return_token DOTTIMES )
-# 6458 "src/parser/scilabLexer.ml"
+# 6457 "src/parser/scilabLexer.ml"
 
   | 47 ->
-# 382 "src/parser/scilabLexer.mll"
+# 381 "src/parser/scilabLexer.mll"
                                  ( return_control lexbuf; return_token CONTROLTIMES )
-# 6463 "src/parser/scilabLexer.ml"
+# 6462 "src/parser/scilabLexer.ml"
 
   | 48 ->
-# 383 "src/parser/scilabLexer.mll"
+# 382 "src/parser/scilabLexer.mll"
                                  ( return_token KRONTIMES )
-# 6468 "src/parser/scilabLexer.ml"
+# 6467 "src/parser/scilabLexer.ml"
 
   | 49 ->
-# 384 "src/parser/scilabLexer.mll"
+# 383 "src/parser/scilabLexer.mll"
                                  ( return_token POWER )
-# 6473 "src/parser/scilabLexer.ml"
+# 6472 "src/parser/scilabLexer.ml"
 
   | 50 ->
-# 385 "src/parser/scilabLexer.mll"
+# 384 "src/parser/scilabLexer.mll"
                                  ( return_token DOTPOWER )
-# 6478 "src/parser/scilabLexer.ml"
+# 6477 "src/parser/scilabLexer.ml"
 
   | 51 ->
-# 386 "src/parser/scilabLexer.mll"
+# 385 "src/parser/scilabLexer.mll"
                                  ( return_token EQ )
-# 6483 "src/parser/scilabLexer.ml"
+# 6482 "src/parser/scilabLexer.ml"
 
   | 52 ->
-# 387 "src/parser/scilabLexer.mll"
+# 386 "src/parser/scilabLexer.mll"
                                  ( return_token NE )
-# 6488 "src/parser/scilabLexer.ml"
+# 6487 "src/parser/scilabLexer.ml"
 
   | 53 ->
-# 388 "src/parser/scilabLexer.mll"
+# 387 "src/parser/scilabLexer.mll"
                                  ( return_token LT )
-# 6493 "src/parser/scilabLexer.ml"
+# 6492 "src/parser/scilabLexer.ml"
 
   | 54 ->
-# 389 "src/parser/scilabLexer.mll"
+# 388 "src/parser/scilabLexer.mll"
                                  ( return_token GT )
-# 6498 "src/parser/scilabLexer.ml"
+# 6497 "src/parser/scilabLexer.ml"
 
   | 55 ->
-# 390 "src/parser/scilabLexer.mll"
+# 389 "src/parser/scilabLexer.mll"
                                  ( return_token LE )
-# 6503 "src/parser/scilabLexer.ml"
+# 6502 "src/parser/scilabLexer.ml"
 
   | 56 ->
-# 391 "src/parser/scilabLexer.mll"
+# 390 "src/parser/scilabLexer.mll"
                                  ( return_token GE )
-# 6508 "src/parser/scilabLexer.ml"
+# 6507 "src/parser/scilabLexer.ml"
 
   | 57 ->
-# 392 "src/parser/scilabLexer.mll"
+# 391 "src/parser/scilabLexer.mll"
                                  ( return_token COMMA )
-# 6513 "src/parser/scilabLexer.ml"
+# 6512 "src/parser/scilabLexer.ml"
 
   | 58 ->
-# 393 "src/parser/scilabLexer.mll"
+# 392 "src/parser/scilabLexer.mll"
                                  ( if !shellmode_on then shellmode_on := false;
                                    return_token SEMI )
-# 6519 "src/parser/scilabLexer.ml"
+# 6518 "src/parser/scilabLexer.ml"
 
   | 59 ->
-# 395 "src/parser/scilabLexer.mll"
+# 394 "src/parser/scilabLexer.mll"
                                  ( return_token COLON )
-# 6524 "src/parser/scilabLexer.ml"
+# 6523 "src/parser/scilabLexer.ml"
 
   | 60 ->
 let
-# 396 "src/parser/scilabLexer.mll"
+# 395 "src/parser/scilabLexer.mll"
                inum
-# 6530 "src/parser/scilabLexer.ml"
+# 6529 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 396 "src/parser/scilabLexer.mll"
+# 395 "src/parser/scilabLexer.mll"
                                  ( let num = float_of_string inum in
                                    (* Printf.printf "varint[%f]\n" num; *)
                                    return_token (VARINT num) )
-# 6536 "src/parser/scilabLexer.ml"
+# 6535 "src/parser/scilabLexer.ml"
 
   | 61 ->
 let
-# 399 "src/parser/scilabLexer.mll"
+# 398 "src/parser/scilabLexer.mll"
               nnum
-# 6542 "src/parser/scilabLexer.ml"
+# 6541 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 399 "src/parser/scilabLexer.mll"
+# 398 "src/parser/scilabLexer.mll"
                                  ( let num = float_of_string nnum in
                                    (* Printf.printf "num[%s = %.15f]\n" nnum num; *)
                                    return_token (NUM num) )
-# 6548 "src/parser/scilabLexer.ml"
+# 6547 "src/parser/scilabLexer.ml"
 
   | 62 ->
 let
-# 402 "src/parser/scilabLexer.mll"
+# 401 "src/parser/scilabLexer.mll"
               lnum
-# 6554 "src/parser/scilabLexer.ml"
+# 6553 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 402 "src/parser/scilabLexer.mll"
+# 401 "src/parser/scilabLexer.mll"
                                  ( let num = float_of_string lnum in
                                    (* Printf.printf "little[%f]\n" num; *)
                                    return_token (NUM num) )
-# 6560 "src/parser/scilabLexer.ml"
+# 6559 "src/parser/scilabLexer.ml"
 
   | 63 ->
 let
-# 405 "src/parser/scilabLexer.mll"
+# 404 "src/parser/scilabLexer.mll"
                 float
-# 6566 "src/parser/scilabLexer.ml"
+# 6565 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 405 "src/parser/scilabLexer.mll"
+# 404 "src/parser/scilabLexer.mll"
                                  ( let f = (float_of_string (convert_scientific_notation float)) in
                                    (* Printf.printf "float[%s = %f]\n" float f; *)
                                    NUM f )
-# 6572 "src/parser/scilabLexer.ml"
+# 6571 "src/parser/scilabLexer.ml"
 
   | 64 ->
-# 408 "src/parser/scilabLexer.mll"
+# 407 "src/parser/scilabLexer.mll"
                                  ( if in_matrix () && !last_token = SPACES then begin lexbuf_to_prev_tok lexbuf; return_token COMMA end
                                    else if !shellmode_on then begin shellmode_on := false; return_token LPAREN end else return_token LPAREN )
-# 6578 "src/parser/scilabLexer.ml"
+# 6577 "src/parser/scilabLexer.ml"
 
   | 65 ->
-# 410 "src/parser/scilabLexer.mll"
+# 409 "src/parser/scilabLexer.mll"
                                  ( return_token RPAREN )
-# 6583 "src/parser/scilabLexer.ml"
+# 6582 "src/parser/scilabLexer.ml"
 
   | 66 ->
-# 411 "src/parser/scilabLexer.mll"
+# 410 "src/parser/scilabLexer.mll"
                                  ( incr matrix_level; return_token LBRACE )
-# 6588 "src/parser/scilabLexer.ml"
+# 6587 "src/parser/scilabLexer.ml"
 
   | 67 ->
-# 412 "src/parser/scilabLexer.mll"
+# 411 "src/parser/scilabLexer.mll"
                                  ( decr matrix_level; return_token RBRACE )
-# 6593 "src/parser/scilabLexer.ml"
+# 6592 "src/parser/scilabLexer.ml"
 
   | 68 ->
-# 413 "src/parser/scilabLexer.mll"
+# 412 "src/parser/scilabLexer.mll"
                                  ( incr matrix_level; return_token LBRACK )
-# 6598 "src/parser/scilabLexer.ml"
+# 6597 "src/parser/scilabLexer.ml"
 
   | 69 ->
-# 414 "src/parser/scilabLexer.mll"
+# 413 "src/parser/scilabLexer.mll"
                                  ( decr matrix_level; return_token RBRACK )
-# 6603 "src/parser/scilabLexer.ml"
+# 6602 "src/parser/scilabLexer.ml"
 
   | 70 ->
-# 415 "src/parser/scilabLexer.mll"
+# 414 "src/parser/scilabLexer.mll"
                                  ( return_token DOLLAR )
-# 6608 "src/parser/scilabLexer.ml"
+# 6607 "src/parser/scilabLexer.ml"
 
   | 71 ->
-# 416 "src/parser/scilabLexer.mll"
+# 415 "src/parser/scilabLexer.mll"
                                  ( return_token NOT )
-# 6613 "src/parser/scilabLexer.ml"
+# 6612 "src/parser/scilabLexer.ml"
 
   | 72 ->
-# 417 "src/parser/scilabLexer.mll"
+# 416 "src/parser/scilabLexer.mll"
                                  ( return_token BOOLTRUE )
-# 6618 "src/parser/scilabLexer.ml"
+# 6617 "src/parser/scilabLexer.ml"
 
   | 73 ->
-# 418 "src/parser/scilabLexer.mll"
+# 417 "src/parser/scilabLexer.mll"
                                  ( return_token BOOLFALSE )
-# 6623 "src/parser/scilabLexer.ml"
+# 6622 "src/parser/scilabLexer.ml"
 
   | 74 ->
-# 419 "src/parser/scilabLexer.mll"
+# 418 "src/parser/scilabLexer.mll"
                                  ( return_token AND )
-# 6628 "src/parser/scilabLexer.ml"
+# 6627 "src/parser/scilabLexer.ml"
 
   | 75 ->
-# 420 "src/parser/scilabLexer.mll"
+# 419 "src/parser/scilabLexer.mll"
                                  ( return_token ANDAND )
-# 6633 "src/parser/scilabLexer.ml"
+# 6632 "src/parser/scilabLexer.ml"
 
   | 76 ->
-# 421 "src/parser/scilabLexer.mll"
+# 420 "src/parser/scilabLexer.mll"
                                  ( return_token OR )
-# 6638 "src/parser/scilabLexer.ml"
+# 6637 "src/parser/scilabLexer.ml"
 
   | 77 ->
-# 422 "src/parser/scilabLexer.mll"
+# 421 "src/parser/scilabLexer.mll"
                                  ( return_token OROR )
-# 6643 "src/parser/scilabLexer.ml"
+# 6642 "src/parser/scilabLexer.ml"
 
   | 78 ->
 let
-# 423 "src/parser/scilabLexer.mll"
+# 422 "src/parser/scilabLexer.mll"
           ident
-# 6649 "src/parser/scilabLexer.ml"
+# 6648 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 423 "src/parser/scilabLexer.mll"
+# 422 "src/parser/scilabLexer.mll"
                                  ( if (not (in_matrix ())) && (is_EOL () || is_SOF ())
                                    then shellmode_on := true;
                                    let id8 = (* utf_8_normalize *) ident in
@@ -6655,17 +6654,17 @@ let
                                    (* (\*shellmode lexbuf*\) *)
                                    (*   else return_token (ID ident) *)
                                    (* else return_token (ID ident) *) )
-# 6659 "src/parser/scilabLexer.ml"
+# 6658 "src/parser/scilabLexer.ml"
 
   | 79 ->
-# 430 "src/parser/scilabLexer.mll"
+# 429 "src/parser/scilabLexer.mll"
                                  ( return_token EOF )
-# 6664 "src/parser/scilabLexer.ml"
+# 6663 "src/parser/scilabLexer.ml"
 
   | 80 ->
-# 431 "src/parser/scilabLexer.mll"
+# 430 "src/parser/scilabLexer.mll"
                                  ( raise (Lex_err ("Error : Unknow character ")) )
-# 6669 "src/parser/scilabLexer.ml"
+# 6668 "src/parser/scilabLexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_token_rec lexbuf __ocaml_lex_state
 
@@ -6674,19 +6673,19 @@ and discardcomment lexbuf =
 and __ocaml_lex_discardcomment_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 434 "src/parser/scilabLexer.mll"
+# 433 "src/parser/scilabLexer.mll"
                                  ( token lexbuf )
-# 6680 "src/parser/scilabLexer.ml"
+# 6679 "src/parser/scilabLexer.ml"
 
   | 1 ->
-# 435 "src/parser/scilabLexer.mll"
+# 434 "src/parser/scilabLexer.mll"
                                  ( return_token EOF )
-# 6685 "src/parser/scilabLexer.ml"
+# 6684 "src/parser/scilabLexer.ml"
 
   | 2 ->
-# 436 "src/parser/scilabLexer.mll"
+# 435 "src/parser/scilabLexer.mll"
                                  ( discardcomment lexbuf )
-# 6690 "src/parser/scilabLexer.ml"
+# 6689 "src/parser/scilabLexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_discardcomment_rec lexbuf __ocaml_lex_state
 
@@ -6695,24 +6694,24 @@ and comment lexbuf =
 and __ocaml_lex_comment_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 439 "src/parser/scilabLexer.mll"
+# 438 "src/parser/scilabLexer.mll"
                                  ( end_cmt lexbuf; return_token (COMMENT !str_cmt) )
-# 6701 "src/parser/scilabLexer.ml"
+# 6700 "src/parser/scilabLexer.ml"
 
   | 1 ->
-# 440 "src/parser/scilabLexer.mll"
+# 439 "src/parser/scilabLexer.mll"
                                  ( return_token (COMMENT !str_cmt) )
-# 6706 "src/parser/scilabLexer.ml"
+# 6705 "src/parser/scilabLexer.ml"
 
   | 2 ->
 let
-# 441 "src/parser/scilabLexer.mll"
+# 440 "src/parser/scilabLexer.mll"
          c
-# 6712 "src/parser/scilabLexer.ml"
+# 6711 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme_char lexbuf lexbuf.Lexing.lex_start_pos in
-# 441 "src/parser/scilabLexer.mll"
+# 440 "src/parser/scilabLexer.mll"
                                  ( str_cmt := !str_cmt^(String.make 1 c); comment lexbuf )
-# 6716 "src/parser/scilabLexer.ml"
+# 6715 "src/parser/scilabLexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_comment_rec lexbuf __ocaml_lex_state
 
@@ -6721,29 +6720,29 @@ and commentblock lexbuf =
 and __ocaml_lex_commentblock_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 444 "src/parser/scilabLexer.mll"
+# 443 "src/parser/scilabLexer.mll"
                                  ( return_token (COMMENT !str_cmt) )
-# 6727 "src/parser/scilabLexer.ml"
+# 6726 "src/parser/scilabLexer.ml"
 
   | 1 ->
-# 445 "src/parser/scilabLexer.mll"
+# 444 "src/parser/scilabLexer.mll"
                                  ( newline_lex lexbuf; str_cmt := !str_cmt^(String.make 1 '\n'); commentblock lexbuf )
-# 6732 "src/parser/scilabLexer.ml"
+# 6731 "src/parser/scilabLexer.ml"
 
   | 2 ->
-# 446 "src/parser/scilabLexer.mll"
+# 445 "src/parser/scilabLexer.mll"
                                  ( return_token (COMMENT !str_cmt) )
-# 6737 "src/parser/scilabLexer.ml"
+# 6736 "src/parser/scilabLexer.ml"
 
   | 3 ->
 let
-# 447 "src/parser/scilabLexer.mll"
+# 446 "src/parser/scilabLexer.mll"
          c
-# 6743 "src/parser/scilabLexer.ml"
+# 6742 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme_char lexbuf lexbuf.Lexing.lex_start_pos in
-# 447 "src/parser/scilabLexer.mll"
+# 446 "src/parser/scilabLexer.mll"
                                  ( str_cmt := !str_cmt^(String.make 1 c); commentblock lexbuf )
-# 6747 "src/parser/scilabLexer.ml"
+# 6746 "src/parser/scilabLexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_commentblock_rec lexbuf __ocaml_lex_state
 
@@ -6752,63 +6751,63 @@ and doublestr lexbuf =
 and __ocaml_lex_doublestr_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 450 "src/parser/scilabLexer.mll"
+# 449 "src/parser/scilabLexer.mll"
                                  ( let s = utf_8_normalize !str in
                                    return_token (STR s) )
-# 6759 "src/parser/scilabLexer.ml"
+# 6758 "src/parser/scilabLexer.ml"
 
   | 1 ->
-# 452 "src/parser/scilabLexer.mll"
+# 451 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\"\""; doublestr lexbuf )
-# 6764 "src/parser/scilabLexer.ml"
+# 6763 "src/parser/scilabLexer.ml"
 
   | 2 ->
-# 453 "src/parser/scilabLexer.mll"
+# 452 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\"\'"; doublestr lexbuf )
-# 6769 "src/parser/scilabLexer.ml"
+# 6768 "src/parser/scilabLexer.ml"
 
   | 3 ->
-# 454 "src/parser/scilabLexer.mll"
+# 453 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\'\""; doublestr lexbuf )
-# 6774 "src/parser/scilabLexer.ml"
+# 6773 "src/parser/scilabLexer.ml"
 
   | 4 ->
-# 455 "src/parser/scilabLexer.mll"
+# 454 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\'\'"; doublestr lexbuf )
-# 6779 "src/parser/scilabLexer.ml"
+# 6778 "src/parser/scilabLexer.ml"
 
   | 5 ->
-# 456 "src/parser/scilabLexer.mll"
+# 455 "src/parser/scilabLexer.mll"
                                  ( let msg = "Heterogeneous string, starting with \" and ending with \' only allowed in scilab 5" in
                                    warning_only_scila5 msg lexbuf;
                                    let s = utf_8_normalize !str in
                                    return_token (STR s) )
-# 6787 "src/parser/scilabLexer.ml"
+# 6786 "src/parser/scilabLexer.ml"
 
   | 6 ->
-# 460 "src/parser/scilabLexer.mll"
+# 459 "src/parser/scilabLexer.mll"
                                  ( newline_lex lexbuf; doublestr lexbuf )
-# 6792 "src/parser/scilabLexer.ml"
+# 6791 "src/parser/scilabLexer.ml"
 
   | 7 ->
-# 461 "src/parser/scilabLexer.mll"
+# 460 "src/parser/scilabLexer.mll"
                                  ( raise (Err_str "Error : unexpected newline in a string ") )
-# 6797 "src/parser/scilabLexer.ml"
+# 6796 "src/parser/scilabLexer.ml"
 
   | 8 ->
-# 462 "src/parser/scilabLexer.mll"
+# 461 "src/parser/scilabLexer.mll"
                                  ( raise (Err_str "Error : unexpected end of file in a string ") )
-# 6802 "src/parser/scilabLexer.ml"
+# 6801 "src/parser/scilabLexer.ml"
 
   | 9 ->
 let
-# 463 "src/parser/scilabLexer.mll"
+# 462 "src/parser/scilabLexer.mll"
          c
-# 6808 "src/parser/scilabLexer.ml"
+# 6807 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme_char lexbuf lexbuf.Lexing.lex_start_pos in
-# 463 "src/parser/scilabLexer.mll"
+# 462 "src/parser/scilabLexer.mll"
                                  ( str := !str^(String.make 1 c); doublestr lexbuf )
-# 6812 "src/parser/scilabLexer.ml"
+# 6811 "src/parser/scilabLexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_doublestr_rec lexbuf __ocaml_lex_state
 
@@ -6817,73 +6816,73 @@ and simplestr lexbuf =
 and __ocaml_lex_simplestr_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 466 "src/parser/scilabLexer.mll"
+# 465 "src/parser/scilabLexer.mll"
                                  ( let s = utf_8_normalize !str in
                                    return_token (STR s) )
-# 6824 "src/parser/scilabLexer.ml"
+# 6823 "src/parser/scilabLexer.ml"
 
   | 1 ->
-# 468 "src/parser/scilabLexer.mll"
+# 467 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\"\""; simplestr lexbuf )
-# 6829 "src/parser/scilabLexer.ml"
+# 6828 "src/parser/scilabLexer.ml"
 
   | 2 ->
-# 469 "src/parser/scilabLexer.mll"
+# 468 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\"\'"; simplestr lexbuf )
-# 6834 "src/parser/scilabLexer.ml"
+# 6833 "src/parser/scilabLexer.ml"
 
   | 3 ->
-# 470 "src/parser/scilabLexer.mll"
+# 469 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\'\""; simplestr lexbuf )
-# 6839 "src/parser/scilabLexer.ml"
+# 6838 "src/parser/scilabLexer.ml"
 
   | 4 ->
-# 471 "src/parser/scilabLexer.mll"
+# 470 "src/parser/scilabLexer.mll"
                                  ( str := !str^"\'\'"; simplestr lexbuf )
-# 6844 "src/parser/scilabLexer.ml"
+# 6843 "src/parser/scilabLexer.ml"
 
   | 5 ->
-# 472 "src/parser/scilabLexer.mll"
+# 471 "src/parser/scilabLexer.mll"
                                  ( let msg = "Heterogeneous string, starting with \' and ending with \" only allowed in scilab 5" in
                                    warning_only_scila5 msg lexbuf;
                                    let s = utf_8_normalize !str in
                                    return_token (STR s) )
-# 6852 "src/parser/scilabLexer.ml"
+# 6851 "src/parser/scilabLexer.ml"
 
   | 6 ->
-# 476 "src/parser/scilabLexer.mll"
+# 475 "src/parser/scilabLexer.mll"
                                  ( newline_lex lexbuf; simplestr lexbuf )
-# 6857 "src/parser/scilabLexer.ml"
+# 6856 "src/parser/scilabLexer.ml"
 
   | 7 ->
-# 477 "src/parser/scilabLexer.mll"
+# 476 "src/parser/scilabLexer.mll"
                                  ( raise (Err_str "Error : unexpected newline in a string ") )
-# 6862 "src/parser/scilabLexer.ml"
+# 6861 "src/parser/scilabLexer.ml"
 
   | 8 ->
-# 478 "src/parser/scilabLexer.mll"
+# 477 "src/parser/scilabLexer.mll"
                                  ( raise (Err_str "Error : unexpected end of file in a string ") )
-# 6867 "src/parser/scilabLexer.ml"
+# 6866 "src/parser/scilabLexer.ml"
 
   | 9 ->
 let
-# 479 "src/parser/scilabLexer.mll"
+# 478 "src/parser/scilabLexer.mll"
            u
-# 6873 "src/parser/scilabLexer.ml"
+# 6872 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 479 "src/parser/scilabLexer.mll"
+# 478 "src/parser/scilabLexer.mll"
                                  ( str := !str ^ u; simplestr lexbuf )
-# 6877 "src/parser/scilabLexer.ml"
+# 6876 "src/parser/scilabLexer.ml"
 
   | 10 ->
 let
-# 480 "src/parser/scilabLexer.mll"
+# 479 "src/parser/scilabLexer.mll"
          c
-# 6883 "src/parser/scilabLexer.ml"
+# 6882 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme_char lexbuf lexbuf.Lexing.lex_start_pos in
-# 480 "src/parser/scilabLexer.mll"
+# 479 "src/parser/scilabLexer.mll"
                                  ( str := !str^(Char.escaped c); simplestr lexbuf )
-# 6887 "src/parser/scilabLexer.ml"
+# 6886 "src/parser/scilabLexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_simplestr_rec lexbuf __ocaml_lex_state
 
@@ -6892,208 +6891,208 @@ and shellmode lexbuf =
 and __ocaml_lex_shellmode_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 483 "src/parser/scilabLexer.mll"
+# 482 "src/parser/scilabLexer.mll"
                                  ( shellmode lexbuf )
-# 6898 "src/parser/scilabLexer.ml"
+# 6897 "src/parser/scilabLexer.ml"
 
   | 1 ->
-# 484 "src/parser/scilabLexer.mll"
+# 483 "src/parser/scilabLexer.mll"
                                  ( shellmode_on := false;
                                    comment lexbuf )
-# 6904 "src/parser/scilabLexer.ml"
+# 6903 "src/parser/scilabLexer.ml"
 
   | 2 ->
-# 486 "src/parser/scilabLexer.mll"
+# 485 "src/parser/scilabLexer.mll"
                                  ( return_shell PLUS )
-# 6909 "src/parser/scilabLexer.ml"
+# 6908 "src/parser/scilabLexer.ml"
 
   | 3 ->
-# 487 "src/parser/scilabLexer.mll"
+# 486 "src/parser/scilabLexer.mll"
                                  ( return_shell MINUS )
-# 6914 "src/parser/scilabLexer.ml"
+# 6913 "src/parser/scilabLexer.ml"
 
   | 4 ->
-# 488 "src/parser/scilabLexer.mll"
+# 487 "src/parser/scilabLexer.mll"
                                  ( return_shell RDIVIDE )
-# 6919 "src/parser/scilabLexer.ml"
+# 6918 "src/parser/scilabLexer.ml"
 
   | 5 ->
-# 489 "src/parser/scilabLexer.mll"
+# 488 "src/parser/scilabLexer.mll"
                                  ( return_shell DOTRDIVIDE )
-# 6924 "src/parser/scilabLexer.ml"
+# 6923 "src/parser/scilabLexer.ml"
 
   | 6 ->
-# 490 "src/parser/scilabLexer.mll"
+# 489 "src/parser/scilabLexer.mll"
                                  ( return_control lexbuf; return_shell CONTROLRDIVIDE )
-# 6929 "src/parser/scilabLexer.ml"
+# 6928 "src/parser/scilabLexer.ml"
 
   | 7 ->
-# 491 "src/parser/scilabLexer.mll"
+# 490 "src/parser/scilabLexer.mll"
                                  ( return_shell KRONRDIVIDE )
-# 6934 "src/parser/scilabLexer.ml"
+# 6933 "src/parser/scilabLexer.ml"
 
   | 8 ->
-# 492 "src/parser/scilabLexer.mll"
+# 491 "src/parser/scilabLexer.mll"
                                  ( return_shell LDIVIDE )
-# 6939 "src/parser/scilabLexer.ml"
+# 6938 "src/parser/scilabLexer.ml"
 
   | 9 ->
-# 493 "src/parser/scilabLexer.mll"
+# 492 "src/parser/scilabLexer.mll"
                                  ( return_shell DOTLDIVIDE )
-# 6944 "src/parser/scilabLexer.ml"
+# 6943 "src/parser/scilabLexer.ml"
 
   | 10 ->
-# 494 "src/parser/scilabLexer.mll"
+# 493 "src/parser/scilabLexer.mll"
                                  ( return_control lexbuf; return_shell CONTROLLDIVIDE )
-# 6949 "src/parser/scilabLexer.ml"
+# 6948 "src/parser/scilabLexer.ml"
 
   | 11 ->
-# 495 "src/parser/scilabLexer.mll"
+# 494 "src/parser/scilabLexer.mll"
                                  ( return_shell KRONLDIVIDE )
-# 6954 "src/parser/scilabLexer.ml"
+# 6953 "src/parser/scilabLexer.ml"
 
   | 12 ->
-# 496 "src/parser/scilabLexer.mll"
+# 495 "src/parser/scilabLexer.mll"
                                  ( return_shell TIMES )
-# 6959 "src/parser/scilabLexer.ml"
+# 6958 "src/parser/scilabLexer.ml"
 
   | 13 ->
-# 497 "src/parser/scilabLexer.mll"
+# 496 "src/parser/scilabLexer.mll"
                                  ( return_shell DOTTIMES )
-# 6964 "src/parser/scilabLexer.ml"
+# 6963 "src/parser/scilabLexer.ml"
 
   | 14 ->
-# 498 "src/parser/scilabLexer.mll"
+# 497 "src/parser/scilabLexer.mll"
                                  ( return_control lexbuf; return_shell CONTROLTIMES )
-# 6969 "src/parser/scilabLexer.ml"
+# 6968 "src/parser/scilabLexer.ml"
 
   | 15 ->
-# 499 "src/parser/scilabLexer.mll"
+# 498 "src/parser/scilabLexer.mll"
                                  ( return_shell KRONTIMES )
-# 6974 "src/parser/scilabLexer.ml"
+# 6973 "src/parser/scilabLexer.ml"
 
   | 16 ->
-# 500 "src/parser/scilabLexer.mll"
+# 499 "src/parser/scilabLexer.mll"
                                  ( return_shell POWER )
-# 6979 "src/parser/scilabLexer.ml"
+# 6978 "src/parser/scilabLexer.ml"
 
   | 17 ->
-# 501 "src/parser/scilabLexer.mll"
+# 500 "src/parser/scilabLexer.mll"
                                  ( return_shell DOTPOWER )
-# 6984 "src/parser/scilabLexer.ml"
+# 6983 "src/parser/scilabLexer.ml"
 
   | 18 ->
-# 502 "src/parser/scilabLexer.mll"
+# 501 "src/parser/scilabLexer.mll"
                                  ( return_shell EQ )
-# 6989 "src/parser/scilabLexer.ml"
+# 6988 "src/parser/scilabLexer.ml"
 
   | 19 ->
-# 503 "src/parser/scilabLexer.mll"
+# 502 "src/parser/scilabLexer.mll"
                                  ( return_shell NE )
-# 6994 "src/parser/scilabLexer.ml"
+# 6993 "src/parser/scilabLexer.ml"
 
   | 20 ->
-# 504 "src/parser/scilabLexer.mll"
+# 503 "src/parser/scilabLexer.mll"
                                  ( return_shell LT )
-# 6999 "src/parser/scilabLexer.ml"
+# 6998 "src/parser/scilabLexer.ml"
 
   | 21 ->
-# 505 "src/parser/scilabLexer.mll"
+# 504 "src/parser/scilabLexer.mll"
                                  ( return_shell GT )
-# 7004 "src/parser/scilabLexer.ml"
+# 7003 "src/parser/scilabLexer.ml"
 
   | 22 ->
-# 506 "src/parser/scilabLexer.mll"
+# 505 "src/parser/scilabLexer.mll"
                                  ( return_shell LE )
-# 7009 "src/parser/scilabLexer.ml"
+# 7008 "src/parser/scilabLexer.ml"
 
   | 23 ->
-# 507 "src/parser/scilabLexer.mll"
+# 506 "src/parser/scilabLexer.mll"
                                  ( return_shell GE )
-# 7014 "src/parser/scilabLexer.ml"
+# 7013 "src/parser/scilabLexer.ml"
 
   | 24 ->
-# 508 "src/parser/scilabLexer.mll"
+# 507 "src/parser/scilabLexer.mll"
                                  ( return_shell SEMI )
-# 7019 "src/parser/scilabLexer.ml"
+# 7018 "src/parser/scilabLexer.ml"
 
   | 25 ->
-# 509 "src/parser/scilabLexer.mll"
+# 508 "src/parser/scilabLexer.mll"
                                  ( return_shell COMMA )
-# 7024 "src/parser/scilabLexer.ml"
+# 7023 "src/parser/scilabLexer.ml"
 
   | 26 ->
-# 510 "src/parser/scilabLexer.mll"
+# 509 "src/parser/scilabLexer.mll"
                                  ( return_shell ASSIGN )
-# 7029 "src/parser/scilabLexer.ml"
+# 7028 "src/parser/scilabLexer.ml"
 
   | 27 ->
-# 511 "src/parser/scilabLexer.mll"
+# 510 "src/parser/scilabLexer.mll"
                                  ( return_shell LPAREN )
-# 7034 "src/parser/scilabLexer.ml"
+# 7033 "src/parser/scilabLexer.ml"
 
   | 28 ->
-# 512 "src/parser/scilabLexer.mll"
+# 511 "src/parser/scilabLexer.mll"
                                  ( return_shell LT )
-# 7039 "src/parser/scilabLexer.ml"
+# 7038 "src/parser/scilabLexer.ml"
 
   | 29 ->
-# 513 "src/parser/scilabLexer.mll"
+# 512 "src/parser/scilabLexer.mll"
                                  ( return_shell GT )
-# 7044 "src/parser/scilabLexer.ml"
+# 7043 "src/parser/scilabLexer.ml"
 
   | 30 ->
-# 514 "src/parser/scilabLexer.mll"
+# 513 "src/parser/scilabLexer.mll"
                                  ( return_shell NOT )
-# 7049 "src/parser/scilabLexer.ml"
+# 7048 "src/parser/scilabLexer.ml"
 
   | 31 ->
-# 515 "src/parser/scilabLexer.mll"
+# 514 "src/parser/scilabLexer.mll"
                                  ( return_shell AND )
-# 7054 "src/parser/scilabLexer.ml"
+# 7053 "src/parser/scilabLexer.ml"
 
   | 32 ->
-# 516 "src/parser/scilabLexer.mll"
+# 515 "src/parser/scilabLexer.mll"
                                  ( return_shell ANDAND )
-# 7059 "src/parser/scilabLexer.ml"
+# 7058 "src/parser/scilabLexer.ml"
 
   | 33 ->
-# 517 "src/parser/scilabLexer.mll"
+# 516 "src/parser/scilabLexer.mll"
                                  ( return_shell OR )
-# 7064 "src/parser/scilabLexer.ml"
+# 7063 "src/parser/scilabLexer.ml"
 
   | 34 ->
-# 518 "src/parser/scilabLexer.mll"
+# 517 "src/parser/scilabLexer.mll"
                                  ( return_shell OROR )
-# 7069 "src/parser/scilabLexer.ml"
+# 7068 "src/parser/scilabLexer.ml"
 
   | 35 ->
-# 519 "src/parser/scilabLexer.mll"
+# 518 "src/parser/scilabLexer.mll"
                                  ( shellmode_on := false;
                                    if (is_transposable ())
                                    then return_shell QUOTE
                                    else begin str := ""; simplestr lexbuf end )
-# 7077 "src/parser/scilabLexer.ml"
+# 7076 "src/parser/scilabLexer.ml"
 
   | 36 ->
-# 523 "src/parser/scilabLexer.mll"
+# 522 "src/parser/scilabLexer.mll"
                                  ( shellmode_on := false; str := ""; doublestr lexbuf )
-# 7082 "src/parser/scilabLexer.ml"
+# 7081 "src/parser/scilabLexer.ml"
 
   | 37 ->
 let
-# 524 "src/parser/scilabLexer.mll"
+# 523 "src/parser/scilabLexer.mll"
                      arg
-# 7088 "src/parser/scilabLexer.ml"
+# 7087 "src/parser/scilabLexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 524 "src/parser/scilabLexer.mll"
+# 523 "src/parser/scilabLexer.mll"
                                  ( return_token (STR arg) )
-# 7092 "src/parser/scilabLexer.ml"
+# 7091 "src/parser/scilabLexer.ml"
 
   | 38 ->
-# 525 "src/parser/scilabLexer.mll"
+# 524 "src/parser/scilabLexer.mll"
                                  ( return_shell EOF )
-# 7097 "src/parser/scilabLexer.ml"
+# 7096 "src/parser/scilabLexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf; __ocaml_lex_shellmode_rec lexbuf __ocaml_lex_state
 

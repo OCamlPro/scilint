@@ -34,19 +34,21 @@ let file = ref ""
 
 type state = { mutable escaped_sy : SetSyWithLoc.t ;
                mutable returned_sy : SetSyWithLoc.t;
-               mutable init_sy : SetSy.t;
+               mutable init_sy : SetSyWithLoc.t;
                mutable args_sy : SetSyWithLoc.t;
                mutable used_sy : SetSyWithLoc.t;
                mutable level_fun : int;
                mutable level_for : int;
-               mutable for_sy : SetSyWithLoc.t }
+               mutable for_sy : SetSyWithLoc.t;
+               mutable level_while : int}
 
 let new_state level_fun =
   { escaped_sy = SetSyWithLoc.empty ; returned_sy = SetSyWithLoc.empty;
-    init_sy = SetSy.empty; args_sy = SetSyWithLoc.empty;
+    init_sy = SetSyWithLoc.empty; args_sy = SetSyWithLoc.empty;
     used_sy = SetSyWithLoc.empty;
     level_fun = level_fun;
-    level_for = 0; for_sy = SetSyWithLoc.empty; }
+    level_for = 0; for_sy = SetSyWithLoc.empty;
+    level_while = 0}
 
 let table_unsafe_fun = ref UnsafeFunSy.empty
 
@@ -69,7 +71,7 @@ let get_location_from_var var =
 
 let rec add_used st sy loc =
   st.used_sy <- SetSyWithLoc.add (sy, loc) st.used_sy;
-  if not (SetSy.mem sy st.init_sy)
+  if not (SetSyWithLoc.mem (sy, loc) st.init_sy)
   then st.escaped_sy <- SetSyWithLoc.add (sy, loc) st.escaped_sy;
   if SetSyWithLoc.mem (sy, loc) st.args_sy
   then st.args_sy <- SetSyWithLoc.remove (sy, loc) st.args_sy
@@ -255,7 +257,9 @@ and analyze_ast st e = match e.exp_desc with
         Array.fold_left (fun acc (sy, loc) ->
           if st.level_for <> 0 && SetSyWithLoc.mem (sy, loc) st.for_sy
           then local_warning (!file, loc) For_var_modif;
-          SetSy.add sy acc) st.init_sy arr_sy;
+          if SetSyWithLoc.mem (sy, loc) acc && not (SetSyWithLoc.mem (sy, loc) st.used_sy)
+          then local_warning (!file, loc) (Var_redef_not_used sy.symbol_name);
+          SetSyWithLoc.add (sy, loc) acc) st.init_sy arr_sy;
       if is_return_call assignExp_right_exp
       then
         st.returned_sy <- Array.fold_left (fun acc sy ->
@@ -270,7 +274,7 @@ and analyze_ast st e = match e.exp_desc with
 *)
       ()
     end
-  | ControlExp controlExp -> analyze_cntrl st controlExp
+  | ControlExp controlExp -> analyze_cntrl e.exp_location st controlExp
   | FieldExp { fieldExp_head; fieldExp_tail } -> ()
   | ListExp { listExp_start; listExp_step; listExp_end } ->
       analyze_ast st listExp_start;
@@ -282,15 +286,19 @@ and analyze_ast st e = match e.exp_desc with
   | MathExp mathExp -> analyze_math st mathExp
   | Dec dec -> analyze_dec st dec
 
-and analyze_cntrl st = function
-  | BreakExp -> ()
-  | ContinueExp -> ()
+and analyze_cntrl loc st = function
+  | BreakExp -> 
+      if st.level_for = 0 && st.level_while = 0
+      then local_warning (!file, loc) (Break_outside_loop ())
+  | ContinueExp -> 
+      if st.level_for = 0 && st.level_while = 0
+      then local_warning (!file, loc) (Continue_outside_loop ())
   | ForExp forExp ->
       let varDec = forExp.forExp_vardec in (* name, init, kind *)
       let sy = varDec.varDec_name in
       let loc = forExp.forExp_vardec_location in
       analyze_ast st varDec.varDec_init;
-      st.init_sy <- SetSy.add sy st.init_sy;
+      st.init_sy <- SetSyWithLoc.add (sy, loc) st.init_sy;
       st.for_sy <- SetSyWithLoc.add (sy, loc) st.for_sy;
       st.level_for <- st.level_for + 1;
       analyze_ast st forExp.forExp_body;
@@ -326,15 +334,18 @@ and analyze_cntrl st = function
       List.iter (analyze_ast st) tryCatchExp.tryCatchExp_catchme
   | WhileExp whileExp ->
       analyze_ast st whileExp.whileExp_test;
-      analyze_ast st whileExp.whileExp_body
+      st.level_while <- st.level_while + 1;
+      analyze_ast st whileExp.whileExp_body;
+      st.level_while <- st.level_while - 1
 
 and analyze_dec st = function
   | VarDec vd -> ()
   | FunctionDec fd ->
       incr cpt_analyze_fun;
       let new_st = new_state (st.level_fun+1) in
-      let sy = fd.functionDec_symbol in
-      let fun_name = symbol_name sy in
+      let fun_sy = fd.functionDec_symbol in
+      let fun_loc = fd.functionDec_location in
+      let fun_name = symbol_name fun_sy in
       let body = fd.functionDec_body in
       let args = fd.functionDec_args.arrayListVar_vars in
       let ret = fd.functionDec_returns.arrayListVar_vars in
@@ -347,18 +358,18 @@ and analyze_dec st = function
         ) args in
       let ini, args_set =
         Array.fold_left (fun (ini, args_set) (sy_arg, loc) ->
-          if SetSy.mem sy_arg ini then
+          if SetSyWithLoc.mem (sy_arg, loc) ini then
             (* W003 *)
             local_warning (!file, loc)
               (Duplicate_arg sy_arg.symbol_name);
-                (SetSy.add sy_arg ini,
+                (SetSyWithLoc.add (sy_arg, loc) ini,
                  SetSyWithLoc.add (sy_arg, loc) args_set)
-        ) (SetSy.singleton sy, SetSyWithLoc.empty) args in
+        ) (SetSyWithLoc.singleton (fun_sy, fun_loc), SetSyWithLoc.empty) args in
       let ret_vars = Array.fold_left (fun acc ret_var ->
         match ret_var.var_desc with
           | SimpleVar sy_arg ->
               (* W005 *)
-              if SetSy.mem sy_arg ini
+              if SetSyWithLoc.mem (sy_arg, ret_var.var_location) ini
               then
                 local_warning
                     (!file, ret_var.var_location)
@@ -403,7 +414,7 @@ and analyze_dec st = function
 
       if st.level_fun = 0 then begin
         let fun_decl = {
-          fun_name = symbol_name sy;
+          fun_name = symbol_name fun_sy;
           fun_args = Array.map (fun (sy, _) ->
               symbol_name sy
             ) args;
@@ -418,6 +429,14 @@ and analyze_dec st = function
               print_extract_error (msg, lnum, cnum)
           | Assert_failure _ as err -> print_endline (Printexc.to_string err)
       end;
+      (* W016 *)
+      SetSyWithLoc.iter (fun (sy, loc) ->
+        if sy <> fun_sy
+          && not (SetSyWithLoc.mem (sy, loc) new_st.args_sy) 
+          && not (SetSyWithLoc.mem (sy, loc) ret_vars)
+          && not (SetSyWithLoc.mem (sy, loc) new_st.used_sy) then
+          local_warning (!file, loc) (Var_def_not_used sy.symbol_name)
+      ) new_st.init_sy;
       let unused = get_unused new_st.args_sy new_st.used_sy in
       (* W006 and W007 *)
       SetSyWithLoc.iter (fun (sy, loc_ret) ->
@@ -429,7 +448,7 @@ and analyze_dec st = function
               (SetSyWithLoc.filter (fun (sy_ret, _) -> sy = sy_ret) new_st.used_sy) in
             local_warning (!file, loc) (Return_as_var sy.symbol_name)
           end;
-        if not (SetSy.mem sy new_st.init_sy)
+        if not (SetSyWithLoc.mem (sy, loc_ret) new_st.init_sy)
         then
           local_warning (!file, loc_ret) (Unset_ret sy.symbol_name)
       ) ret_vars;
@@ -447,15 +466,15 @@ and analyze_dec st = function
           SetSyWithLoc.iter (fun (sy, loc) ->
             local_warning (!file, loc) (Uninitialized_var sy.symbol_name)
           ) new_st.escaped_sy;
-          add_unsafeFun sy new_st.escaped_sy new_st.returned_sy;
+          add_unsafeFun fun_sy new_st.escaped_sy new_st.returned_sy;
           if st.level_fun <> 0
-          then st.init_sy <- SetSy.add sy st.init_sy;
+          then st.init_sy <- SetSyWithLoc.add (fun_sy, fun_loc) st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
       else
         begin
           if st.level_fun <> 0
-          then st.init_sy <- SetSy.add sy st.init_sy;
+          then st.init_sy <- SetSyWithLoc.add (fun_sy, fun_loc) st.init_sy;
           st.args_sy <- get_unused st.args_sy new_st.used_sy;
         end
 

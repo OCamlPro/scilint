@@ -69,10 +69,11 @@ let get_length ic =
 
 let parse_file file =
   let ch = if file = "" then stdin else open_in file in
-  let new_prog = ScilabPreParser.pre_parse ch in
+  let (new_prog, corrupt_zone) = ScilabPreParser.pre_parse ch in
   let lexbuf = Lexing.from_string new_prog in
   ScilabLexer.init_lexer_var ();
   try
+    ScilabParserUtils.init_var_corrupt corrupt_zone;
     let ast = ScilabParser.program ScilabLexer.token lexbuf in
     flush stdout;
     close_in ch;

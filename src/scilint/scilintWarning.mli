@@ -17,6 +17,10 @@ type local_warning =
   | Unexpected_string_argument of string * int * string * string list
   | Unexpected_argument_type of string * int * string (* W014 *)
   | Int_argument_out_of_range of string * int * float * int * int (* W015 *)
+  | Var_def_not_used of string (* W016 *)
+  | Var_redef_not_used of string (* W017 *)
+  | Break_outside_loop of unit (* W018 *)
+  | Continue_outside_loop of unit (* W019 *)
 
 val local_warning : location -> local_warning -> unit
 

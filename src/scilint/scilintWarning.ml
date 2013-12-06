@@ -18,6 +18,10 @@ type local_warning =
   | Unexpected_string_argument of string * int * string * string list (* W013 *)
   | Unexpected_argument_type of string * int * string (* W014 *)
   | Int_argument_out_of_range of string * int * float * int * int (* W015 *)
+  | Var_def_not_used of string (* W016 *)
+  | Var_redef_not_used of string (* 017 *)
+  | Break_outside_loop of unit (* W018 *)
+  | Continue_outside_loop of unit (* W019 *)
 
 type output_format = TextFormat | XmlFormat
 
@@ -29,10 +33,21 @@ let set_format_to_xml () = output_format := XmlFormat
 
 let print_warning_in_text code locs =
   List.iteri (fun i ((file, loc), msg) ->
-    Printf.printf "File \"%s\", line %i, characters %i-%i:\n"
-      file loc.first_line loc.first_column loc.last_column;
-    if i = 0 then Printf.printf "Warning W%03d: " code;
-    Printf.printf "%s\n" msg
+    if loc.first_line = loc.last_line
+    then
+      begin
+        Printf.printf "File \"%s\", line %i, characters %i-%i:\n"
+          file loc.first_line loc.first_column loc.last_column;
+        if i = 0 then Printf.printf "Warning W%03d: " code;
+        Printf.printf "%s\n" msg
+      end
+    else
+      begin
+        Printf.printf "File \"%s\", line %i-%i, characters %i-%i:\n"
+          file loc.first_line loc.last_line loc.first_column loc.last_column;
+        if i = 0 then Printf.printf "Warning W%03d: " code;
+        Printf.printf "%s\n" msg
+      end
   ) locs
 
 let print_warning code locs = match !output_format with
@@ -90,8 +105,33 @@ let local_warning loc w =
         Printf.sprintf "Function %S does not expect %.1f as argument %d\nShould be between %d and %d"
           fun_name v (i+1) min max
       ]
-
+    | Var_def_not_used var_name -> 16,
+      [ loc,
+        Printf.sprintf "variable %S defined but not used" var_name
+      ]
+    | Var_redef_not_used var_name -> 17,
+      [ loc,
+        Printf.sprintf "variable %S redefined before being used" var_name
+      ]
+    | Break_outside_loop () -> 18,
+      [ loc,
+        Printf.sprintf "break outside of loop"
+      ] 
+    | Continue_outside_loop () -> 19,
+      [ loc,
+        Printf.sprintf "continue outside of loop"
+      ] 
   in
   print_warning code msg
+
+
+
+
+
+
+
+
+
+
 
 

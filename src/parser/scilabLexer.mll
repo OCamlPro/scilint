@@ -3,7 +3,6 @@
   open Lexing
   open ScilabParser
 
-
   exception Err_str of string
 
   exception Lex_err of string

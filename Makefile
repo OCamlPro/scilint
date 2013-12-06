@@ -11,6 +11,7 @@ OCAML_COMMON_MLS = \
 
 OCAML_PARSER_MLS = \
 	src/parser/scilabPreParser.ml \
+	src/parser/scilabParserUtils.ml \
 	src/parser/scilabParser.ml \
 	src/parser/uutf.ml \
 	src/parser/scilabLexer.ml

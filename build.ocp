@@ -14,6 +14,7 @@ begin program "scilint"
 	"src/common/scilabPrettyPrinter.ml"
 
 	"src/parser/scilabPreParser.ml"
+        "src/parser/scilabParserUtils.ml"
 	"src/parser/scilabParser.mly"
 	"src/parser/uutf.ml"
 	"src/parser/scilabLexer.mll"
