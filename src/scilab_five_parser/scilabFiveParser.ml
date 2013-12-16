@@ -947,7 +947,8 @@ end = struct
             let exp = (Error ("'" ^ id_text
                               ^ "' only allowed on the right of a condition")) in
             `Stmt (descr_exp (descr exp id_bounds ctx))
-          | 'e', "else" ->
+          | 'e', "else"
+          | 'e', "elseif" ->
             terminate id cp [ "select" ; "if" ] ctx
           | 'c', "case" -> terminate id cp [ "select" ] ctx
           | 'c', "catch" -> terminate id cp [ "try" ] ctx
@@ -1289,7 +1290,6 @@ end = struct
     let sloc = point ctx.st in
     discard empty_lines ctx.st ;
     let rec parse_case cond term default cases =
-      let cond, _ = parse_main_expr ~terminators:[ "then" ] ctx in
       match term, default with
       | "else", None ->
         let phrases, term = parse_seq ctx in
@@ -1530,7 +1530,7 @@ end = struct
           let eacc =
             if exec comment ctx.st then begin
               let tok = extract_from ctx.st cp in
-              discard (maybe (char '\n')) ctx.st ;
+              (* discard (maybe (char '\n')) ctx.st ; *)
               `Comment tok :: eacc
             end else eacc
           in

@@ -49,20 +49,22 @@ let treat_source source =
     printf "\n"
   end ;
   if !Opts.print_messages then begin
-    printf "Messages:\n" ;
+    let messages = ref [] in
     let source (source : source) =
       match source with
       | String str -> "input"
       | File name -> name
       | Forged -> "ghost"
     in
-    let show_errors = object
+    let collect = object
       inherit ast_iterator as mom
       method! exp ({ cstr ; loc = (src, ((ls, cs), (le, ce))) } as exp) =
         (match cstr with
          | Error msg ->
-           Printf.printf "%s:%d.%d:%d.%d: Error: %s\n"
-             (source src) ls cs le ce msg ;
+           messages :=
+             (sprintf "%s:%d.%d:%d.%d: Error: %s\n"
+                (source src) ls cs le ce msg)
+             :: !messages ;
            mom # exp exp
          | _ -> mom # exp exp)
         
@@ -71,17 +73,27 @@ let treat_source source =
           List.iter
             (function
               | Warning msg ->
-                Printf.printf "%s:%d.%d:%d.%d: Warning: %s\n"
-                  (source src) ls cs le ce msg
+                messages :=
+                  (sprintf "%s:%d.%d:%d.%d: Warning: %s\n"
+                     (source src) ls cs le ce msg)
+                  :: !messages
               | Insert ((l, c), kwd, msg) ->
-          Printf.printf "%s:%d.%d: Inserted %S: %s\n"
-            (source src) l c kwd msg
+                messages :=
+                  (sprintf "%s:%d.%d: Inserted %S: %s\n"
+                     (source src) l c kwd msg)
+                  :: !messages
               | Drop (((ls, cs), (le, ce)), text, msg) ->
-                Printf.printf "%s:%d.%d:%d.%d: Dropped %S: %s\n"
-                  (source src) ls cs le ce text msg)
+                messages :=
+                  (sprintf "%s:%d.%d:%d.%d: Dropped %S: %s\n"
+                     (source src) ls cs le ce text msg)
+                  :: !messages)
             meta
     end in
-    show_errors # ast ast
+    collect # ast ast ;
+    if !messages <> [] then begin
+      printf "Messages:\n" ;
+      List.iter print_string !messages
+    end
   end
 
 (** a small toplevel for experimentation purposes *)
