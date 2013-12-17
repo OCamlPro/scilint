@@ -35,8 +35,21 @@ OCAML_SCILINT_MLS = \
 	src/scilint/scilabAstStats.ml \
 	src/scilint/scilintMain.ml
 
-OCAML_SCILINT_MLIS = 
+OCAML_SCILAB_FIVE_PARSER_MLS = \
+	src/scilab_five_parser/scilabFiveParserAst.ml \
+	src/scilab_five_parser/scilabFiveParser.ml \
+	src/scilab_five_parser/scilabFiveParserAstSerializer.ml
 
+OCAML_SCILAB_FIVE_AST_MLS = \
+	src/scilab_five_ast/scilabFiveAst.ml \
+	src/scilab_five_ast/scilabFiveAstUtils.ml \
+	src/scilab_five_ast/scilabFiveAstSexpPrinter.ml \
+	src/scilab_five_ast/scilabFiveAstPrettyPrinter.ml
+
+OCAML_SCINTAX_MLS = \
+	src/scintax/scintaxMain.ml
+
+OCAML_SCILINT_MLIS = 
 
 ######### OCAML_JIT
 
@@ -66,20 +79,44 @@ SCILINT_CMIS = $(SCILINT_MLS:.ml=.cmi) $(SCILINT_MLIS:.mli=.cmi)
 SCILINT_CMXS = $(SCILINT_MLS:.ml=.cmx)
 SCILINT_OBJS = $(SCILINT_MLS:.ml=.o)
 
-OCAML_INCL= -I src/common -I src/parser -I src/scilint -I src/scilint/config
-OPTFLAGS = -g -c -fPIC $(OCAML_INCL)
+########## SCINTAX
 
-all: scilint.asm
+SCINTAX_MLS = \
+	$(OCAML_SCILAB_FIVE_AST_MLS) \
+	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
+	$(OCAML_SCINTAX_MLS)
+
+SCINTAX_MLIS =
+
+SCINTAX_CMIS = $(SCINTAX_MLS:.ml=.cmi) $(SCINTAX_MLIS:.mli=.cmi)
+SCINTAX_CMXS = $(SCINTAX_MLS:.ml=.cmx)
+SCINTAX_OBJS = $(SCINTAX_MLS:.ml=.o)
+
+########## COMMON FLAGS
+
+OCAML_INCL= \
+  -I $(shell ocamlfind query pprint) \
+  -I src/common -I src/parser \
+  -I src/scilint -I src/scilint/config \
+  -I src/scilab_five_ast -I src/scilab_five_parser
+
+OPTFLAGS = -g -fPIC $(OCAML_INCL)
+
+all: scilint.asm scintax.asm
 
 scilint.asm : $(SCILINT_CMXS)
 	$(OCAMLOPT) unix.cmxa \
 	  -o scilint.asm $(SCILINT_CMXS)
 
+scintax.asm : $(SCINTAX_CMXS)
+	$(OCAMLOPT) $(OPTFLAGS) unix.cmxa PPrintLib.cmxa \
+          -o scintax.asm $(SCINTAX_CMXS)
 
 depend: $(OCAML_PARSER_MLS)
 	$(OCAMLDEP) -native $(OCAML_INCL) \
 		$(OCAML_JIT_MLS) $(OCAML_JIT_MLIS) \
-		$(SCILINT_MLS) $(SCILINT_MLIS) > .depend_ocaml
+		$(SCILINT_MLS) $(SCILINT_MLIS) \
+		$(SCINTAX_MLS) $(SCINTAX_MLIS) > .depend_ocaml
 include .depend_ocaml
 
 ChangeLog.txt: _obuild/scilintDocgen/scilintDocgen.byte
@@ -120,8 +157,13 @@ clean :
 	$(SCILINT_CMIS)  \
 	$(SCILINT_CMXS)  \
 	$(SCILINT_OBJS)  \
+	$(SCINTAX_CMIS)  \
+	$(SCINTAX_CMXS)  \
+	$(SCINTAX_OBJS)  \
 	scilint \
 	scilint.asm \
+	scintax \
+	scintax.asm \
 	src/lex/*.cm* \
 	src/lex/*.o \
 	src/yacc/*.cm* \

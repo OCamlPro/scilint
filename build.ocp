@@ -5,6 +5,23 @@ begin library "scilintManual"
   ]
 end
 
+begin program "scintax"
+  files = [
+  (* - AST and utils *)
+	"src/scilab_five_ast/scilabFiveAst.ml"
+	"src/scilab_five_ast/scilabFiveAstUtils.ml"
+	"src/scilab_five_ast/scilabFiveAstSexpPrinter.ml"
+  	"src/scilab_five_ast/scilabFiveAstPrettyPrinter.ml"
+  (* - parser *)
+	"src/scilab_five_parser/scilabFiveParserAst.ml"
+	"src/scilab_five_parser/scilabFiveParser.ml"
+	"src/scilab_five_parser/scilabFiveParserAstSerializer.ml"
+  (* - main *)
+	"src/scintax/scintaxMain.ml"
+  ]
+  requires = [ "pprint" ]
+end
+
 begin program "scilint"
   files = [
 
