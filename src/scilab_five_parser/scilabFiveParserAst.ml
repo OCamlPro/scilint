@@ -34,8 +34,9 @@ module Parameters = struct
 
   and message =
     | Insert of point * string * string
-    | Drop of (point * point) * string * string
-    | Warning of string
+    | Drop of (point * point) * string
+    | Replace of (point * point) * string * string
+    | Message of string
 
   (** Dummy meta *)
   let ghost_meta = []

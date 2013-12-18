@@ -104,8 +104,8 @@ module Make
       B [ sexp_of_unop unop ; sexp_of_exp exp ]
     | Op (op, lexp, rexp) ->
       B [ sexp_of_op op ; sexp_of_exp lexp ; sexp_of_exp rexp ]      
-    | Error msg ->
-      B [ L "error" ; L (Printf.sprintf "%S" msg) ]
+    | Error ->
+      B [ L "error" ]
 
   and sexp_of_unop unop =
     match unop with
@@ -186,9 +186,12 @@ module Make
     | Return  ->
       B [ L "return" ]
     | Select { cond ; cases ; default = None }  ->
-      B (L "select" :: List.map sexp_of_case cases)
+      B (L "select" :: sexp_of_exp cond
+         :: List.map sexp_of_case cases)
     | Select { cond ; cases ; default = Some d }  ->
-      B (L "select" :: List.map sexp_of_case cases @ [ B [ L "default" ; sexp_of_stmt d ] ])
+      B (L "select" :: sexp_of_exp cond
+         :: List.map sexp_of_case cases
+         @ [ B [ L "default" ; sexp_of_stmt d ] ])
     | Try (tbody, cbody)  ->
       B [ L "try" ; sexp_of_stmt tbody ; sexp_of_stmt cbody ]
     | While (cond, body)  ->

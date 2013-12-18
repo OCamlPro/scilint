@@ -260,8 +260,8 @@ let serialize_ast =
         output_wstring str
       | Colon ->
         output_header loc 10 (* ColonVar *)
-      | Error msg ->
-        failwith (Printf.sprintf "Trailing Error %S in the AST" msg)
+      | Error ->
+        failwith "Trailing error in the AST"
   and output_arg (n, exp) =
     match n with 
     | Some var ->

@@ -121,7 +121,7 @@ module Make
       | Op (op, lexp, rexp) ->
         Op (op, self # exp lexp, self # exp rexp)
       | Bool _ | Num _ | String _ | Colon as e -> e
-      | Error msg -> Error msg
+      | Error -> Error
 
     method unop (unop : unop) = unop
     method op (op : op) = op
@@ -241,7 +241,7 @@ module Make
       | Op (op, lexp, rexp) ->
         self # exp lexp ;
         self # exp rexp
-      | Bool _ | Num _ | String _ | Colon | Error _ -> ()
+      | Bool _ | Num _ | String _ | Colon | Error -> ()
 
     method unop (unop : unop) = ()
     method op (op : op) = ()

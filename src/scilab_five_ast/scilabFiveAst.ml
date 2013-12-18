@@ -94,8 +94,8 @@ module Make (Parameters : Parameters) = struct
   (** Raw expression node *)
   and exp_cstr =
     (** {4 Composite expressions} *)
-    | Call of exp * arg list * call_kind  (** f (exp, ..., exp) (see {!call_kind}) *)
-    | Identity of exp list                (** (exp, ..., exp) (* call to identity *) *)
+    | Call of exp * arg list * call_kind  (** f (exp, ..., exp) ({!call_kind}) *)
+    | Identity of exp list                (** (exp, ..., exp) *)
     | Range of exp * exp option * exp     (** exp : exp? : exp *)
 
     (** {4 Simple expressions} *)
@@ -104,11 +104,11 @@ module Make (Parameters : Parameters) = struct
     | String of string                (** "..." '...' *)
     | Var of var                      (** Symbols, including "$" *)
     | Colon                           (** Special variable ":" *)
-    | Error of string                 (** Syntax error recovered by the parser *)
+    | Error                           (** Syntax error recovered by the parser *)
 
     (** {4 Math expressions} *)
     | Matrix of matrix_contents       (** Matrix litteral [ ... ] *)
-    | Cell_array of matrix_contents   (** Cell litteral { ... } (Scilab 6 / MATLAB) *)
+    | Cell_array of matrix_contents   (** Cell litteral { ... } (Scilab 6/MATLAB) *)
     | Unop of unop * exp              (** Prefix or postfix unary op *)
     | Op of op * exp * exp            (** Infix binary op *)
 
@@ -172,5 +172,4 @@ module Make (Parameters : Parameters) = struct
     | Or                              (** "|" *)
     | Seq_and                         (** "&&" *)
     | Seq_or                          (** "||" *)
-
 end
