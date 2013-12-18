@@ -158,11 +158,8 @@ module Make
           (align (document_of_exp lexp
                   ^^ shell_arg_sep ^^ document_of_op op
                   ^^ nbsp ^^ document_of_exp rexp))
-    | Error msg ->
-      group_sp sp
-        (string "error"
-         ^^ mnbsp in_matrix
-         ^^ string "(" ^^ format_string msg ^^ string ")")
+    | Error ->
+      group_sp sp (string "error")
         
   and document_of_op op =
     match op with
@@ -259,7 +256,6 @@ module Make
 
   and document_of_stmt (w : Ast.stmt) =
     document_of_descr w (document_of_stmt_cstr w.cstr)
-    |> group
 
   and document_of_stmt_cstr (st : Ast.stmt_cstr) =
     match st with
@@ -278,31 +274,33 @@ module Make
     | Defun { name ; args ; rets = [] ; body } ->
       string "function" ^^ nbsp ^^ document_of_var name ^^ nbsp
       ^^ group (string "("
-                ^^ separate_map (arg_sep false) document_of_var args
-                ^^ string ")")
+                ^^ align (flow (arg_sep false)
+                            (List.map document_of_var args)
+                          ^^ string ")"))
       ^^ nest 2 (instr_end ^^ document_of_stmt body)
       ^^ instr_end ^^ string "endfunction"
     | Defun { name ; args ; rets = [ ret ] ; body } ->
       string "function" ^^ nbsp
-      ^^ document_of_var ret ^^ bsp ^^ string "="
-      ^^ nbsp ^^ document_of_var name
+      ^^ document_of_var ret ^^ nbsp ^^ string "="
+      ^^ bsp ^^ document_of_var name ^^ nbsp
       ^^ group (string "("
-                ^^ separate_map (arg_sep false) document_of_var args
-                ^^ string ")")
+                ^^ align (flow (arg_sep false)
+                            (List.map document_of_var args)
+                          ^^ string ")"))
       ^^ nest 2 (instr_end ^^ document_of_stmt body)
       ^^ instr_end ^^ string "endfunction"
     | Defun { name ; args ; rets ; body } ->
       string "function" ^^ nbsp
       ^^ group (string "["
                 ^^ separate_map (arg_sep false) document_of_var rets
-                ^^ string "]")
-      ^^ nbsp ^^ document_of_var name
+                ^^ string "] =")
+      ^^ group (bsp ^^ document_of_var name) ^^ nbsp
       ^^ group (string "("
-                ^^ separate_map (arg_sep false) document_of_var args
-                ^^ string ")")
+                ^^ align (flow (arg_sep false)
+                            (List.map document_of_var args)
+                          ^^ string ")"))
       ^^ nest 2 (instr_end ^^ document_of_stmt body)
       ^^ instr_end ^^ string "endfunction"
-      |> group
     | Exp exp ->
       document_of_exp exp
     | Break ->

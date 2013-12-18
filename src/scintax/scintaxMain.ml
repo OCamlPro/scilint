@@ -30,7 +30,7 @@ let treat_source source =
   in 
   let ast =
     if !Opts.print_time then begin
-      printf "Parsing %S ...%!" display_name ;
+      printf "Parsing %s ...%!" display_name ;
       let t0 = Sys.time () in
       let ast = parse () in
       let t1 = Sys.time () in
@@ -58,16 +58,6 @@ let treat_source source =
     in
     let collect = object
       inherit ast_iterator as mom
-      method! exp ({ cstr ; loc = (src, ((ls, cs), (le, ce))) } as exp) =
-        (match cstr with
-         | Error msg ->
-           messages :=
-             (sprintf "%s:%d.%d:%d.%d: Error: %s\n"
-                (source src) ls cs le ce msg)
-             :: !messages ;
-           mom # exp exp
-         | _ -> mom # exp exp)
-        
       method! descr : 'a. 'a descr -> unit
         = fun { meta ; loc = (src, ((ls, cs), (le, ce))) } ->
           List.iter
@@ -77,27 +67,39 @@ let treat_source source =
                   (sprintf "%s:%d.%d:%d.%d: Warning: %s\n"
                      (source src) ls cs le ce msg)
                   :: !messages
+              | Recovered msg ->
+                messages :=
+                  (sprintf "%s:%d.%d:%d.%d: Error: %s\n"
+                     (source src) ls cs le ce msg)
+                  :: !messages
               | Insert ((l, c), kwd, msg) ->
                 messages :=
-                  (sprintf "%s:%d.%d: Inserted %S: %s\n"
+                  (sprintf "%s:%d.%d: Insert %S: %s\n"
                      (source src) l c kwd msg)
                   :: !messages
-              | Drop (((ls, cs), (le, ce)), text, msg) ->
+              | Drop (((ls, cs), (le, ce)), msg) ->
                 messages :=
-                  (sprintf "%s:%d.%d:%d.%d: Dropped %S: %s\n"
-                     (source src) ls cs le ce text msg)
+                  (sprintf "%s:%d.%d:%d.%d: Drop: %s\n"
+                     (source src) ls cs le ce msg)
+                  :: !messages
+              | Replace (((ls, cs), (le, ce)), rep, msg) ->
+                messages :=
+                  (sprintf "%s:%d.%d:%d.%d: Replace %S: %s\n"
+                     (source src) ls cs le ce rep msg)
                   :: !messages)
             meta
     end in
     collect # ast ast ;
-    if !messages <> [] then begin
+    let messages = List.rev !messages in
+    if messages <> [] then begin
       printf "Messages:\n" ;
-      List.iter print_string !messages
+      List.iter print_string messages
     end
   end
 
 (** a small toplevel for experimentation purposes *)
 let interactive () =
+  Opts.print_ast := true ;
   let rec interp acc =
     let open Printf in
     Printf.printf "--> %!" ;
@@ -130,7 +132,7 @@ let main () =
        "Launch an interactive toplevel after other inputs have been processed") ;
       ("-silent", Clear Opts.print_messages,
        "Do not display error messages") ;
-      ("-time", Clear Opts.print_time,
+      ("-time", Set Opts.print_time,
        "Display parsing time") ;
       ("-format", Symbol ([ "human" ; "emacs" ; "firehose" ], (:=) Opts.format),
        " Set the format of warnings (default is \"human\")") ;
