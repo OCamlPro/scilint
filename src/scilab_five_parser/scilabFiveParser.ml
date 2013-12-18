@@ -814,12 +814,12 @@ end = struct
          | _ ->
            let warns =
              if opn.[0] <> cls then
-               [ Message "inconsistent string delimiters" ]
+               [ Warning "inconsistent string delimiters" ]
              else []
            in
            descr ~warns (String (Buffer.contents buf)) (from ctx.st cp) ctx)
       | '\000' | '\n' ->
-        let warns = [ Message "unterminated string" ] in
+        let warns = [ Recovered "unterminated string" ] in
         descr ~warns Error (from ctx.st cp) ctx
       | c ->
         Buffer.add_char buf c ; loop ()
@@ -939,20 +939,20 @@ end = struct
           | 'b', "break" ->
             let warns =
               (if not ctx.in_loop then
-                 [ Message "break outside of a loop" ]
+                 [ Warning "break outside of a loop" ]
                else [])
               @ (if not (exec empty_instr ctx.st) then
-                   [ Message "break takes no argument" ]
+                   [ Warning "break takes no argument" ]
                  else [])
             in
             `Stmt (descr ~warns Break id_bounds ctx)
           | 'c', "continue" ->
             let warns =
               (if not ctx.in_loop then
-                 [ Message "continue outside of a loop" ]
+                 [ Warning "continue outside of a loop" ]
                else [])
               @ (if not (exec empty_instr ctx.st) then
-                   [ Message "continue takes no argument" ]
+                   [ Warning "continue takes no argument" ]
                  else [])
             in
             `Stmt (descr ~warns Continue id_bounds ctx)
@@ -1002,12 +1002,16 @@ end = struct
       match peek ctx.st with
       | ' ' | '\t' | ',' | ';' | '\n' | '\000' ->
         let ctns, bounds = extract_from ctx.st cp in
-        let msg = sprintf
-            "this %S will not be interpreted as a terminator, \
-             insert line break before it or surround it with \
-             double quotes to dismiss this warning" ctns
+        let warns =
+          if closing_keyword ctns then
+            let msg = sprintf
+                "this %s will not be interpreted as a terminator, \
+                 insert a line break before it or surround it with \
+                 double quotes to dismiss this warning" ctns
+            in
+            [ Replace (bounds, "\"" ^ ctns ^ "\"", msg) ]
+          else []
         in
-        let warns = if closing_keyword ctns then [ Message msg ] else [] in
         skip (descr ~warns (String ctns) bounds ctx :: acc)
       | _ -> advance_1 ctx.st ; grab cp acc
     in
@@ -1079,13 +1083,13 @@ end = struct
 	  let expr = Call (lexpr, [ None, rexpr], Field) in
           let warns =
             if not !blanks then []
-            else [ Message "avoid spaces around dot field accessors" ]
+            else [ Warning "avoid spaces around dot field accessors" ]
           in
           let expr = descr_for_seq ~warns expr [ lexpr ; rexpr ] in
           parse_extraction expr ctx
         else begin
           discard instr_end ctx.st ;
-          let warns = [ Message "a name is expected after this dot" ] in
+          let warns = [ Recovered "a name is expected after this dot" ] in
           let rexpr = descr ~warns Error (from ctx.st cp) ctx in
           descr_for_seq (Call (lexpr, [ None, rexpr], Field)) [ lexpr ; rexpr ]
         end
@@ -1146,7 +1150,7 @@ end = struct
       let warns =
         match fst ctx.kwd, clo with
         | "{", "]" | "[", "}" ->
-          [ Message "Inconsistent matrix delimiters" ]
+          [ Warning "Inconsistent matrix delimiters" ]
         | _ -> []
       in
       let lines = List.rev (fst (change_row accs)) in
@@ -1162,7 +1166,7 @@ end = struct
       discard instr_end ctx.st ;
       ignore (parse_seq ctx) ;
       (* and reraise the error *)
-      let warns = [ Message msg ] in
+      let warns = [ Recovered msg ] in
       descr_exp (descr ~warns Error (from_last "function" ctx) ctx)
     in
     let rec name rets =
@@ -1176,7 +1180,7 @@ end = struct
       in
       let id = group () in
       if exec (seq [ spaces ; store id ident ; spaces ]) ctx.st then
-        let with_missing = Message "missing function parameters" :: warns in
+        let with_missing = Warning "missing function parameters" :: warns in
         match peek ctx.st with
         | '(' -> advance_1 ctx.st ;
           args (string_descr ~warns (extract id) ctx) rets
@@ -1227,11 +1231,11 @@ end = struct
               advance_1 ctx.st ; args var []
             | [], ('\n' | ',' | ';') ->
               body
-		{ var with meta = Message "missing parameters" :: var.meta }
+		{ var with meta = Warning "missing parameters" :: var.meta }
 		[] []
             | [], '/' when peek_ahead ctx.st 1 = '/' ->
               let var =
-                { var with meta = Message "missing parameters" :: var.meta }
+                { var with meta = Warning "missing parameters" :: var.meta }
               in
               body var [] []
             | _, '(' ->
@@ -1369,11 +1373,11 @@ end = struct
     let res = match term with
       | "case" -> parse_case term None []
       | "end" ->
-        let warns = [ Message "empty select" ] in
+        let warns = [ Recovered "empty select" ] in
         descr ~warns (Select { cond ; cases = [] ; default = None })
           (from_last "select" ctx) ctx
       | "else" ->
-        let warn = Message "expecting at least one case" in
+        let warn = Recovered "expecting at least one case" in
         let res = parse_case term None [] in
         { res with meta = warn :: res.meta }
       | _ -> assert false
@@ -1392,7 +1396,7 @@ end = struct
       (* fixme: check "end" *)
       descr (Try (phrases, catch_phrases)) (from_last "try" ctx) ctx ;
     | _ (* "end" *) ->
-      let warns = [ Message "missing catch in try block" ] in
+      let warns = [ Warning "missing catch in try block" ] in
       let sloc = point ctx.st in
       let fake = descr (Seq []) (sloc, sloc) ctx in
       descr ~warns (Try (phrases, fake )) (from_last "try" ctx) ctx
@@ -1407,13 +1411,13 @@ end = struct
     let before_range = seq [ star space ; store iter ident ;
                              star space ; char '=' ; star space ] in
     if not (exec before_range ctx.st) then
-      let warns = [ Message "'for' must be followed by an assignment" ] in
+      let warns = [ Recovered "'for' must be followed by an assignment" ] in
       let res = descr_exp (descr ~warns Error (from_last "for" ctx) ctx) in
       ignore (parse_seq ctx) ; res
     else
       let (n, n_bounds) = extract iter in
       let msg = "for iterator cannot be a ':'" in
-      let warns = if n = ":" then [ Message msg ] else [] in
+      let warns = if n = ":" then [ Recovered msg ] else [] in
       let var = descr ~warns n n_bounds ctx in
       let range, _ = parse_cond_expr [ "do" ] ctx in
       let phrases, _ = parse_seq ctx in
@@ -1429,7 +1433,7 @@ end = struct
       | (`Fake | `Term _), ")" ->
         List.rev (arg :: acc), ws
       | (`Fake | `Term _), "\000" ->
-        let w = Message "unterminated argument list" in
+        let w = Recovered "unterminated argument list" in
         List.rev (arg :: acc), (w :: ws)
       | (`Fake | `Term _), "\n" ->
         let w = Insert (point ctx.st, ")",
@@ -1470,7 +1474,7 @@ end = struct
       | (`Fake | `Term _), "," ->
         loop (arg :: acc) ws
       | (`Fake | `Term _), "\000" ->
-        let w = Message "unterminated argument list" in
+        let w = Recovered "unterminated argument list" in
         List.rev (arg :: acc), (w :: ws)
       | (`Fake | `Term _), "\n" ->
         let w = Insert (point ctx.st, ")",
@@ -1661,15 +1665,15 @@ end = struct
           e, rest
         | `Error msg :: [] ->
           let loc = point ctx.st, point ctx.st in
-          let warns = [ Message msg ] in
+          let warns = [ Recovered msg ] in
           descr ~warns Error loc ctx, []
         | `Comment (text, ((sloc, _) as bounds)) :: [] ->
           let comment = [ descr text bounds ctx ] in
-          let warns = [ Message "unterminated expression" ] in
+          let warns = [ Recovered "unterminated expression" ] in
           descr ~warns ~comment Error (sloc, sloc) ctx, []
         | [] ->
           let loc = point ctx.st, point ctx.st in
-          let warns = [ Message "unterminated expression" ] in
+          let warns = [ Recovered "unterminated expression" ] in
           descr ~warns Error loc ctx, []
         | _ -> assert false
       and infix lvl tokens =
@@ -1727,7 +1731,7 @@ end = struct
     | [l;m;r], term ->
       descr_for_seq (Range (l, Some m, r)) [ l ; r ], term
     | seq, term ->
-      let warns = [ Message "too many ':'" ] in 
+      let warns = [ Recovered "too many ':'" ] in 
       descr_for_seq ~warns Error seq, term
 
   let parse ?(allow_toplevel_exprs = false) state src =

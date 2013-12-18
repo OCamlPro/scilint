@@ -62,9 +62,14 @@ let treat_source source =
         = fun { meta ; loc = (src, ((ls, cs), (le, ce))) } ->
           List.iter
             (function
-              | Message msg ->
+              | Warning msg ->
                 messages :=
                   (sprintf "%s:%d.%d:%d.%d: Warning: %s\n"
+                     (source src) ls cs le ce msg)
+                  :: !messages
+              | Recovered msg ->
+                messages :=
+                  (sprintf "%s:%d.%d:%d.%d: Error: %s\n"
                      (source src) ls cs le ce msg)
                   :: !messages
               | Insert ((l, c), kwd, msg) ->
