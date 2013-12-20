@@ -1,11 +1,14 @@
-
-begin library "scilintManual"
+begin library "scilintCommon"
   files =  [
-        "src/scilint/scilintManual.ml"
+  (* - common *)
+       "src/common/scilabLocations.ml"
+       "src/common/scilintWarning.ml"
+       "src/common/scilintOptions.ml"
+       "src/common/scilintManual.ml"
   ]
 end
 
-begin program "scintax"
+begin library "scilabFive"
   files = [
   (* - AST and utils *)
 	"src/scilab_five_ast/scilabFiveAst.ml"
@@ -16,33 +19,41 @@ begin program "scintax"
 	"src/scilab_five_parser/scilabFiveParserAst.ml"
 	"src/scilab_five_parser/scilabFiveParser.ml"
 	"src/scilab_five_parser/scilabFiveParserAstSerializer.ml"
-  (* - main *)
+  ]
+  requires = [ "pprint" "scilintCommon" ]
+end
+
+begin library "scilabSix"
+  files = [
+  (* - AST and utils *)
+	"src/scilab_six_ast/scilabSymbol.ml"
+	"src/scilab_six_ast/scilabAst.ml"
+	"src/scilab_six_ast/scilabAstPrinter.ml"
+	"src/scilab_six_ast/scilabPrettyPrinter.ml"
+  (* - parser *)
+	"src/scilab_six_parser/scilabPreParser.ml"
+        "src/scilab_six_parser/scilabParserUtils.ml"
+	"src/scilab_six_parser/scilabParser.mly"
+	"src/scilab_six_parser/scilabLexer.mll"
+  ]
+  requires = [ "uutf" "scilintCommon" ]
+end
+
+begin program "scintax"
+  files = [
 	"src/scintax/scintaxMain.ml"
   ]
-  requires = [ "pprint" ]
+  requires = [ "scilabFive" "scilintCommon" ]
 end
 
 begin program "scilint"
   files = [
-
-	"src/common/scilabSymbol.ml"
-	"src/common/scilabAst.ml"
-	"src/common/scilabAstPrinter.ml"
-	"src/common/scilabPrettyPrinter.ml"
-
-	"src/parser/scilabPreParser.ml"
-        "src/parser/scilabParserUtils.ml"
-	"src/parser/scilabParser.mly"
-	"src/parser/uutf.ml"
-	"src/parser/scilabLexer.mll"
-
 	"src/scilint/config/scilintTree.ml";
 	"src/scilint/config/scilintParser.mly";
 	"src/scilint/config/scilintLexer.mll";
         "src/scilint/config/scilintConfig.ml";
 	"src/scilint/scilabUtils.ml"
-   "src/scilint/scilintFirehosegen.ml"
-        "src/scilint/scilintWarning.ml";
+	"src/scilint/scilintFirehosegen.ml"
         "src/scilint/scilintProject.ml";
 	"src/scilint/scilabFunctionAnalyze.ml"
 	"src/scilint/scilabDeffRefactoring.ml"
@@ -50,10 +61,12 @@ begin program "scilint"
 	"src/scilint/scilintMain.ml"
   ]
 
-  requires = [ "scilintManual"  "unix" ]
+  requires = [
+    "scilintCommon" "scilabSix" "unix"
+  ]
 end
 
 begin program "scilintDocgen"
-  requires = [ "scilintManual" ]
+  requires = [ "scilintCommon" ]
   files = [ "src/scilint/scilintDocgen.ml" ]
 end

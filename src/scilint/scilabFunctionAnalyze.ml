@@ -96,6 +96,21 @@ let array_forall f t =
 
 let function_call_analysis = Hashtbl.create 113
 
+let loc ast_loc =
+  ((ast_loc.first_line, ast_loc.first_column), 
+   (ast_loc.last_line, ast_loc.last_column))
+
+let local_warning (file, ast_loc) descr =
+  print_endline
+    (if !ScilintOptions.format = "firehose" then
+       ScilintFirehosegen.warning_to_firehose
+         (num_of_local_warning descr)
+         [ (file, ast_loc), string_of_local_warning descr ]
+     else
+       string_of_message
+         (((ScilabLocations.File file, loc ast_loc),
+           ScilintWarning.(Warning (L descr)))))
+
 let rec get_assign_ident st e = match e.exp_desc with
   | Var var ->
       begin
@@ -289,10 +304,10 @@ and analyze_ast st e = match e.exp_desc with
 and analyze_cntrl loc st = function
   | BreakExp -> 
       if st.level_for = 0 && st.level_while = 0
-      then local_warning (!file, loc) (Break_outside_loop ())
+      then local_warning (!file, loc) (Break_outside_loop)
   | ContinueExp -> 
       if st.level_for = 0 && st.level_while = 0
-      then local_warning (!file, loc) (Continue_outside_loop ())
+      then local_warning (!file, loc) (Continue_outside_loop)
   | ForExp forExp ->
       let varDec = forExp.forExp_vardec in (* name, init, kind *)
       let sy = varDec.varDec_name in
@@ -394,9 +409,11 @@ and analyze_dec st = function
             (Overriding_primitive fun_name)
 
         | FunDeclared fun_decl ->
+          let loc = ScilabLocations.File (fst fun_decl.fun_loc),
+                    loc (snd fun_decl.fun_loc) in
           local_warning
             (!file, fd.functionDec_location)
-            (Overriding_declared_function (fun_name,fun_decl.fun_loc))
+            (Overriding_declared_function (fun_name, loc))
 
         | FunFile old_file ->
           let is_current_file = try

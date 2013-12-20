@@ -5,7 +5,7 @@ let type_flag = ref false
 let cfg_flag = ref false
 let cfg_file = ref false
 let args = Arg.align [("-I", Arg.String ScilintProject.add_to_path,"DIRECTORY Add DIRECTORY to search path");
-		      ("-xml", Arg.Unit ScilintWarning.set_format_to_xml, " Set the output format to xml");]
+		      ScilintOptions.format_arg ]
 
 (* let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base"); *)
 (*             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code"); *)
@@ -119,13 +119,13 @@ let run_test file =
   with _ as err -> print_err err
 
 let run_type_file file =
-  if not (ScilintWarning.is_format_xml ()) then Printf.printf "File %S\n%!" file;
+  let firehose = !ScilintOptions.format = "firehose" in
+  if not firehose then Printf.printf "File %S\n%!" file;
   try
     let ast = parse_file file in
     match ast with
       | ScilabAst.Exp exp ->
-          if ScilintWarning.is_format_xml ()
-          then 
+          if firehose then 
             begin 
               ScilintFirehosegen.print_header ();
               ScilabFunctionAnalyze.analyze file exp;
