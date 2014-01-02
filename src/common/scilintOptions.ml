@@ -40,7 +40,14 @@ let print_messages_arg =
   ("-quiet", Clear print_messages, "Do not display non-warning messages")
 
 (** Message output format: "human", "emacs" or "firehose" *)
-let format = ref "human"
+type format = Human | Emacs | Firehose
+let format = ref Human
 let format_arg =
-  ("-format", Symbol ([ "human" ; "emacs" ; "firehose" ], (:=) format),
+  let set_format = function
+    | "human" -> format := Human
+    | "emacs" -> format := Emacs
+    | "firehose" -> format := Firehose
+    | _ -> assert false
+  in
+  ("-format", Symbol ([ "human" ; "emacs" ; "firehose" ], set_format),
    " Set the format of warnings (default is \"human\")") ;

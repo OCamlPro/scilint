@@ -62,7 +62,7 @@ begin program "scilint"
   ]
 
   requires = [
-    "scilintCommon" "scilabSix" "unix"
+    "scilintCommon" "scilabFive" "scilabSix" "unix"
   ]
 end
 

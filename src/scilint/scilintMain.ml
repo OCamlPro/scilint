@@ -119,32 +119,64 @@ let run_test file =
   with _ as err -> print_err err
 
 let run_type_file file =
-  let firehose = !ScilintOptions.format = "firehose" in
+  let firehose = ScilintOptions.(!format = Firehose) in
   if not firehose then Printf.printf "File %S\n%!" file;
   try
     let ast = parse_file file in
     match ast with
       | ScilabAst.Exp exp ->
-          if firehose then 
-            begin 
-              ScilintFirehosegen.print_header ();
-              ScilabFunctionAnalyze.analyze file exp;
-              ScilintFirehosegen.print_trailer ()
-            end
-          else ScilabFunctionAnalyze.analyze file exp
+        if firehose then ScilintFirehosegen.print_header ();
+        (* call the resilient parser for syntax / style warnings *)
+        (* this is a quick and dirty integration before the AST merge *)
+        let open ScilabFiveParserAst in
+        let open ScilabFiveParser in
+        let open ScilintWarning in
+        let ast = parse_file file in
+        let print_messages = object
+          inherit ast_iterator as mom
+          method! descr : 'a. 'a descr -> unit
+            = fun { meta ; loc = (_, ((sl, sc), (el, ec))) as loc } ->
+              let ast_loc =
+                ScilabAst.({ first_line = sl ; first_column = sc ;
+                             last_line = el ; last_column = ec }) in
+              List.iter
+                (fun w ->
+                   if firehose then
+                     match w with
+                     | Warning (L w) ->
+                       print_endline
+                         (ScilintFirehosegen.warning_to_firehose
+                            (num_of_local_warning w)
+                            [ (file, ast_loc), string_of_local_warning w ])
+                     | Warning (S w) ->
+                       print_endline
+                         (ScilintFirehosegen.warning_to_firehose
+                            (num_of_style_warning w + 6)
+                            [ (file, ast_loc), string_of_style_warning w ])
+                     | _ -> ()
+                   else
+                     match w with
+                     | Warning _ ->
+                       print_endline (string_of_message (loc, w))
+                     | _ -> (* skip error recovery for now *) ())
+                meta
+        end in
+        print_messages # ast ast ;
+        ScilabFunctionAnalyze.analyze file exp;
+        if firehose then ScilintFirehosegen.print_trailer ()
       | _ -> print_endline "-> Error not an Exp\n"
   with _ as err -> print_err err
 
 let run_analyze_file file =
   try
     let ast = parse_file file in
-    match ast with
-      | ScilabAst.Exp exp -> 
-          print_endline "-> OK\n";
-          incr cpt_files;
-          ScilabAstStats.analyze_ast exp;
-          ScilabFunctionAnalyze.analyze file exp
-      | _ -> print_endline "-> Error not an Exp\n"
+     match ast with
+     | ScilabAst.Exp exp -> 
+       print_endline "-> OK\n";
+       incr cpt_files;
+       ScilabAstStats.analyze_ast exp;
+       ScilabFunctionAnalyze.analyze file exp
+     | _ -> print_endline "-> Error not an Exp\n" ;    
   with _ as err -> print_err err
 
 let rec run_tests fun_iter dirname =

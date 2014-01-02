@@ -102,7 +102,7 @@ let loc ast_loc =
 
 let local_warning (file, ast_loc) descr =
   print_endline
-    (if !ScilintOptions.format = "firehose" then
+    (if !ScilintOptions.format = Firehose then
        ScilintFirehosegen.warning_to_firehose
          (num_of_local_warning descr)
          [ (file, ast_loc), string_of_local_warning descr ]

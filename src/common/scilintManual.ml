@@ -1,5 +1,6 @@
 type format =
   | CODE of string
+  | SCODE of string
   | PAR of format list
   | S of string
   | URL of string
@@ -381,8 +382,111 @@ let style_warnings_info =
 ]
 
 let style_warnings = [
- 601, "functions should start with lowercase", [], [];
- 602, "functions should not contain numeric values", [], [];
+ 601, "Function names should start with lowercase", [0;4], [] ;
+ 602, "Function names should not contain digits", [0;4], [] ;
+ 603, "Inconsistent string delimiters", [0;4], [
+   PAR [
+     S "A string starting with a " ;
+     SCODE "\"" ;
+     S " (resp. a " ;
+     SCODE "'" ;
+     S ") should end with a " ;
+     SCODE "\"" ;
+     S " (resp. a " ;
+     SCODE "\'" ;
+     S "). \
+        This warning is also output when a delimiter is escaped with two different characters \
+        such as in " ;
+     SCODE "\"this is a quote: \"'\"" ;
+     S " which should be written " ;
+     SCODE "\"this is a quote: ''\""
+   ]
+ ] ;
+ 604, "Inconsistent matrix delimiters", [0;4], [
+   PAR [
+     S "A string starting with a " ;
+     SCODE "[" ;
+     S " (resp. a " ;
+     SCODE "{" ;
+     S ") should end with a " ;
+     SCODE "]" ;
+     S " (resp. a " ;
+     SCODE "}" ;
+     S ")."
+   ]
+ ] ;
+ 605, "Inconsistent matrix separators", [], [
+   PAR [
+     S "This warning is issued when spaces and comas are both used to \
+        separate the cells of a single matrix litteral which can lead to misreadings." ;
+     S "To make it disappear, simply add comas between all pairs of consecutive cells."
+   ] ;
+   PAR [
+     S "This warning is also issued when semicolons and line breaks are both used to \
+        separate the rows of a single matrix litteral." ;
+     S "To make it disappear, simply add semicolons at the end of every row or replace \
+        all semicolons by line breaks."
+   ]
+ ] ;
+ 606, "Spaces in operator", [0 ;4], [
+   PAR [ S "Scilab's interpreter accepts spaces inside some operators, such as " ;
+         SCODE ". * ." ; S " which is not a good idea." ]
+ ] ;
+ 607, "Spaces around dot", [0 ;4], [
+   PAR [ S "In some cases, a space before the dot of a field access gives a different \
+           sense to the code line. For instance, " ;
+         SCODE "v.f = 3" ;
+         S " assigns 3 to the field f of the variable v, while " ;
+         SCODE "v . f = 3" ;
+         S " tests is the value of this field is 3." ;
+         S "It is thus a good idea to avoid spaces around all dots."
+   ]
+ ] ;
+ 608, "Missing function parameters", [0 ;4], [
+   PAR [ S "It is recommended to make explicit an empty list of arguments by writing " ;
+         SCODE "()" ;
+         S " instead of just breaking the line after the function name."
+   ]
+ ] ;
+ 609, "Missing catch", [0 ;4], [
+   PAR [ S "A try block without a catch statement is probably useless." ]
+ ] ;
+ 610, "Misused keyword", [0 ;4], [
+   PAR [ S "Using a language keyword as a variable, field name or anything but a keyword \
+            makes code difficult to read." ] ;
+   PAR [ S "To correct this, rename the variable." ]
+ ] ;
+ 611, "Keyword as shell arg", [0 ;4], [
+   PAR [ S "Using a language keyword unquoted inside a shell call such as in " ;
+         SCODE "disp end";
+         S " makes code difficult to read." ] ;
+   PAR [ S "To correct this, surround the keyword with quotes, such as " ;
+         SCODE "disp 'end'" ]
+ ] ;
+ 612, "Deprecated", [0 ;4], [
+   PAR [ S "This warning is issued when a deprecated function, operator or \
+            construct is encountered." ]
+ ] ;
+ 613, "Ambiguous dot at left of operator", [0 ;4], [
+   PAR [ S "This warning is issued when a sequence similar to " ;
+         SCODE "3./2" ;
+         S " is encountered, which is interpreted as " ;
+         SCODE "3. / 2" ;
+         S " but could be read as " ;
+         SCODE "3 ./ 2" ] ;
+   PAR [ S "To correct it, just insert a space if you meant a dotted operator \
+            or remove the dot otherwise." ]
+ ] ;
+ 614, "Ambiguous dot at right of operator", [0 ;4], [
+   PAR [ S "This warning is issued when a sequence similar to " ;
+         SCODE "3/.2" ;
+         S " is encountered, which is interpreted as " ;
+         SCODE "3 / .2" ;
+         S " but could be read as " ;
+         SCODE "3 /. 2" ] ;
+   PAR [ S "To correct it, just insert a space in the right place or surround \
+            the right hand side with parentheses." ]
+ ] ;
 ]
 
 
@@ -453,6 +557,21 @@ let changelog = [
         "Warning W013: primitive with too many arguments";
       ];
     ];
+
+    (* To insert for next release:
+       "Warning W601: function names should start with lowercase";
+       "Warning W602: function names should not contain digits";
+       "Warning W603: Inconsistent string delimiters";
+       "Warning W604: Inconsistent matrix delimiters";
+       "Warning W606: Spaces in operator";
+       "Warning W607: Spaces around dot";
+       "Warning W608: Missing function parameters";
+       "Warning W609: Missing catch";
+       "Warning W610: Misused keyword";
+       "Warning W611: Keyword as shell arg";
+       "Warning W612: Deprecated";
+       "Warning W613: Ambiguous dot at left of operator";
+       "Warning W614: Ambiguous dot at right of operator"; *)
   ]
 
 

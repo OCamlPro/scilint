@@ -50,6 +50,8 @@ and local_warning =
 
 (** Textual mistakes *)
 and style_warning =
+  | Function_name_not_started_by_lowercase
+  | Function_name_contains_digits
   | Inconsistent_string_delimiters
   | Inconsistent_matrix_delimiters
   | Inconsistent_matrix_separators
@@ -57,7 +59,7 @@ and style_warning =
   | Spaces_around_dot
   | Missing_function_parameters
   | Missing_catch
-  | Keyword_as_var
+  | Misused_keyword
   | Keyword_as_shell_arg
   | Deprecated of string
   | Ambiguous_dot_left_of_oper
@@ -185,22 +187,26 @@ and num_of_local_warning descr =
 
 and num_of_style_warning descr =
   match descr with
-  | Inconsistent_string_delimiters -> 001
-  | Inconsistent_matrix_delimiters -> 002
-  | Inconsistent_matrix_separators -> 003
-  | Spaces_in_operator -> 004
-  | Spaces_around_dot -> 005
-  | Missing_function_parameters -> 006
-  | Missing_catch -> 007
-  | Keyword_as_var -> 008
-  | Keyword_as_shell_arg -> 009
-  | Deprecated arg -> 010
-  | Ambiguous_dot_left_of_oper -> 011
-  | Ambiguous_dot_right_of_oper -> 012
+  | Function_name_not_started_by_lowercase -> 001
+  | Function_name_contains_digits -> 002
+  | Inconsistent_string_delimiters -> 003
+  | Inconsistent_matrix_delimiters -> 004
+  | Inconsistent_matrix_separators -> 005
+  | Spaces_in_operator -> 006
+  | Spaces_around_dot -> 007
+  | Missing_function_parameters -> 008
+  | Missing_catch -> 009
+  | Misused_keyword -> 010
+  | Keyword_as_shell_arg -> 011
+  | Deprecated arg -> 012
+  | Ambiguous_dot_left_of_oper -> 013
+  | Ambiguous_dot_right_of_oper -> 014
 
 and string_of_style_warning descr =
   let open Printf in
   match descr with
+  | Function_name_not_started_by_lowercase -> "function name not started by lowercase"
+  | Function_name_contains_digits -> "function name contains digits"
   | Inconsistent_string_delimiters -> "inconsistent string delimiters"
   | Inconsistent_matrix_delimiters -> "inconsistent matrix delimiters"
   | Inconsistent_matrix_separators -> "inconsistent matrix separators"
@@ -208,7 +214,7 @@ and string_of_style_warning descr =
   | Spaces_around_dot -> "spaces around dot"
   | Missing_function_parameters -> "missing function parameters"
   | Missing_catch -> "missing catch in try block"
-  | Keyword_as_var -> "keyword should not be used as variable names"
+  | Misused_keyword -> "misused keyword"
   | Keyword_as_shell_arg -> "keywords in shell args should be quoted"
   | Deprecated arg -> "deprecated " ^ arg
   | Ambiguous_dot_left_of_oper -> "ambiguous decimal dot before operator"

@@ -713,12 +713,29 @@ end = struct
   let string_descr ?warns (tok, (s, e)) ctx =
     descr ?warns tok (s, e) ctx
 
+  let keyword str =
+    if String.length str = 0 then false else
+      match str.[0], str with
+      | 'i', "if"
+      | 's', "select"
+      | 't', "try"
+      | 'w', "while" | 'f', "for"
+      | 'r', "return"
+      | 'b', "break" | 'c', "continue"
+      | 'e', "end" | 'e', "endfunction"
+      | 't', "then" | 'd', "do"
+      | 'e', "else" | 'e', "elseif"
+      | 'c', "case" | 'c', "catch" -> true
+      | _ -> false
+
   let var_descr (text, bounds) ctx =
     match text with
     | "%t" | "%T" -> descr (Bool true) bounds ctx
     | "%f" | "%F" -> descr (Bool false) bounds ctx
     | ":" -> descr Colon bounds ctx
-    | _ -> descr (Var (string_descr (text, bounds) ctx)) bounds ctx
+    | _ ->
+      let warns = if keyword text then [ Warning (S Misused_keyword) ] else [] in
+      descr ~warns (Var (string_descr (text, bounds) ctx)) bounds ctx
 
   let push kwd ?in_matrix ?in_function ?in_loop ctx =
     { kwd ; src = ctx.src ; st = ctx.st ; next = Some ctx ;
@@ -760,7 +777,8 @@ end = struct
     if String.length str = 0 then false else
       match str.[0], str with
       | 'e', "end" | 'e', "endfunction"
-      | 't', "then" | 'e', "else" | 'e', "elseif"
+      | 't', "then" | 'd', "do"
+      | 'e', "else" | 'e', "elseif"
       | 'c', "case" | 'c', "catch" -> true
       | _ -> false
 
@@ -1086,7 +1104,8 @@ end = struct
         let eloc = point ctx.st in
         if exec ident ctx.st then
           let name, name_bounds = extract_from ctx.st cp in
-          let rexpr = descr (String name) name_bounds ctx in
+          let warns = if keyword name then [ Warning (S Misused_keyword) ] else [] in
+          let rexpr = descr ~warns (String name) name_bounds ctx in
 	  let expr = Call (lexpr, [ None, rexpr], Field) in
           let warns =
             if not !blanks then []
@@ -1303,9 +1322,20 @@ end = struct
             error "syntax error in parameters"
       in
       discard spaces ctx.st ; loop []
+
     and body name rets args =
       let comment = parse_comment_block ctx in
       let body, _ = parse_seq ctx in
+      let name =
+        if (name.cstr.[0] < 'a' || name.cstr.[0] > 'z') && name.cstr.[0] <> '%' then
+          { name with meta = Warning (S Function_name_not_started_by_lowercase) :: name.meta }
+        else name
+      in
+      let name =
+        if List.exists (String.contains name.cstr) ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9'] then
+          { name with meta = Warning (S Function_name_contains_digits) :: name.meta }
+        else name
+      in
       descr ~comment (Defun { name ; args ; rets ; body })
 	(from_last "function" ctx) ctx
     in rets ()
