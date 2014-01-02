@@ -52,10 +52,7 @@ let treat_source source =
     end in
     collect # ast ast ;
     let messages = List.rev !messages in
-    if messages <> [] then begin
-      printf "Messages:\n" ;
-      List.iter print_string messages
-    end
+    List.iter print_string messages
   end
 
 (** a small toplevel for experimentation purposes *)

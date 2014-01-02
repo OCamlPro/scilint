@@ -22,6 +22,7 @@ src/scilab_six_parser/scilabLexer.cmx: \
 OCAML_SCILAB_SIX_AST_MLS = \
   src/scilab_six_ast/scilabSymbol.ml \
   src/scilab_six_ast/scilabAst.ml \
+  src/scilab_six_ast/scilabAstConverter.ml \
   src/scilab_six_ast/scilabAstPrinter.ml \
   src/scilab_six_ast/scilabPrettyPrinter.ml
 

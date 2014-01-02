@@ -12,6 +12,7 @@ begin library "scilabFive"
   files = [
   (* - AST and utils *)
 	"src/scilab_five_ast/scilabFiveAst.ml"
+	"src/scilab_five_ast/scilabFiveAstConverter.ml"
 	"src/scilab_five_ast/scilabFiveAstUtils.ml"
 	"src/scilab_five_ast/scilabFiveAstSexpPrinter.ml"
   	"src/scilab_five_ast/scilabFiveAstPrettyPrinter.ml"
