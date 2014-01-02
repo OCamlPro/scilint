@@ -63,6 +63,8 @@ OCAML_SCILINT_MLIS = \
 
 SCILINT_MLS = \
 	$(OCAML_COMMON_MLS) \
+	$(OCAML_SCILAB_FIVE_AST_MLS) \
+	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
 	$(OCAML_SCILAB_SIX_AST_MLS) \
 	$(OCAML_SCILAB_SIX_PARSER_MLS) \
 	$(OCAML_SCILINT_MLS)
@@ -100,7 +102,7 @@ OCAML_INCL= \
 OPTFLAGS = -g -fPIC $(OCAML_INCL)
 
 scilint.asm : $(SCILINT_CMXS)
-	$(OCAMLOPT) -package 'unix,uutf' -linkpkg \
+	$(OCAMLOPT) -package 'unix,uutf,pprint' -linkpkg \
 	  -o scilint.asm $(SCILINT_CMXS)
 
 scintax.asm : $(SCINTAX_CMXS)
