@@ -1,4 +1,4 @@
-(*  OCamlPro Scilab Toolbox - Scintax, a Real time syntax checker for Scilab
+(*  OCamlPro Scilab Toolbox - Common options handling module
  *  Copyright (C) 2013 - OCamlPro - Benjamin CANOU
  *
  *  This file must be used under the terms of the CeCILL.
