@@ -27,6 +27,64 @@ module type Parameters = sig
 
 end
 
+(** Types shared between Ast instances *)
+module Shared = struct
+  (** This flag is used to preserve the concrete syntax of the call *)
+  type call_kind =
+    | Tuplified                        (** f (x, y) *)
+    | Field                            (** o.f (eq. o ('f') *)
+    | Shell                            (** o x y (eq. o ('x', 'y') *)
+    | Cell                             (** f {x, y} (Scilab 6 / MATLAB) *)
+      
+  (** Unary operators *)
+  and unop =
+    | Unary_minus                     (** "-" *)
+    | Unary_plus                      (** "+" *)
+    | Not                             (** "~" *)
+    | Transpose_conjugate             (** exp' *)
+    | Transpose_non_conjugate         (** exp.' *)
+      
+  (** Binary operators *)
+  and op =
+    (** {4 Arithmetics} *)
+    | Plus                            (** "+" *)
+    | Minus                           (** "-" *)
+    | Times                           (** "*" *)
+    | Rdivide                         (** "/" *)
+    | Ldivide                         (** \   *)
+    | Power                           (** "**" or "^" *)
+      
+    (** {4 Element-wise operations} *)
+    | Dot_times                        (** ".*" *)
+    | Dot_rdivide                      (** "./" *)
+    | Dot_ldivide                      (** .\   *)
+    | Dot_power                        (** ".^" *)
+      
+    (** {4 Kroneckers} *)
+    | Kron_times                       (** ".*." *)
+    | Kron_rdivide                     (** "./." *)
+    | Kron_ldivide                     (** ".\." *)
+      
+    (** {4 Control} *)
+    | Control_times                    (** "*." *)
+    | Control_rdivide                  (** "/." *)
+    | Control_ldivide                  (** "\." *)
+      
+    (** {4 Comparison} *)
+    | Eq                              (** "==" *)
+    | Ne                              (** "<>" or "~=" *)
+    | Lt                              (** "<" *)
+    | Le                              (** "<=" *)
+    | Gt                              (** "<" *)
+    | Ge                              (** ">=" *)
+      
+    (** {4 Logical operators} *)
+    | And                             (** "&" *)
+    | Or                              (** "|" *)
+    | Seq_and                         (** "&&" *)
+    | Seq_or                          (** "||" *)
+end
+
 (** Build an AST module specialized according to its {!Parameters} *)
 module Make (Parameters : Parameters) = struct
 
@@ -44,6 +102,9 @@ module Make (Parameters : Parameters) = struct
       comment = [] ;
       loc = Parameters.ghost_loc ;
       meta = Parameters.ghost_meta }
+
+  (** Export shared types *)
+  include Shared
 
   (** Main entry point: a list of statements *)
   type ast = stmt list
@@ -112,64 +173,9 @@ module Make (Parameters : Parameters) = struct
     | Unop of unop * exp              (** Prefix or postfix unary op *)
     | Op of op * exp * exp            (** Infix binary op *)
 
-  (** This flag preserves the concrete syntax of the call *)
-  and call_kind =
-    | Tuplified                        (** f (x, y) *)
-    | Field                            (** o.f (eq. o ('f') *)
-    | Shell                            (** o x y (eq. o ('x', 'y') *)
-    | Cell                             (** f {x, y} (Scilab 6 / MATLAB) *)
-
   (** Optionally named function argument *)
   and arg = var option * exp
 
   (** Two dimensional matrix literrals _, _, _ ; _, _, _ *)
   and matrix_contents = exp list descr list
-
-  (** Unary operators *)
-  and unop =
-    | Unary_minus                     (** "-" *)
-    | Unary_plus                      (** "+" *)
-    | Not                             (** "~" *)
-    | Transpose_conjugate             (** exp' *)
-    | Transpose_non_conjugate         (** exp.' *)
-
-  (** Operators *)
-  and op =
-    (** {4 Arithmetics} *)
-    | Plus                            (** "+" *)
-    | Minus                           (** "-" *)
-    | Times                           (** "*" *)
-    | Rdivide                         (** "/" *)
-    | Ldivide                         (** \   *)
-    | Power                           (** "**" or "^" *)
-
-    (** {4 Element-wise operations} *)
-    | Dot_times                        (** ".*" *)
-    | Dot_rdivide                      (** "./" *)
-    | Dot_ldivide                      (** .\   *)
-    | Dot_power                        (** ".^" *)
-
-    (** {4 Kroneckers} *)
-    | Kron_times                       (** ".*." *)
-    | Kron_rdivide                     (** "./." *)
-    | Kron_ldivide                     (** ".\." *)
-
-    (** {4 Control} *)
-    | Control_times                    (** "*." *)
-    | Control_rdivide                  (** "/." *)
-    | Control_ldivide                  (** "\." *)
-
-    (** {4 Comparison} *)
-    | Eq                              (** "==" *)
-    | Ne                              (** "<>" or "~=" *)
-    | Lt                              (** "<" *)
-    | Le                              (** "<=" *)
-    | Gt                              (** "<" *)
-    | Ge                              (** ">=" *)
-
-    (** {4 Logical operators} *)
-    | And                             (** "&" *)
-    | Or                              (** "|" *)
-    | Seq_and                         (** "&&" *)
-    | Seq_or                          (** "||" *)
 end

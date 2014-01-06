@@ -9,28 +9,20 @@
 
 open ScilabFiveParserAst
 open ScilabFiveParser
+open ScilintWarning
 open Printf
-
-(** commane line options *)
-module Opts = struct
-  let print_ast = ref false
-  let print_time = ref false
-  let pretty_print = ref false
-  let print_messages = ref true
-  let format = ref "human" (* | "emacs" | "firehose" *)
-end
 
 (** called by the main on each code source passed on th CLI *)
 let treat_source source =
-  let parse, display_name =
+  let parse () =
     match source with
-    | File fn -> (fun () -> parse_file fn), sprintf "file %S" fn
-    | String str -> (fun () -> parse_string str), sprintf "input %S" str
-    | Forged -> assert false
+    | File fn -> parse_file fn
+    | String (name, str) -> parse_string name str
+    | _ -> assert false
   in 
   let ast =
-    if !Opts.print_time then begin
-      printf "Parsing %s ...%!" display_name ;
+    if !ScilintOptions.print_time then begin
+      printf "Parsing %s ...%!" (string_of_source source) ;
       let t0 = Sys.time () in
       let ast = parse () in
       let t1 = Sys.time () in
@@ -38,69 +30,35 @@ let treat_source source =
       ast
     end else parse ()
   in
-  if !Opts.print_ast then begin
+  if !ScilintOptions.print_ast then begin
     printf "Raw syntax tree:\n" ;
     Sexp.pretty_output stdout ast ;
     printf "\n"
   end ;
-  if !Opts.pretty_print then begin
+  if !ScilintOptions.pretty_print then begin
     printf "Pretty printed:\n" ;
     Pretty.pretty_output stdout ast ;
     printf "\n"
   end ;
-  if !Opts.print_messages then begin
+  if !ScilintOptions.print_messages then begin
     let messages = ref [] in
-    let source (source : source) =
-      match source with
-      | String str -> "input"
-      | File name -> name
-      | Forged -> "ghost"
-    in
     let collect = object
       inherit ast_iterator as mom
       method! descr : 'a. 'a descr -> unit
-        = fun { meta ; loc = (src, ((ls, cs), (le, ce))) } ->
+        = fun { meta ; loc } ->
           List.iter
-            (function
-              | Warning msg ->
-                messages :=
-                  (sprintf "%s:%d.%d:%d.%d: Warning: %s\n"
-                     (source src) ls cs le ce msg)
-                  :: !messages
-              | Recovered msg ->
-                messages :=
-                  (sprintf "%s:%d.%d:%d.%d: Error: %s\n"
-                     (source src) ls cs le ce msg)
-                  :: !messages
-              | Insert ((l, c), kwd, msg) ->
-                messages :=
-                  (sprintf "%s:%d.%d: Insert %S: %s\n"
-                     (source src) l c kwd msg)
-                  :: !messages
-              | Drop (((ls, cs), (le, ce)), msg) ->
-                messages :=
-                  (sprintf "%s:%d.%d:%d.%d: Drop: %s\n"
-                     (source src) ls cs le ce msg)
-                  :: !messages
-              | Replace (((ls, cs), (le, ce)), rep, msg) ->
-                messages :=
-                  (sprintf "%s:%d.%d:%d.%d: Replace %S: %s\n"
-                     (source src) ls cs le ce rep msg)
-                  :: !messages)
+            (fun msg -> messages := string_of_message (loc, msg) :: !messages)
             meta
     end in
     collect # ast ast ;
     let messages = List.rev !messages in
-    if messages <> [] then begin
-      printf "Messages:\n" ;
-      List.iter print_string messages
-    end
+    List.iter print_string messages
   end
 
 (** a small toplevel for experimentation purposes *)
 let interactive () =
-  Opts.print_ast := true ;
-  let rec interp acc =
+  ScilintOptions.print_ast := true ;
+  let rec interp acc nb =
     let open Printf in
     Printf.printf "--> %!" ;
     let phrase =
@@ -108,15 +66,15 @@ let interactive () =
       with End_of_file -> exit 0
     in
     if phrase = "" then begin
-      treat_source (String acc) ;
-      interp ""
+      treat_source (String ("input-" ^ string_of_int nb, acc)) ;
+      interp "" (succ nb)
     end else
       let acc = if acc = "" then acc else acc ^ "\n" in
-      interp (acc ^ phrase)
+      interp (acc ^ phrase) nb
   in
   printf "Welcome to Scintax's interactive mode\n%!" ;
   printf "Type your phrases, leave an empty line to submit, Ctrl-C to quit\n%!" ;
-  interp ""
+  interp "" 0
 
 (** where the args are passed and all the fun starts *)
 let main () =
@@ -124,19 +82,14 @@ let main () =
   let toplevel = ref false in
   let open Arg in
   let options =
-    [ ("-ast", Set Opts.print_ast,
-       "Output the syntax tree of all inputs as an S-expression") ;
-      ("-pretty", Set Opts.pretty_print,
-       "Output a reformatted version of all inputs") ;
+    [ ScilintOptions.print_ast_arg ;
+      ScilintOptions.pretty_print_arg ;
+      ScilintOptions.print_messages_arg ;
+      ScilintOptions.print_time_arg ;
+      ScilintOptions.format_arg ;
       ("-toplevel", Set toplevel,
        "Launch an interactive toplevel after other inputs have been processed") ;
-      ("-silent", Clear Opts.print_messages,
-       "Do not display error messages") ;
-      ("-time", Set Opts.print_time,
-       "Display parsing time") ;
-      ("-format", Symbol ([ "human" ; "emacs" ; "firehose" ], (:=) Opts.format),
-       " Set the format of warnings (default is \"human\")") ;
-      ("-s", String ( fun str -> sources := String str :: !sources),
+      ("-s", String ( fun str -> sources := String ("argument" ,str) :: !sources),
        "Add a verbatim text input from the command line") ]
   and anon_fun fn =
     sources := File fn :: !sources

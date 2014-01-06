@@ -10,14 +10,8 @@
 (** Instance of AST parameters *)
 module Parameters = struct
 
-  (** Locations as given from the parser *)
-  type loc = source * (point * point) (** source,  (start, stop) *)
-  and point = int * int  (** (line >= 1, column >= 0) *)
-
-  and source =
-    | String of string
-    | File of string
-    | Forged
+  (** Locations as given from the parser, taken from ScilabWarnings *)
+  include ScilabLocations
 
   (** Location builder *)
   let loc source fl fc ll lc =
@@ -30,14 +24,7 @@ module Parameters = struct
   type symbol = string
 
   (** Warnings emitted by the parser stored as meta-info *)
-  type meta = message list
-
-  and message =
-    | Insert of point * string * string
-    | Drop of (point * point) * string
-    | Replace of (point * point) * string * string
-    | Warning of string
-    | Recovered of string
+  type meta = ScilintWarning.message_contents list
 
   (** Dummy meta *)
   let ghost_meta = []
@@ -91,5 +78,7 @@ let merge_descr_locs exprs =
 include Utils
 
 (* printers *)
-module Sexp = ScilabFiveAstSexpPrinter.Make (Parameters) (PrinterParameters) (Ast)
-module Pretty = ScilabFiveAstPrettyPrinter.Make (Parameters) (PrinterParameters) (Ast)
+module Sexp =
+  ScilabFiveAstSexpPrinter.Make (Parameters) (PrinterParameters) (Ast)
+module Pretty =
+  ScilabFiveAstPrettyPrinter.Make (Parameters) (PrinterParameters) (Ast)

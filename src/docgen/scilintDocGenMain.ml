@@ -21,6 +21,8 @@ let rec latex_of_format doc =
     Printf.sprintf "\\url{%s}" url
   | CODE code ->
     Printf.sprintf "\\begin{verbatim}\n%s\n\\end{verbatim}\n" code
+  | SCODE code ->
+    Printf.sprintf "\\verb#%s#" code
 
 and latex_of_formats docs =
 String.concat ""
@@ -36,6 +38,8 @@ let rec html_of_format doc =
     Printf.sprintf "<a href=\"%s\">%s</a>" url url
   | CODE code ->
     Printf.sprintf "<pre>%s</pre>\n" code
+  | SCODE code ->
+    Printf.sprintf "<code>%s</code>\n" code
 
 and html_of_formats docs =
   String.concat ""
