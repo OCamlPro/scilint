@@ -1,169 +1,162 @@
+(*  OCamlPro Scilab Toolbox - Scilab 6 parser OCaml port
+ *  Copyright (C) 2013 - OCamlPro - Michael LAPORTE
+ *
+ *  This file must be used under the terms of the CeCILL.
+ *  This source file is licensed as described in the file COPYING, which
+ *  you should have received as part of this distribution.
+ *  The terms are also available at
+ *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
+
 {
 
-  open Lexing
-  open ScilabParser
+open Lexing
+open ScilabSixGenParser
 
-  exception Err_str of string
+exception Error of string
 
-  exception Lex_err of string
+let matrix_level = ref 0
+let last_token = ref SOF
+let str_cmt = ref ""
+let str = ref ""
+let shellmode_on = ref false
 
-  let matrix_level = ref 0
+(* We need this when we parse several files *)
+let init_lexer_var () =
+  shellmode_on := false;
+  last_token := SOF;
+  matrix_level := 0
 
-  let last_token = ref SOF
+let print_pos pos =
+  Printf.printf "%i %i %i" pos.pos_lnum pos.pos_bol pos.pos_cnum
 
-  let str_cmt = ref ""
+let print_lexbuf lexbuf =
+  Printf.printf "======================\n";
+  Printf.printf "lex_buffer : %s\n" lexbuf.lex_buffer;
+  Printf.printf "lex_buffer_len : %i\n" lexbuf.lex_buffer_len;
+  Printf.printf "lex_abs_pos : %i\n" lexbuf.lex_abs_pos;
+  Printf.printf "lex_start_pos : %i\n" lexbuf.lex_start_pos;
+  Printf.printf "lex_curr_pos : %i\n" lexbuf.lex_curr_pos;
+  Printf.printf "lex_last_pos : %i\n" lexbuf.lex_last_pos;    
+  Printf.printf "lex_start_p :"; print_pos lexbuf.lex_start_p; Printf.printf "\n";
+  Printf.printf "lex_curr_p :"; print_pos lexbuf.lex_curr_p; Printf.printf "\n======================\n\n"
 
-  let str = ref ""
+let return_token tok =
+  if !shellmode_on then shellmode_on := false;
+  last_token := tok;
+  tok
 
-  let shellmode_on = ref false
+let return_id tok =
+  last_token := tok;
+  tok
 
-  (* We need this when we parse several files *)
-  let init_lexer_var () =
-    shellmode_on := false;
-    last_token := SOF;
-    matrix_level := 0
+let return_control lexbuf =
+  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with
+                         pos_cnum = lexbuf.lex_curr_p.pos_cnum - 1 };
+  lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - 1
+                         
+let return_shell tok =
+  last_token := tok;
+  shellmode_on := false;
+  tok
 
-  let print_pos pos =
-    Printf.printf "%i %i %i" pos.pos_lnum pos.pos_bol pos.pos_cnum
+let lexbuf_to_prev_tok lexbuf =
+  lexbuf.lex_curr_pos <- lexbuf.lex_start_p.pos_cnum;
+  lexbuf.lex_curr_p <- lexbuf.lex_start_p;
+  lexbuf.lex_start_p <- lexbuf.lex_start_p
 
-  let print_lexbuf lexbuf =
-    Printf.printf "======================\n";
-    Printf.printf "lex_buffer : %s\n" lexbuf.lex_buffer;
-    Printf.printf "lex_buffer_len : %i\n" lexbuf.lex_buffer_len;
-    Printf.printf "lex_abs_pos : %i\n" lexbuf.lex_abs_pos;
-    Printf.printf "lex_start_pos : %i\n" lexbuf.lex_start_pos;
-    Printf.printf "lex_curr_pos : %i\n" lexbuf.lex_curr_pos;
-    Printf.printf "lex_last_pos : %i\n" lexbuf.lex_last_pos;    
-    Printf.printf "lex_start_p :"; print_pos lexbuf.lex_start_p; Printf.printf "\n";
-    Printf.printf "lex_curr_p :"; print_pos lexbuf.lex_curr_p; Printf.printf "\n======================\n\n"
+let is_transposable () = match !last_token with
+  | ID _ | RBRACK | RBRACE | VARINT _
+  | RPAREN | NUM _ | BOOLTRUE | BOOLFALSE | QUOTE -> true
+  | _ -> false
 
-  let return_token tok =
-    if !shellmode_on then shellmode_on := false;
-    last_token := tok;
-    tok
+let is_EOL () = match !last_token with
+  | EOL -> true
+  | _ -> false
 
-  let return_id tok =
-    last_token := tok;
-    tok
+let is_SOF () = match !last_token with
+  | SOF -> true
+  | _ -> false
 
-  let return_control lexbuf =
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with
-      pos_cnum = lexbuf.lex_curr_p.pos_cnum - 1 };
-    lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - 1
+let is_plus () = match !last_token with
+  | PLUS -> true
+  | _ -> false
 
-  let return_shell tok =
-    last_token := tok;
-    shellmode_on := false;
-    tok
+let is_comma () = match !last_token with
+  | COMMA -> true
+  | _ -> false
 
-  let lexbuf_to_prev_tok lexbuf =
-    lexbuf.lex_curr_pos <- lexbuf.lex_start_p.pos_cnum;
-    lexbuf.lex_curr_p <- lexbuf.lex_start_p;
-    lexbuf.lex_start_p <- lexbuf.lex_start_p
-    
+let in_matrix () =
+  !matrix_level <> 0
+  
+let set_last_token_spaces () =
+  if (in_matrix () && (!last_token = COMMA || !last_token = PLUS)) ||
+     (!last_token = EOL  || !last_token = SOF)
+  then ()
+  else
+    last_token := SPACES
 
-
-  let is_transposable () = match !last_token with
-    | ID _ | RBRACK | RBRACE | VARINT _ | VARFLOAT _
-    | RPAREN | NUM _ | BOOLTRUE | BOOLFALSE | QUOTE -> true
-    | _ -> false
-
-  let is_EOL () = match !last_token with
-    | EOL -> true
-    | _ -> false
-
-  let is_SOF () = match !last_token with
-    | SOF -> true
-    | _ -> false
-
-  let is_plus () = match !last_token with
-    | PLUS -> true
-    | _ -> false
-
-  let is_comma () = match !last_token with
-    | COMMA -> true
-    | _ -> false
-
-  let in_matrix () =
-    !matrix_level <> 0
-
-  let set_last_token_spaces () =
-    if (in_matrix () && (!last_token = COMMA || !last_token = PLUS)) ||
-       (!last_token = EOL  || !last_token = SOF)
-    then ()
-    else
-      last_token := SPACES
-      (* if !matrix_level = 0  *)
-      (* then last_token := EOF *)
-      (* else () *)
-
-  let make_error_string lexbuf =
-    let curr = lexbuf.Lexing.lex_curr_p in
-    let line = "at line " ^ (string_of_int curr.Lexing.pos_lnum) in
-    let cnum = ", chararacter " ^ (string_of_int (curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1)) in
-    line ^ cnum ^ "."^(!str)
+let make_error_string lexbuf =
+  let curr = lexbuf.Lexing.lex_curr_p in
+  let line = "at line " ^ (string_of_int curr.Lexing.pos_lnum) in
+  let cnum = ", chararacter " ^ (string_of_int (curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1)) in
+  line ^ cnum ^ "."^(!str)
 
 
- let newline_lex lexbuf =
-    let pos = lexbuf.lex_curr_p in
-    lexbuf.lex_curr_p <-
-      { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }
+let newline_lex lexbuf =
+  let pos = lexbuf.lex_curr_p in
+  lexbuf.lex_curr_p <-
+    { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }
 
-  let end_cmt lexbuf =
-    lexbuf.lex_curr_pos <- lexbuf.lex_start_pos;
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with
-      pos_cnum = lexbuf.lex_start_p.pos_cnum;
-    }
+let end_cmt lexbuf =
+  lexbuf.lex_curr_pos <- lexbuf.lex_start_pos;
+  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with
+                         pos_cnum = lexbuf.lex_start_p.pos_cnum }
 
-  (** xd-y -> xe-y
+(** xd-y -> xe-y
       xD-y -> xe-y **)
-  let convert_scientific_notation str =
-    let s = String.copy str in
-    for i = 0 to String.length s - 1 do
-      match s.[i] with
+let convert_scientific_notation str =
+  let s = String.copy str in
+  for i = 0 to String.length s - 1 do
+    match s.[i] with
       'd' | 'D' -> s.[i] <- 'e'
-      | _ -> ()
-    done;
-    s
+    | _ -> ()
+  done;
+  s
 
-  let warning_only_scila5 msg lexbuf =
-    let curr = lexbuf.Lexing.lex_curr_p in
-    let line = curr.Lexing.pos_lnum in
-    let cnum = (curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1) in
-    Printf.printf "Warning : %s at line %i, character %i." msg line cnum
+let warning_only_scila5 msg lexbuf =
+  let curr = lexbuf.Lexing.lex_curr_p in
+  let line = curr.Lexing.pos_lnum in
+  let cnum = (curr.Lexing.pos_cnum - curr.Lexing.pos_bol - 1) in
+  Printf.printf "Warning : %s at line %i, character %i." msg line cnum
 
+let unicode_to_utf32le u =
+  let c0 = (u lsr 24) land 255 and
+  c1 = (u lsr 16) land 255 and
+  c2 = (u lsr 8) land 255 and
+  c3 = u land 255 in
+  let utf32 = String.make 4 '0' in
+  utf32.[0] <- Char.chr c3;
+  utf32.[1] <- Char.chr c2;
+  utf32.[2] <- Char.chr c1;
+  utf32.[3] <- Char.chr c0;
+  utf32
 
-(* Convertion to UTF32LE *)
-  let unicode_to_utf32le u =
-    let c0 = (u lsr 24) land 255 and
-        c1 = (u lsr 16) land 255 and
-        c2 = (u lsr 8) land 255 and
-        c3 = u land 255 in
-    let utf32 = String.make 4 '0' in
-    utf32.[0] <- Char.chr c3;
-    utf32.[1] <- Char.chr c2;
-    utf32.[2] <- Char.chr c1;
-    utf32.[3] <- Char.chr c0;
-    utf32
-
-  let utf_8_normalize s =
-    let b = Buffer.create (String.length s * 3) in
-    (* let n = Uunf.create nf in *)
-    let rec add v = match (* Uunf.add n *) v with
-      | `Uchar u -> Buffer.add_string b (unicode_to_utf32le u); add `Await
-      | _ -> ()
-    in
-    let add_uchar _ _ = function
-      | `Malformed _ -> add (`Uchar Uutf.u_rep)
-      | `Uchar c as u -> add u
-    in
-    Uutf.String.fold_utf_8 add_uchar () s; add `End; Buffer.contents b
-
+let utf_8_normalize s =
+  let b = Buffer.create (String.length s * 3) in
+  (* let n = Uunf.create nf in *)
+  let rec add v = match (* Uunf.add n *) v with
+    | `Uchar u -> Buffer.add_string b (unicode_to_utf32le u); add `Await
+    | _ -> ()
+  in
+  let add_uchar _ _ = function
+    | `Malformed _ -> add (`Uchar Uutf.u_rep)
+    | `Uchar c as u -> add u
+  in
+  Uutf.String.fold_utf_8 add_uchar () s; add `End; Buffer.contents b
 
 }
 
 let spaces    = [' ' '\t']
-
 
 let newline   = ('\010' | '\013' | "\013\010")
 let blankline = spaces+ newline
@@ -416,9 +409,7 @@ rule token = parse
   | booltrue                     { return_token BOOLTRUE }
   | boolfalse                    { return_token BOOLFALSE }
   | booland                      { return_token AND }
-  | boolandand                   { return_token ANDAND }
   | boolor                       { return_token OR }
-  | booloror                     { return_token OROR }
   | id as ident                  { if (not (in_matrix ())) && (is_EOL () || is_SOF ())
                                    then shellmode_on := true;
                                    let id8 = (* utf_8_normalize *) ident in
@@ -427,7 +418,7 @@ rule token = parse
                                    (*   else return_token (ID ident) *)
                                    (* else return_token (ID ident) *) }
   | eof                          { return_token EOF }
-  | _                            { raise (Lex_err ("Error : Unknow character ")) }
+  | _ as c                       { raise (Error ("unknow character " ^ String.make 1 c)) }
 
 and discardcomment = parse
   | newline                      { token lexbuf }
@@ -452,13 +443,11 @@ and doublestr = parse
   | dquote quote                 { str := !str^"\"\'"; doublestr lexbuf }
   | quote dquote                 { str := !str^"\'\""; doublestr lexbuf }
   | quote quote                  { str := !str^"\'\'"; doublestr lexbuf }
-  | quote                        { let msg = "Heterogeneous string, starting with \" and ending with \' only allowed in scilab 5" in
-                                   warning_only_scila5 msg lexbuf;
-                                   let s = utf_8_normalize !str in
+  | quote                        { let s = utf_8_normalize !str in
                                    return_token (STR s) }
   | next newline                 { newline_lex lexbuf; doublestr lexbuf }
-  | newline                      { raise (Err_str "Error : unexpected newline in a string ") }
-  | eof                          { raise (Err_str "Error : unexpected end of file in a string ") }
+  | newline                      { raise (Error "unexpected newline in a string") }
+  | eof                          { raise (Error "unexpected end of file in a string") }
   | _ as c                       { str := !str^(String.make 1 c); doublestr lexbuf }
 
 and simplestr = parse
@@ -473,8 +462,8 @@ and simplestr = parse
                                    let s = utf_8_normalize !str in
                                    return_token (STR s) }
   | next newline                 { newline_lex lexbuf; simplestr lexbuf }
-  | newline                      { raise (Err_str "Error : unexpected newline in a string ") }
-  | eof                          { raise (Err_str "Error : unexpected end of file in a string ") }
+  | newline                      { raise (Error "unexpected newline in a string") }
+  | eof                          { raise (Error "unexpected end of file in a string") }
   | utf as u                     { str := !str ^ u; simplestr lexbuf }
   | _ as c                       { str := !str^(Char.escaped c); simplestr lexbuf }
 
@@ -512,9 +501,7 @@ and shellmode = parse
   | greaterthan                  { return_shell GT }
   | boolnot                      { return_shell NOT }
   | booland                      { return_shell AND }
-  | boolandand                   { return_shell ANDAND }
   | boolor                       { return_shell OR }
-  | booloror                     { return_shell OROR }
   | quote                        { shellmode_on := false;
                                    if (is_transposable ())
                                    then return_shell QUOTE
@@ -522,40 +509,3 @@ and shellmode = parse
   | dquote                       { shellmode_on := false; str := ""; doublestr lexbuf }
   | shellmode_arg as arg         { return_token (STR arg) }
   | eof                          { return_shell EOF }
-
-(* and matrix = parse *)
-(*   | spaces+ *)
-(*       { Printf.printf " "; *)
-(*         matrix lexbuf} *)
-(*   | integer as inum *)
-(*       { let num = int_of_string inum in *)
-(*         Printf.printf "%d" num; *)
-(*         matrix lexbuf} *)
-(*   | number as nnum *)
-(*       { let num = float_of_string nnum in *)
-(*         Printf.printf "%f" num; *)
-(*         matrix lexbuf} *)
-(*   | little as lnum *)
-(*       { let num = float_of_string lnum in *)
-(*         Printf.printf "%f" num; *)
-(*         matrix lexbuf} *)
-(*   | rbrack *)
-(*       {token lexbuf} *)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

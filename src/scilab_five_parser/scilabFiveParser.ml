@@ -664,6 +664,8 @@ end = struct
       seq [ char '.' ; star space ; any_of "*/\\" ; star space ; char '.' ;
             phantom (any_but ('0'--'9')) ] ;
       seq [ char '.' ; star space ; any_of "*/\\^" ] ]
+  let before_shell_call_arg =
+    seq [ spaces ; phantom (any_but ".-/+*&|<>=,;\n\000^") ]
 
   let drop_spaces op bounds =
     (* clean spaces in element wise and kronecker operators *)
@@ -889,8 +891,11 @@ end = struct
           (* if we're at toplevel, it could also be an expr *)
           let as_expr = parse_toplevel_expr ctx in
           match as_expr.cstr with
-          (* TODO: macro generate 'typeof id = function' *)
           | Error -> `Stmt (parse_shell_call ctx)
+          (* TODO: better heuristics ? macro generate 'typeof id = function' ? *)
+          | Var _ when exec before_shell_call_arg ctx.st ->
+            restore ctx.st cp ;
+            `Stmt (parse_shell_call ctx)
           | _ -> `Stmt (descr_exp as_expr)
       else  `Stmt (descr_exp (parse_toplevel_expr ctx))
     in
@@ -1444,8 +1449,14 @@ end = struct
 
   and parse_while ctx =
     let cond, _ = parse_cond_expr [ "do" ; "then" ] ctx in
-    let phrases, _ = parse_seq ctx in
-    descr (While (cond, phrases)) (from_last "while" ctx) ctx
+    let phrases, term = parse_seq ctx in
+      match term with
+      | "else" ->
+        let else_phrases, _ = parse_seq ctx in
+        descr (While (cond, phrases, Some else_phrases)) (from_last "while" ctx) ctx
+      | _ (* "end" *) ->
+        descr (While (cond, phrases, None)) (from_last "while" ctx) ctx
+
 
   and parse_for ctx =
     let iter = group () in
@@ -1783,8 +1794,8 @@ end
 
 (** Builds an AST for the file at the given path and returns the list
     of warnings that may have happened during its parsing. Actually,
-    these warnings are recovered errors, and a file is completely
-    valid iff it produces zero warning. In any other case, either its
+    some warnings are recovered errors, and parsing is completely
+    safe iff it produces zero warning. In any other case, either its
     AST is partial or the parser made non trivial decisions to build
     it. This error resilient parsing should only be used by tools to
     be able to give some information even on incomplete files. *)

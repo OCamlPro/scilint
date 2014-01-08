@@ -93,8 +93,10 @@ module Make
       Select { cond = convert_exp cond ; cases ; default = Some (convert_stmt d) } 
     | FromAst.Try (tbody, cbody)  ->
       Try (convert_stmt tbody, convert_stmt cbody) 
-    | FromAst.While (cond, body)  ->
-      While (convert_exp cond, convert_stmt body) 
+    | FromAst.While (cond, tbody, Some fbody)  ->
+      While (convert_exp cond, convert_stmt tbody, Some (convert_stmt fbody)) 
+    | FromAst.While (cond, tbody, None)  ->
+      While (convert_exp cond, convert_stmt tbody, None) 
         
   and convert_exp_cstr cstr =
     let open ToAst in

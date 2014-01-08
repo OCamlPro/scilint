@@ -134,10 +134,13 @@ let serialize_ast =
         output_location cloc ;
         output_stmts tbody ;
         output_stmts cbody
-      | While (cond, body)  ->
+      | While (cond, body, None)  ->
         output_header loc 16 (* WhileExp *) ;
         output_exp cond ;
         output_stmt body
+      | While (cond, body, Some _)  ->
+        (* FIXME: macro generate ?? *)
+        failwith "Unsupported while with else"
       | Return ->
         output_header loc 20 (* ReturnExp *) ;
         output_bool true (* no parameters *)

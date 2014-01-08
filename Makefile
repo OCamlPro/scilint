@@ -22,19 +22,13 @@ src/input/scilabTypedPrimitivesLexer.cmx: \
   src/input/scilabTypedPrimitivesParser.cmi
 
 OCAML_SCILAB_SIX_PARSER_MLS = \
-  src/scilab_six_parser/scilabLexer.ml \
-  src/scilab_six_parser/scilabPreParser.ml \
-  src/scilab_six_parser/scilabParserUtils.ml \
-  src/scilab_six_parser/scilabParser.ml
+  src/scilab_six_parser/scilabSixLexer.ml \
+  src/scilab_six_parser/scilabSixParserUtils.ml \
+  src/scilab_six_parser/scilabSixParserUtils.ml \
+  src/scilab_six_parser/scilabSixParser.ml
 
-src/scilab_six_parser/scilabLexer.cmx: \
-  src/scilab_six_parser/scilabParser.cmi
-
-OCAML_SCILAB_SIX_AST_MLS = \
-  src/scilab_six_ast/scilabSymbol.ml \
-  src/scilab_six_ast/scilabAst.ml \
-  src/scilab_six_ast/scilabAstPrinter.ml \
-  src/scilab_six_ast/scilabPrettyPrinter.ml
+src/scilab_six_parser/scilabSixLexer.cmx: \
+  src/scilab_six_parser/scilabSixParser.cmi
 
 OCAML_SCILAB_FIVE_PARSER_MLS = \
   src/scilab_five_parser/scilabFiveParserAst.ml \
@@ -55,7 +49,7 @@ OCAML_SCILINT_DOC_GEN_MLS = \
   src/docgen/scilintDocGenMain.ml
 
 OCAML_SCILINT_MLS = \
-  src/scilint/scilabDeffRefactoring.ml \
+#  src/scilint/scilabDeffRefactoring.ml \
   src/scilint/scilintFirehosegen.ml \
   src/scilint/scilabUtils.ml \
   src/scilint/config/scilintTree.ml \
@@ -80,7 +74,6 @@ SCILINT_MLS = \
 	$(OCAML_COMMON_MLS) \
 	$(OCAML_SCILAB_FIVE_AST_MLS) \
 	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
-	$(OCAML_SCILAB_SIX_AST_MLS) \
 	$(OCAML_SCILAB_SIX_PARSER_MLS) \
 	$(OCAML_SCILINT_MLS)
 
@@ -116,7 +109,7 @@ OCAML_INCL= \
   $(shell ocamlfind query -i-format pprint uutf) \
   -I src/common -I src/input \
   -I src/scilab_five_ast -I src/scilab_five_parser \
-  -I src/scilab_six_ast -I src/scilab_six_parser \
+  -I src/scilab_six_parser \
   -I src/scilint -I src/scilint/config \
   -I src/scintax -I src/docgen \
 
@@ -182,9 +175,9 @@ clean :
 	  scilint scilint.asm \
 	  scilint_doc_gen scilint_doc_gen.asm \
 	  scintax scintax.asm \
-	  src/scilab_six_parser/scilabLexer.ml \
-	  src/scilab_six_parser/scilabParser.ml \
-	  src/scilab_six_parser/scilabParser.mli \
+	  src/scilab_six_parser/scilabSixLexer.ml \
+	  src/scilab_six_parser/scilabSixGenParser.ml \
+	  src/scilab_six_parser/scilabSixGenParser.mli \
 	  src/scilint/config/scilintLexer.ml \
 	  src/scilint/config/scilintParser.ml \
 	  src/scilint/config/scilintParser.mli \

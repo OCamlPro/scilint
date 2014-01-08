@@ -194,8 +194,10 @@ module Make
          @ [ B [ L "default" ; sexp_of_stmt d ] ])
     | Try (tbody, cbody)  ->
       B [ L "try" ; sexp_of_stmt tbody ; sexp_of_stmt cbody ]
-    | While (cond, body)  ->
-      B [ L "while" ; sexp_of_exp cond ; sexp_of_stmt body ]
+    | While (cond, tbody, Some fbody)  ->
+      B [ L "while" ; sexp_of_exp cond ; sexp_of_stmt tbody ; sexp_of_stmt fbody ]
+    | While (cond, tbody, None)  ->
+      B [ L "while" ; sexp_of_exp cond ; sexp_of_stmt tbody ]
 
   and sexp_of_case (exp, stmt) =
     B [ L "case" ; sexp_of_exp exp ; sexp_of_stmt stmt ]

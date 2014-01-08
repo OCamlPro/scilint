@@ -347,10 +347,17 @@ module Make
       ^^ string "catch" ^^ instr_end
       ^^ nest 2 (instr_end ^^ document_of_stmt cbody) ^^ instr_end
       ^^ string "end"
-    | While (cond, body)  ->
+    | While (cond, tbody, Some fbody)  ->
       string "while" ^^ nbsp ^^ document_of_exp cond
-      ^^ nbsp ^^ string "do"
-      ^^ nest 2 (instr_end ^^ document_of_stmt body) ^^ instr_end
+      ^^ nbsp ^^ string "then"
+      ^^ nest 2 (instr_end ^^ document_of_stmt tbody) ^^ instr_end
+      ^^ string "else"
+      ^^ nest 2 (instr_end ^^ document_of_stmt fbody) ^^ instr_end
+      ^^ string "end"
+    | While (cond, tbody, None)  ->
+      string "while" ^^ nbsp ^^ document_of_exp cond
+      ^^ nbsp ^^ string "then"
+      ^^ nest 2 (instr_end ^^ document_of_stmt tbody) ^^ instr_end
       ^^ string "end"
 
   and document_of_case (exp, stmt) =

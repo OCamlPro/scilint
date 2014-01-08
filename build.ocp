@@ -1,79 +1,90 @@
 begin library "scilint_common"
   files =  [
   (* - common *)
-       "src/common/scilabLocations.ml"
-       "src/common/scilintWarning.ml"
-       "src/common/scilintOptions.ml"
-       "src/common/scilintManual.ml"
+    "src/common/scilabLocations.ml"
+    "src/common/scilintWarning.ml"
+    "src/common/scilintOptions.ml"
+    "src/common/scilintManual.ml"
   (* - inputs *)
-       "src/input/scilabTypedPrimitives.ml"
-       "src/input/scilabTypedPrimitivesLexer.mll"
-       "src/input/scilabTypedPrimitivesParser.mly"
-       "src/input/scilabTypedPrimitivesLoader.ml"
+    "src/input/scilabTypedPrimitives.ml"
+    "src/input/scilabTypedPrimitivesLexer.mll"
+    "src/input/scilabTypedPrimitivesParser.mly"
+    "src/input/scilabTypedPrimitivesLoader.ml"
   ]
   ocamlyacc = [ "menhir" ]
 end
 
-begin library "scilab_five"
+begin library "scilab_ast"
   files = [
-  (* - AST and utils *)
-	"src/scilab_five_ast/scilabFiveAst.ml"
-	"src/scilab_five_ast/scilabFiveAstConverter.ml"
-	"src/scilab_five_ast/scilabFiveAstUtils.ml"
-	"src/scilab_five_ast/scilabFiveAstSexpPrinter.ml"
-  	"src/scilab_five_ast/scilabFiveAstPrettyPrinter.ml"
-  (* - parser *)
-	"src/scilab_five_parser/scilabFiveParserAst.ml"
-	"src/scilab_five_parser/scilabFiveParser.ml"
-	"src/scilab_five_parser/scilabFiveParserAstSerializer.ml"
+    "src/scilab_five_ast/scilabFiveAst.ml"
+    "src/scilab_five_ast/scilabFiveAstConverter.ml"
+    "src/scilab_five_ast/scilabFiveAstUtils.ml"
+    "src/scilab_five_ast/scilabFiveAstSexpPrinter.ml"
+    "src/scilab_five_ast/scilabFiveAstPrettyPrinter.ml"
   ]
   requires = [ "pprint" "scilint_common" ]
 end
 
-begin library "scilab_six"
+begin library "scilab_five_parser"
   files = [
-  (* - AST and utils *)
-	"src/scilab_six_ast/scilabSymbol.ml"
-	"src/scilab_six_ast/scilabAst.ml"
-	"src/scilab_six_ast/scilabAstPrinter.ml"
-	"src/scilab_six_ast/scilabPrettyPrinter.ml"
-  (* - parser *)
-	"src/scilab_six_parser/scilabPreParser.ml"
-        "src/scilab_six_parser/scilabParserUtils.ml"
-	"src/scilab_six_parser/scilabParser.mly"
-	"src/scilab_six_parser/scilabLexer.mll"
+    "src/scilab_five_parser/scilabFiveParserAst.ml"
+    "src/scilab_five_parser/scilabFiveParser.ml"
+    "src/scilab_five_parser/scilabFiveParserAstSerializer.ml"
   ]
-  requires = [ "uutf" "scilint_common" ]
+  requires = [ "scilint_common" "scilab_ast" ]
+end
+
+begin library "scilab_six_parser"
+  files = [
+    "src/scilab_six_parser/scilabSixParserUtils.ml"
+    "src/scilab_six_parser/scilabSixGenParser.mly"
+    "src/scilab_six_parser/scilabSixLexer.mll"
+    "src/scilab_six_parser/scilabSixParser.ml"
+  ]
+  ocamlyacc = [ "menhir" ]
+  requires = [ "uutf" "scilint_common" "scilab_ast" "scilab_five_parser" ]
 end
 
 begin program "scintax"
   files = [
-	"src/scintax/scintaxMain.ml"
+    "src/scintax/scintaxMain.ml"
   ]
-  requires = [ "scilab_five" "scilint_common" ]
+  requires = [
+    "scilab_ast"
+    "scilab_five_parser"
+    "scilint_common"
+  ]
 end
 
 begin program "scilint"
   files = [
-	"src/scilint/config/scilintTree.ml";
-	"src/scilint/config/scilintParser.mly";
-	"src/scilint/config/scilintLexer.mll";
-        "src/scilint/config/scilintConfig.ml";
-	"src/scilint/scilabUtils.ml"
-	"src/scilint/scilintFirehosegen.ml"
-        "src/scilint/scilintProject.ml";
-	"src/scilint/scilabFunctionAnalyze.ml"
-	"src/scilint/scilabDeffRefactoring.ml"
-	"src/scilint/scilabAstStats.ml"
-	"src/scilint/scilintMain.ml"
+(*    "src/scilint/config/scilintTree.ml";
+    "src/scilint/config/scilintParser.mly";
+    "src/scilint/config/scilintLexer.mll";
+    "src/scilint/config/scilintConfig.ml";
+    "src/scilint/scilabUtils.ml"
+    "src/scilint/scilintFirehosegen.ml"
+    "src/scilint/scilintProject.ml";
+    "src/scilint/scilabFunctionAnalyze.ml"
+    "src/scilint/scilabDeffRefactoring.ml"
+    "src/scilint/scilabAstStats.ml"
+    "src/scilint/scilintMain.ml"*)
   ]
 
   requires = [
-    "scilint_common" "scilab_five" "scilab_six" "unix"
+    "scilint_common"
+    "scilab_ast"
+    "scilab_five_parser"
+    "scilab_six_parser"
+    "unix"
   ]
 end
 
 begin program "scilint_doc_gen"
-  requires = [ "scilint_common" ]
-  files = [ "src/docgen/scilintDocGenMain.ml" ]
+  files = [
+    "src/docgen/scilintDocGenMain.ml"
+  ]
+  requires = [
+    "scilint_common"
+  ]
 end

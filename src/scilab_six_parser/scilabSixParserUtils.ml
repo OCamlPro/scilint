@@ -1,17 +1,26 @@
+(*  OCamlPro Scilab Toolbox - Scilab 6 parser OCaml port
+ *  Copyright (C) 2013 - OCamlPro - Michael LAPORTE
+ *
+ *  This file must be used under the terms of the CeCILL.
+ *  This source file is licensed as described in the file COPYING, which
+ *  you should have received as part of this distribution.
+ *  The terms are also available at
+ *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
+
+open ScilabLocations
+open ScilabFiveParserAst
+open ScilabLocations
+open Lexing
+
 (* Pre-parsing file to deal with '..\n' and '...\n' *)
 
 exception PreParserError
 
 let add_flag = ref false
-
 let add = ref ""
-
 let corrupt_zone = ref []
-
 let corrupt = ref []
-
 let cpt_line = ref 1
-
 let list_white_space = [' '; '\012'; '\n'; '\r'; '\t']
 
 (* To deal with '..       \n' *)
@@ -28,7 +37,7 @@ let rec is_line_comment index str =
   else
     let char1 = String.get str index in
     let char2 = String.get str (index - 1) in
-    if char1 = '/' & char2 = '/'
+    if char1 = '/' && char2 = '/'
     then true
     else is_line_comment (index - 1) str
 
@@ -39,7 +48,7 @@ let rec get_lc_with_dotdot_index index str =
   else
     let char1 = String.get str index in
     let char2 = String.get str (index - 1) in
-    if char1 = '/' & char2 = '/' & index > 1
+    if char1 = '/' && char2 = '/' && index > 1
     then 
       let dot_dot_index = find_last_index (index - 2) str in
       (* Printf.printf "dotindex : %i\n" dot_dot_index; *)
@@ -47,7 +56,7 @@ let rec get_lc_with_dotdot_index index str =
       then
         let dot1 = String.get str dot_dot_index in
         let dot2 = String.get str (dot_dot_index - 1) in
-        if dot1 = '.' & dot2 = '.' 
+        if dot1 = '.' && dot2 = '.' 
         then 
           if dot_dot_index > 1
           then 
@@ -108,8 +117,7 @@ let rec pre_parse_aux buf ch =
       let last_char   = String.get line last_index and
           last_1_char = String.get line last_1_index and
           last_2_char = String.get line last_2_index in
-      (* Printf.printf "dernier : %c; av_dernier : %c; avav_dernier : %c\n" last_char last_1_char last_2_char; *)
-      if last_char = '.' & last_1_char = '.'
+      if last_char = '.' && last_1_char = '.'
       then
         if last_2_char = '.'
         then
@@ -159,7 +167,7 @@ let rec pre_parse_aux buf ch =
       then
         let last_char   = String.get line last_index and
             last_1_char = String.get line last_1_index in
-        if last_char = '.' & last_1_char = '.'
+        if last_char = '.' && last_1_char = '.'
         then
           begin
             (* "  \n" *)
@@ -227,11 +235,111 @@ let rec pre_parse_aux buf ch =
         else Buffer.contents buf
     | _ -> raise PreParserError
 
-
-
 let pre_parse ch =
   let buf = Buffer.create 1024 in
   add := "";
   add_flag := false;
   let new_src = pre_parse_aux buf ch in
   new_src, List.rev !corrupt_zone
+
+let list_line_corrupt_min = ref 0
+let list_line_corrupt_max = ref 0
+let list_line_corrupt = ref []
+  
+let init_var_corrupt list_zone = 
+  if List.length list_zone <> 0 
+  then
+    let (min, _) = List.hd (List.hd list_zone) in
+    let (max, _) = List.hd (List.hd (List.rev list_zone)) in
+    list_line_corrupt_min := min;
+    list_line_corrupt_max := max;
+    let new_list = 
+      List.map (fun zone -> 
+        if List.length zone > 1 
+        then 
+          begin
+            let (line, col) = List.hd zone in
+            let new_zone = 
+              List.map (fun (_, corrupt_col) -> 
+                (line, corrupt_col + col)) (List.tl zone) in
+            (line, col)::new_zone
+          end
+        else zone
+      ) list_zone in
+    list_line_corrupt := new_list
+
+let uncorrupt_loc start_pos end_pos =
+  (File start_pos.pos_fname,
+   ((start_pos.pos_lnum,
+     start_pos.pos_cnum - start_pos.pos_bol),
+    (end_pos.pos_lnum,
+     end_pos.pos_cnum - end_pos.pos_bol)))
+
+let check_overlap start_pos end_pos list_bl = 
+  let start_col = start_pos.pos_cnum - start_pos.pos_bol in
+  let end_col = end_pos.pos_cnum - end_pos.pos_bol in
+  let zone_overlaped = 
+    List.filter (fun (line, col) -> 
+        start_col < col && end_col > col) (List.hd list_bl) in
+  List.length zone_overlaped <> 0  
+
+let add_overlap start_pos end_pos nbr_line char_last_breakline list_bl =
+  let start_line = start_pos.pos_lnum in
+  let start_col = start_pos.pos_cnum - start_pos.pos_bol in
+  let end_col = end_pos.pos_cnum - end_pos.pos_bol in
+  let zone_overlaped = 
+    List.filter (fun (line, col) -> 
+        start_col < col && end_col > col) (List.hd list_bl) in
+  if List.length zone_overlaped <> 0
+  then 
+    let nbr_ol_line = List.length zone_overlaped in
+    (File start_pos.pos_fname,
+     ((start_line + nbr_line,
+       start_col - char_last_breakline),
+      (start_line + nbr_line + nbr_ol_line,
+       end_col - start_col - 1)))
+  else uncorrupt_loc start_pos end_pos
+  
+let loc start_pos end_pos =
+  let start_line = start_pos.pos_lnum in 
+  let start_col = start_pos.pos_cnum - start_pos.pos_bol in
+  if start_line < !list_line_corrupt_min || start_line > !list_line_corrupt_max
+  then uncorrupt_loc start_pos end_pos
+    else
+      let list_line_br = 
+        List.filter (fun zone -> 
+            let (line, col) = List.hd zone in line = start_line
+          ) !list_line_corrupt in
+      let list_br = 
+        List.filter (fun zone -> 
+            let (line, col) = List.hd zone in col <= start_col
+          ) list_line_br in
+      if List.length list_line_br <> 0
+      then
+        if List.length list_br <> 0
+        then 
+          let list_char = 
+            List.filter (fun (_, c) ->  c <= start_col) (List.hd list_br) in
+          let nbr_line = List.length list_char in
+          let (_, char_last_br) = List.hd (List.rev list_char) in
+          if check_overlap start_pos end_pos list_br 
+          then add_overlap start_pos end_pos nbr_line char_last_br list_line_br
+          else
+            (File start_pos.pos_fname,
+             ((start_line + nbr_line,
+               start_col - char_last_br),
+              (start_line + nbr_line,
+               (start_col - char_last_br) 
+               + (end_pos.pos_cnum - end_pos.pos_bol) 
+               - start_col)))
+        else add_overlap start_pos end_pos 0 0 list_line_br
+      else uncorrupt_loc start_pos end_pos
+
+let descr ?(warns = []) ?(comment = []) cstr loc =
+  { cstr ; comment ; loc ; meta = warns }
+
+let string_descr ?warns str loc =
+  descr ?warns str loc
+
+let var_descr ?warns str loc =
+  descr ?warns (Var (string_descr str loc)) loc

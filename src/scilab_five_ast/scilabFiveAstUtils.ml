@@ -97,8 +97,10 @@ module Make
         Select { cond = self # exp cond ; cases ; default = Some (self # stmt d) } 
       | Try (tbody, cbody)  ->
         Try (self # stmt tbody, self # stmt cbody) 
-      | While (cond, body)  ->
-        While (self # exp cond, self # stmt body) 
+      | While (cond, tbody, Some fbody)  ->
+        While (self # exp cond, self # stmt tbody, Some (self # stmt fbody)) 
+      | While (cond, tbody, None)  ->
+        While (self # exp cond, self # stmt tbody, None) 
 
     method exp_cstr cstr =
       match cstr with
@@ -211,9 +213,13 @@ module Make
       | Try (tbody, cbody)  ->
         self # stmt tbody ;
         self # stmt cbody
-      | While (cond, body)  ->
+      | While (cond, tbody, Some fbody)  ->
         self # exp cond ;
-        self # stmt body
+        self # stmt tbody ;
+        self # stmt fbody
+      | While (cond, tbody, None)  ->
+        self # exp cond ;
+        self # stmt tbody
       | Return | Break | Continue -> ()
 
     method exp_cstr cstr =
