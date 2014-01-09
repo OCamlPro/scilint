@@ -8,8 +8,22 @@ src/common/scilintOptions.cmo :
 src/common/scilintOptions.cmx :
 src/input/scilabTypedPrimitives.cmo :
 src/input/scilabTypedPrimitives.cmx :
-src/input/scilabTypedPrimitivesLoader.cmo :
-src/input/scilabTypedPrimitivesLoader.cmx :
+src/input/scilabTypedPrimitivesLexer.cmo : \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesLexer.cmx : \
+    src/input/scilabTypedPrimitivesParser.cmx
+src/input/scilabTypedPrimitivesParser.cmo : \
+    src/input/scilabTypedPrimitives.cmx \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesParser.cmx : \
+    src/input/scilabTypedPrimitives.cmx \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesLoader.cmo : \
+    src/input/scilabTypedPrimitivesParser.cmi \
+    src/input/scilabTypedPrimitivesLexer.cmx
+src/input/scilabTypedPrimitivesLoader.cmx : \
+    src/input/scilabTypedPrimitivesParser.cmx \
+    src/input/scilabTypedPrimitivesLexer.cmx
 src/docgen/scilintDocGenMain.cmo : src/common/scilintManual.cmx
 src/docgen/scilintDocGenMain.cmx : src/common/scilintManual.cmx
 src/common/scilintWarning.cmo : src/common/scilabLocations.cmx
@@ -22,8 +36,22 @@ src/common/scilintOptions.cmo :
 src/common/scilintOptions.cmx :
 src/input/scilabTypedPrimitives.cmo :
 src/input/scilabTypedPrimitives.cmx :
-src/input/scilabTypedPrimitivesLoader.cmo :
-src/input/scilabTypedPrimitivesLoader.cmx :
+src/input/scilabTypedPrimitivesLexer.cmo : \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesLexer.cmx : \
+    src/input/scilabTypedPrimitivesParser.cmx
+src/input/scilabTypedPrimitivesParser.cmo : \
+    src/input/scilabTypedPrimitives.cmx \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesParser.cmx : \
+    src/input/scilabTypedPrimitives.cmx \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesLoader.cmo : \
+    src/input/scilabTypedPrimitivesParser.cmi \
+    src/input/scilabTypedPrimitivesLexer.cmx
+src/input/scilabTypedPrimitivesLoader.cmx : \
+    src/input/scilabTypedPrimitivesParser.cmx \
+    src/input/scilabTypedPrimitivesLexer.cmx
 src/scilab_five_ast/scilabFiveAst.cmo :
 src/scilab_five_ast/scilabFiveAst.cmx :
 src/scilab_five_ast/scilabFiveAstUtils.cmo : \
@@ -62,14 +90,36 @@ src/scilab_five_parser/scilabFiveParserAstSerializer.cmo : \
     src/scilab_five_parser/scilabFiveParserAst.cmx
 src/scilab_five_parser/scilabFiveParserAstSerializer.cmx : \
     src/scilab_five_parser/scilabFiveParserAst.cmx
-src/scilab_six_parser/scilabSixPreParser.cmo :
-src/scilab_six_parser/scilabSixPreParser.cmx :
-src/scilab_six_parser/scilabSixParserUtils.cmo :
-src/scilab_six_parser/scilabSixParserUtils.cmx :
-src/scilab_six_parser/scilabSixParser.cmo : \
-    src/scilab_six_parser/scilabSixPreParser.cmx
-src/scilab_six_parser/scilabSixParser.cmx : \
-    src/scilab_six_parser/scilabSixPreParser.cmx
+src/scilab_six_parser/scilabSixParserUtils.cmo : \
+    src/common/scilabLocations.cmx \
+    src/scilab_five_parser/scilabFiveParserAst.cmx
+src/scilab_six_parser/scilabSixParserUtils.cmx : \
+    src/common/scilabLocations.cmx \
+    src/scilab_five_parser/scilabFiveParserAst.cmx
+src/scilab_six_parser/scilabSixLexer.cmo : \
+    /home/benjamin/.opam/4.01.0/lib/uutf/uutf.cmi \
+    src/scilab_six_parser/scilabSixGenParser.cmi
+src/scilab_six_parser/scilabSixLexer.cmx : \
+    /home/benjamin/.opam/4.01.0/lib/uutf/uutf.cmi \
+    src/scilab_six_parser/scilabSixGenParser.cmx
+src/scilab_six_parser/scilabSixGenParser.cmo : \
+    src/scilab_six_parser/scilabSixParserUtils.cmx \
+    src/scilab_five_parser/scilabFiveParserAst.cmx \
+    src/scilab_six_parser/scilabSixGenParser.cmi
+src/scilab_six_parser/scilabSixGenParser.cmx : \
+    src/scilab_six_parser/scilabSixParserUtils.cmx \
+    src/scilab_five_parser/scilabFiveParserAst.cmx \
+    src/scilab_six_parser/scilabSixGenParser.cmi
+src/scilab_six_parser/scilabSixParser.cmo : src/common/scilintWarning.cmx \
+    src/scilab_six_parser/scilabSixParserUtils.cmx \
+    src/scilab_six_parser/scilabSixLexer.cmx \
+    src/scilab_six_parser/scilabSixGenParser.cmi \
+    src/scilab_five_parser/scilabFiveParserAst.cmx
+src/scilab_six_parser/scilabSixParser.cmx : src/common/scilintWarning.cmx \
+    src/scilab_six_parser/scilabSixParserUtils.cmx \
+    src/scilab_six_parser/scilabSixLexer.cmx \
+    src/scilab_six_parser/scilabSixGenParser.cmx \
+    src/scilab_five_parser/scilabFiveParserAst.cmx
 src/scilint/scilintProject.cmi :
 src/scilint/scilabUtils.cmi :
 src/common/scilintWarning.cmo : src/common/scilabLocations.cmx
@@ -82,8 +132,22 @@ src/common/scilintOptions.cmo :
 src/common/scilintOptions.cmx :
 src/input/scilabTypedPrimitives.cmo :
 src/input/scilabTypedPrimitives.cmx :
-src/input/scilabTypedPrimitivesLoader.cmo :
-src/input/scilabTypedPrimitivesLoader.cmx :
+src/input/scilabTypedPrimitivesLexer.cmo : \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesLexer.cmx : \
+    src/input/scilabTypedPrimitivesParser.cmx
+src/input/scilabTypedPrimitivesParser.cmo : \
+    src/input/scilabTypedPrimitives.cmx \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesParser.cmx : \
+    src/input/scilabTypedPrimitives.cmx \
+    src/input/scilabTypedPrimitivesParser.cmi
+src/input/scilabTypedPrimitivesLoader.cmo : \
+    src/input/scilabTypedPrimitivesParser.cmi \
+    src/input/scilabTypedPrimitivesLexer.cmx
+src/input/scilabTypedPrimitivesLoader.cmx : \
+    src/input/scilabTypedPrimitivesParser.cmx \
+    src/input/scilabTypedPrimitivesLexer.cmx
 src/scilab_five_ast/scilabFiveAst.cmo :
 src/scilab_five_ast/scilabFiveAst.cmx :
 src/scilab_five_ast/scilabFiveAstUtils.cmo : \

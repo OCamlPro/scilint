@@ -1,6 +1,9 @@
-all: scilint.asm scintax.asm scilint_doc_gen.asm
+all: \
+  scilint.asm scintax.asm scilint_doc_gen.asm \
+  scilint.byte scintax.byte scilint_doc_gen.byte
 
 OCAMLOPT=ocamlfind ocamlopt
+OCAMLC=ocamlfind ocamlc
 OCAMLYACC=menhir
 OCAMLLEX=ocamllex
 OCAMLDEP=ocamlfind ocamldep
@@ -21,14 +24,20 @@ src/input/scilabTypedPrimitivesParser.cmi: \
 src/input/scilabTypedPrimitivesLexer.cmx: \
   src/input/scilabTypedPrimitivesParser.cmi
 
+src/input/scilabTypedPrimitivesLexer.cmo: \
+  src/input/scilabTypedPrimitivesParser.cmi
+
 OCAML_SCILAB_SIX_PARSER_MLS = \
+  src/scilab_six_parser/scilabSixParserUtils.ml \
   src/scilab_six_parser/scilabSixLexer.ml \
-  src/scilab_six_parser/scilabSixParserUtils.ml \
-  src/scilab_six_parser/scilabSixParserUtils.ml \
+  src/scilab_six_parser/scilabSixGenParser.ml \
   src/scilab_six_parser/scilabSixParser.ml
 
 src/scilab_six_parser/scilabSixLexer.cmx: \
-  src/scilab_six_parser/scilabSixParser.cmi
+  src/scilab_six_parser/scilabSixGenParser.cmi
+
+src/scilab_six_parser/scilabSixLexer.cmo: \
+  src/scilab_six_parser/scilabSixGenParser.cmi
 
 OCAML_SCILAB_FIVE_PARSER_MLS = \
   src/scilab_five_parser/scilabFiveParserAst.ml \
@@ -82,6 +91,7 @@ SCILINT_MLIS = \
 
 SCILINT_CMIS = $(SCILINT_MLS:.ml=.cmi) $(SCILINT_MLIS:.mli=.cmi)
 SCILINT_CMXS = $(SCILINT_MLS:.ml=.cmx)
+SCILINT_CMOS = $(SCILINT_MLS:.ml=.cmo)
 
 ########## SCINTAX
 
@@ -93,6 +103,7 @@ SCINTAX_MLS = \
 
 SCINTAX_CMIS = $(SCINTAX_MLS:.ml=.cmi) $(SCINTAX_MLIS:.mli=.cmi)
 SCINTAX_CMXS = $(SCINTAX_MLS:.ml=.cmx)
+SCINTAX_CMOS = $(SCINTAX_MLS:.ml=.cmo)
 
 ########## SCILINT_DOC_GEN
 
@@ -102,6 +113,7 @@ SCILINT_DOC_GEN_MLS = \
 
 SCILINT_DOC_GEN_CMIS = $(SCILINT_DOC_GEN_MLS:.ml=.cmi) $(SCILINT_DOC_GEN_MLIS:.mli=.cmi)
 SCILINT_DOC_GEN_CMXS = $(SCILINT_DOC_GEN_MLS:.ml=.cmx)
+SCILINT_DOC_GEN_CMOS = $(SCILINT_DOC_GEN_MLS:.ml=.cmo)
 
 ########## COMMON FLAGS
 
@@ -127,6 +139,18 @@ scilint_doc_gen.asm : $(SCILINT_DOC_GEN_CMXS)
 	$(OCAMLOPT) $(OPTFLAGS) -package 'unix'  -linkpkg \
           -o $@ $(SCILINT_DOC_GEN_CMXS)
 
+scilint.byte : $(SCILINT_CMOS)
+	$(OCAMLC) -package 'unix,uutf,pprint' -linkpkg \
+	  -o $@ $(SCILINT_CMOS)
+
+scintax.byte : $(SCINTAX_CMOS)
+	$(OCAMLC) $(OCAML_INCL) -package 'unix,pprint'  -linkpkg \
+          -o $@ $(SCINTAX_CMOS)
+
+scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
+	$(OCAMLC) $(OCAML_INCL) -package 'unix'  -linkpkg \
+          -o $@ $(SCILINT_DOC_GEN_CMOS)
+
 depend:
 	$(OCAMLDEP) -native $(OCAML_INCL) \
 	  $(SCILINT_DOC_GEN_MLS) $(SCILINT_DOC_GEN_MLIS) \
@@ -139,10 +163,13 @@ ChangeLog.txt: scilint_doc_gen.asm
 	scilint_doc_gen.asm -changelog-txt ChangeLog.txt
 
 ########## COMMON
-.SUFFIXES: .ml .mli .mll .mly .cmi .cmx
+.SUFFIXES: .ml .mli .mll .mly .cmi .cmx .cmo
 
 .ml.cmx:
 	$(OCAMLOPT) $(OPTFLAGS) -c $<
+
+.ml.cmo:
+	$(OCAMLC) $(OCAML_INCL) -c $<
 
 .mll.cmx:
 	$(OCAMLLEX) $<
@@ -162,6 +189,11 @@ ChangeLog.txt: scilint_doc_gen.asm
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.ml
 
+.mly.cmo:
+	$(OCAMLYACC) $<
+	$(OCAMLC) $(OCAML_INCL) -c $*.mli
+	$(OCAMLC) $(OCAML_INCL) -c $*.ml
+
 .mly.cmi:
 	$(OCAMLYACC) -v $<
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
@@ -172,9 +204,9 @@ clean :
 	  *~ */*~ */*/*~ */*/*/*~ \
 	  *.cm* */*.cm* */*/*.cm* */*/*/*.cm* \
 	  *.o */*.o */*/*.o */*/*/*.o \
-	  scilint scilint.asm \
-	  scilint_doc_gen scilint_doc_gen.asm \
-	  scintax scintax.asm \
+	  scilint.byte scilint.asm \
+	  scilint_doc_gen.byte scilint_doc_gen.asm \
+	  scintax.byte scintax.asm \
 	  src/scilab_six_parser/scilabSixLexer.ml \
 	  src/scilab_six_parser/scilabSixGenParser.ml \
 	  src/scilab_six_parser/scilabSixGenParser.mli \
