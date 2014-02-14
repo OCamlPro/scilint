@@ -565,18 +565,18 @@ module ParserInternals : sig
   (** Returns the list of warnings along with the ast. *)
   val parse :
     ?allow_toplevel_exprs:bool ->
-    ScilabStreamReader.state -> ScilabFiveParserAst.source ->
-    ScilabFiveParserAst.ast
+    ScilabStreamReader.state -> ScilabParserAst.source ->
+    ScilabParserAst.ast
   (** operator string x its precedence and ast term *)
   val prefix_table :
-    (string * (int * ScilabFiveParserAst.unop)) list
+    (string * (int * ScilabParserAst.unop)) list
   (** operator string x precedence, associativity and ast term *)
   val infix_table :
-    (string * (int * [ `Left | `Right ] * ScilabFiveParserAst.op)) list
+    (string * (int * [ `Left | `Right ] * ScilabParserAst.op)) list
 end = struct
   open ScilabStreamReader
   open ScilabTokenReader
-  open ScilabFiveParserAst
+  open ScilabParserAst
   open ScilintWarning
   open Printf
 
@@ -1804,7 +1804,7 @@ let parse_file ?(allow_toplevel_exprs = false) name =
   let reader = ScilabStreamReader.channel_reader chan in
   let res = ParserInternals.parse
 	      ~allow_toplevel_exprs
-	      reader (ScilabFiveParserAst.File name) in
+	      reader (ScilabParserAst.File name) in
   close_in chan ;
   res
 
@@ -1814,4 +1814,4 @@ let parse_string ?(allow_toplevel_exprs = true) name str =
   let reader = ScilabStreamReader.string_reader str in
   ParserInternals.parse
     ~allow_toplevel_exprs
-    reader (ScilabFiveParserAst.String (name, str))
+    reader (ScilabParserAst.String (name, str))

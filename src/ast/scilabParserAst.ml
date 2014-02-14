@@ -52,7 +52,7 @@ end
 (** Instance of AST parameters for use with the printer *)
 module PrinterParameters = struct
   include Parameters
-  open ScilabFiveAstSexpPrinter
+  open ScilabAstSexpPrinter
   let sexp_of_loc _ s = s
   let sexp_of_meta _ s = s
   let sexp_of_symbol s = L (Printf.sprintf "!%s" s)
@@ -61,8 +61,8 @@ module PrinterParameters = struct
   let document_of_symbol s = string s
 end
 
-module Ast = ScilabFiveAst.Make (Parameters)
-module Utils = ScilabFiveAstUtils.Make (Parameters) (Ast)
+module Ast = ScilabAst.Make (Parameters)
+module Utils = ScilabAstUtils.Make (Parameters) (Ast)
 
 (** Export ALL the types *)
 include Parameters
@@ -79,6 +79,6 @@ include Utils
 
 (* printers *)
 module Sexp =
-  ScilabFiveAstSexpPrinter.Make (Parameters) (PrinterParameters) (Ast)
+  ScilabAstSexpPrinter.Make (Parameters) (PrinterParameters) (Ast)
 module Pretty =
-  ScilabFiveAstPrettyPrinter.Make (Parameters) (PrinterParameters) (Ast)
+  ScilabAstPrettyPrinter.Make (Parameters) (PrinterParameters) (Ast)

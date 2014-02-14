@@ -16,30 +16,30 @@ end
 
 begin library "scilab_ast"
   files = [
-    "src/scilab_five_ast/scilabFiveAst.ml"
-    "src/scilab_five_ast/scilabFiveAstConverter.ml"
-    "src/scilab_five_ast/scilabFiveAstUtils.ml"
-    "src/scilab_five_ast/scilabFiveAstSexpPrinter.ml"
-    "src/scilab_five_ast/scilabFiveAstPrettyPrinter.ml"
+    "src/ast/scilabAst.ml"
+    "src/ast/scilabAstConverter.ml"
+    "src/ast/scilabAstUtils.ml"
+    "src/ast/scilabAstSexpPrinter.ml"
+    "src/ast/scilabAstPrettyPrinter.ml"
+    "src/ast/scilabParserAst.ml"
+    "src/ast/scilabParserAstSerializer.ml"
   ]
   requires = [ "pprint" "scilint_common" ]
 end
 
 begin library "scilab_five_parser"
   files = [
-    "src/scilab_five_parser/scilabFiveParserAst.ml"
-    "src/scilab_five_parser/scilabFiveParser.ml"
-    "src/scilab_five_parser/scilabFiveParserAstSerializer.ml"
+    "src/parser/scilab_five/scilabFiveParser.ml"
   ]
   requires = [ "scilint_common" "scilab_ast" ]
 end
 
 begin library "scilab_six_parser"
   files = [
-    "src/scilab_six_parser/scilabSixParserUtils.ml"
-    "src/scilab_six_parser/scilabSixGenParser.mly"
-    "src/scilab_six_parser/scilabSixLexer.mll"
-    "src/scilab_six_parser/scilabSixParser.ml"
+    "src/parser/scilab_six/scilabSixParserUtils.ml"
+    "src/parser/scilab_six/scilabSixGenParser.mly"
+    "src/parser/scilab_six/scilabSixLexer.mll"
+    "src/parser/scilab_six/scilabSixParser.ml"
   ]
   ocamlyacc = [ "menhir" ]
   requires = [ "uutf" "scilint_common" "scilab_ast" "scilab_five_parser" ]

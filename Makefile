@@ -28,28 +28,28 @@ src/input/scilabTypedPrimitivesLexer.cmo: \
   src/input/scilabTypedPrimitivesParser.cmi
 
 OCAML_SCILAB_SIX_PARSER_MLS = \
-  src/scilab_six_parser/scilabSixParserUtils.ml \
-  src/scilab_six_parser/scilabSixLexer.ml \
-  src/scilab_six_parser/scilabSixGenParser.ml \
-  src/scilab_six_parser/scilabSixParser.ml
+  src/parser/scilab_six/scilabSixParserUtils.ml \
+  src/parser/scilab_six/scilabSixLexer.ml \
+  src/parser/scilab_six/scilabSixGenParser.ml \
+  src/parser/scilab_six/scilabSixParser.ml
 
-src/scilab_six_parser/scilabSixLexer.cmx: \
-  src/scilab_six_parser/scilabSixGenParser.cmi
+src/parser/scilab_six/scilabSixLexer.cmx: \
+  src/parser/scilab_six/scilabSixGenParser.cmi
 
-src/scilab_six_parser/scilabSixLexer.cmo: \
-  src/scilab_six_parser/scilabSixGenParser.cmi
+src/parser/scilab_six/scilabSixLexer.cmo: \
+  src/parser/scilab_six/scilabSixGenParser.cmi
 
 OCAML_SCILAB_FIVE_PARSER_MLS = \
-  src/scilab_five_parser/scilabFiveParserAst.ml \
-  src/scilab_five_parser/scilabFiveParser.ml \
-  src/scilab_five_parser/scilabFiveParserAstSerializer.ml
+  src/parser/scilab_five/scilabFiveParser.ml
 
-OCAML_SCILAB_FIVE_AST_MLS = \
-  src/scilab_five_ast/scilabFiveAst.ml \
-  src/scilab_five_ast/scilabFiveAstUtils.ml \
-  src/scilab_five_ast/scilabFiveAstConverter.ml \
-  src/scilab_five_ast/scilabFiveAstSexpPrinter.ml \
-  src/scilab_five_ast/scilabFiveAstPrettyPrinter.ml
+OCAML_AST_MLS = \
+  src/ast/scilabAst.ml \
+  src/ast/scilabAstUtils.ml \
+  src/ast/scilabAstConverter.ml \
+  src/ast/scilabAstSexpPrinter.ml \
+  src/ast/scilabAstPrettyPrinter.ml \
+  src/ast/scilabParserAst.ml \
+  src/ast/scilabParserAstSerializer.ml
 
 OCAML_SCINTAX_MLS = \
   src/scintax/scintaxMain.ml
@@ -81,7 +81,7 @@ OCAML_SCILINT_MLIS = \
 
 SCILINT_MLS = \
 	$(OCAML_COMMON_MLS) \
-	$(OCAML_SCILAB_FIVE_AST_MLS) \
+	$(OCAML_AST_MLS) \
 	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
 	$(OCAML_SCILAB_SIX_PARSER_MLS) \
 	$(OCAML_SCILINT_MLS)
@@ -97,7 +97,7 @@ SCILINT_CMOS = $(SCILINT_MLS:.ml=.cmo)
 
 SCINTAX_MLS = \
 	$(OCAML_COMMON_MLS) \
-	$(OCAML_SCILAB_FIVE_AST_MLS) \
+	$(OCAML_AST_MLS) \
 	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
 	$(OCAML_SCINTAX_MLS)
 
@@ -120,8 +120,8 @@ SCILINT_DOC_GEN_CMOS = $(SCILINT_DOC_GEN_MLS:.ml=.cmo)
 OCAML_INCL= \
   $(shell ocamlfind query -i-format pprint uutf) \
   -I src/common -I src/input \
-  -I src/scilab_five_ast -I src/scilab_five_parser \
-  -I src/scilab_six_parser \
+  -I src/ast -I src/parser/scilab_five \
+  -I src/parser/scilab_six \
   -I src/scilint -I src/scilint/config \
   -I src/scintax -I src/docgen \
 
@@ -207,9 +207,9 @@ clean :
 	  scilint.byte scilint.asm \
 	  scilint_doc_gen.byte scilint_doc_gen.asm \
 	  scintax.byte scintax.asm \
-	  src/scilab_six_parser/scilabSixLexer.ml \
-	  src/scilab_six_parser/scilabSixGenParser.ml \
-	  src/scilab_six_parser/scilabSixGenParser.mli \
+	  src/parser/scilab_six/scilabSixLexer.ml \
+	  src/parser/scilab_six/scilabSixGenParser.ml \
+	  src/parser/scilab_six/scilabSixGenParser.mli \
 	  src/scilint/config/scilintLexer.ml \
 	  src/scilint/config/scilintParser.ml \
 	  src/scilint/config/scilintParser.mli \

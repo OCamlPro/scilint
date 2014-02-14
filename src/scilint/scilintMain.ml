@@ -128,7 +128,7 @@ let run_type_file file =
         if firehose then ScilintFirehosegen.print_header ();
         (* call the resilient parser for syntax / style warnings *)
         (* this is a quick and dirty integration before the AST merge *)
-        let open ScilabFiveParserAst in
+        let open ScilabParserAst in
         let open ScilabFiveParser in
         let open ScilintWarning in
         let ast = parse_file file in

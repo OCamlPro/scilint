@@ -7,7 +7,7 @@
  *  The terms are also available at
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
-open ScilabFiveAst
+open ScilabAst
 open PPrint
 
 (** Parameters for the printer: AST type parameters and their
@@ -23,7 +23,7 @@ end
 module Make
     (Parameters : Parameters)
     (PrinterParameters : PrinterParameters with module Parameters := Parameters)
-    (Ast : module type of ScilabFiveAst.Make (Parameters)) = struct
+    (Ast : module type of ScilabAst.Make (Parameters)) = struct
   open Ast
 
   let instr_end =

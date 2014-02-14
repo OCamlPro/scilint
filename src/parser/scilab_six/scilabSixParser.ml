@@ -33,8 +33,8 @@ let parse_file name =
       | ScilabSixLexer.Error msg -> [ Recovered msg ]
       | _ -> [ Recovered ("internal parser error" ^ Printexc.to_string exn) ]
     in
-    [ let exp = descr ~warns ScilabFiveParserAst.Error loc in
-      descr (ScilabFiveParserAst.Exp exp) loc ]
+    [ let exp = descr ~warns ScilabParserAst.Error loc in
+      descr (ScilabParserAst.Exp exp) loc ]
 
 let parse_string name str =
   failwith "ScilabSixParser.parse_string not implemented"

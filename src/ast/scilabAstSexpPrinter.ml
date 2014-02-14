@@ -40,7 +40,7 @@ let pretty_output ?(width = 80) (fp : out_channel) (s : sexp) =
 let compact_output (fp : out_channel) (s : sexp) =
   PPrint.ToChannel.compact fp (document_of_sexp s)  
 
-open ScilabFiveAst
+open ScilabAst
 
 (** Parameters for the printer: AST type parameters and their
     projections to {!sexp} *)
@@ -56,7 +56,7 @@ end
 module Make
     (Parameters : Parameters)
     (PrinterParameters : PrinterParameters with module Parameters := Parameters)
-    (Ast : module type of ScilabFiveAst.Make (Parameters)) = struct
+    (Ast : module type of ScilabAst.Make (Parameters)) = struct
   open Ast
 
   (** Convert an AST to its S-expr intermediate representation *)

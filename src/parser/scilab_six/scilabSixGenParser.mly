@@ -9,7 +9,7 @@
 
 %{
 
-open ScilabFiveParserAst
+open ScilabParserAst
 open ScilabSixParserUtils
 open Lexing
 
@@ -48,7 +48,7 @@ exception Error (* menhir workaround *)
 
 
 %start program
-%type <ScilabFiveParserAst.ast>program
+%type <ScilabParserAst.ast>program
 
 %%
 
@@ -109,7 +109,7 @@ stmt:
     | { cstr = Matrix [ { cstr = items } ] } ->
       (* FIXME: check only injections *)
       items
-    | _ -> [ { mat with cstr = ScilabFiveParserAst.Error } ] }
+    | _ -> [ { mat with cstr = ScilabParserAst.Error } ] }
 
 %inline stmt_break : SEMI | COMMA | EOL {}
 
@@ -169,7 +169,7 @@ expression:
       descr (Range (l, None, r)) (loc $startpos $endpos)
     | _ ->
       (* FIXME: warning *)
-      descr ScilabFiveParserAst.Error (loc $startpos $endpos) }
+      descr ScilabParserAst.Error (loc $startpos $endpos) }
 
 simple_expression:
 | NOT exp = simple_expression %prec NOT

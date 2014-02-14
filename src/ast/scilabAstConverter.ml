@@ -11,10 +11,10 @@
 module type ConverterParameters = sig
 
   (** Domain *)
-  module From : ScilabFiveAst.Parameters
+  module From : ScilabAst.Parameters
 
   (** Domain *)
-  module To : ScilabFiveAst.Parameters
+  module To : ScilabAst.Parameters
 
   (** Location converter *)
   val loc : From.loc -> To.loc
@@ -25,10 +25,10 @@ module type ConverterParameters = sig
 end
 
 module Make
-    (From : ScilabFiveAst.Parameters)
-    (To : ScilabFiveAst.Parameters)
-    (FromAst : module type of ScilabFiveAst.Make (From))
-    (ToAst : module type of ScilabFiveAst.Make (To))
+    (From : ScilabAst.Parameters)
+    (To : ScilabAst.Parameters)
+    (FromAst : module type of ScilabAst.Make (From))
+    (ToAst : module type of ScilabAst.Make (To))
     (Parameters : ConverterParameters with module From = From
                                        and module To = To) = struct
 

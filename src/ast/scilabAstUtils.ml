@@ -7,13 +7,13 @@
  *  The terms are also available at
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
-open ScilabFiveAst
+open ScilabAst
 
 (** Instanciate this functor with the same {!Parameters} as the AST to
     obtain specialized utilities. *)
 module Make
     (Parameters : Parameters)
-    (Ast : module type of ScilabFiveAst.Make (Parameters)) = struct
+    (Ast : module type of ScilabAst.Make (Parameters)) = struct
   open Ast
 
   (** This class defines a method [t] of type [t -> t] per AST type

@@ -8,7 +8,7 @@
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
 open ScilabLocations
-open ScilabFiveParserAst
+open ScilabParserAst
 open ScilabLocations
 open Lexing
 

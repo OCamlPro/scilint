@@ -7,7 +7,7 @@
  *  The terms are also available at
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
-open ScilabFiveParserAst
+open ScilabParserAst
 
 (** Builds a linear, binary representation of the ast. The format is a
     prefix traversal of the tree in which every node is output as
