@@ -9,14 +9,17 @@ OCAMLLEX=ocamllex
 OCAMLDEP=ocamlfind ocamldep
 
 OCAML_COMMON_MLS = \
-  src/common/scilintWarning.ml \
   src/common/scilintManual.ml \
+  src/common/scilintWarning.ml \
   src/common/scilabLocations.ml \
   src/common/scilintOptions.ml \
   src/input/scilabTypedPrimitives.ml \
   src/input/scilabTypedPrimitivesLexer.ml \
   src/input/scilabTypedPrimitivesParser.ml \
   src/input/scilabTypedPrimitivesLoader.ml
+
+OCAML_COMMON_MLIS = \
+  src/common/scilintWarning.mli \
 
 src/input/scilabTypedPrimitivesParser.cmi: \
   src/input/scilabTypedPrimitives.cmi
@@ -58,6 +61,7 @@ OCAML_SCILINT_DOC_GEN_MLS = \
   src/docgen/scilintDocGenMain.ml
 
 OCAML_SCILINT_MLS = \
+  src/scilint/scilintMain.ml
 #  src/scilint/scilabDeffRefactoring.ml \
   src/scilint/scilintFirehosegen.ml \
   src/scilint/scilabUtils.ml \
@@ -68,7 +72,6 @@ OCAML_SCILINT_MLS = \
   src/scilint/scilintProject.ml \
   src/scilint/scilabFunctionAnalyze.ml \
   src/scilint/scilabAstStats.ml \
-  src/scilint/scilintMain.ml
 
 src/scilint/config/scilintLexer.cmx: \
   src/scilint/config/scilintParser.cmi
@@ -87,6 +90,7 @@ SCILINT_MLS = \
 	$(OCAML_SCILINT_MLS)
 
 SCILINT_MLIS = \
+	$(OCAML_COMMON_MLIS) \
 	$(OCAML_SCILINT_MLIS)
 
 SCILINT_CMIS = $(SCILINT_MLS:.ml=.cmi) $(SCILINT_MLIS:.mli=.cmi)
@@ -101,6 +105,9 @@ SCINTAX_MLS = \
 	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
 	$(OCAML_SCINTAX_MLS)
 
+SCINTAX_MLIS = \
+	$(OCAML_COMMON_MLIS) \
+
 SCINTAX_CMIS = $(SCINTAX_MLS:.ml=.cmi) $(SCINTAX_MLIS:.mli=.cmi)
 SCINTAX_CMXS = $(SCINTAX_MLS:.ml=.cmx)
 SCINTAX_CMOS = $(SCINTAX_MLS:.ml=.cmo)
@@ -110,6 +117,9 @@ SCINTAX_CMOS = $(SCINTAX_MLS:.ml=.cmo)
 SCILINT_DOC_GEN_MLS = \
 	$(OCAML_COMMON_MLS) \
 	$(OCAML_SCILINT_DOC_GEN_MLS)
+
+SCILINIT_DOC_GEN_MLIS = \
+	$(OCAML_COMMON_MLIS) \
 
 SCILINT_DOC_GEN_CMIS = $(SCILINT_DOC_GEN_MLS:.ml=.cmi) $(SCILINT_DOC_GEN_MLIS:.mli=.cmi)
 SCILINT_DOC_GEN_CMXS = $(SCILINT_DOC_GEN_MLS:.ml=.cmx)

@@ -1032,7 +1032,7 @@ end = struct
         let ctns, bounds = extract_from ctx.st cp in
         let warns =
           if closing_keyword ctns then
-            [ Replace (bounds, "\"" ^ ctns ^ "\"") ;
+            [ Replace (bounds, ctns) ;
               Warning (S Keyword_as_shell_arg) ]
           else []
         in

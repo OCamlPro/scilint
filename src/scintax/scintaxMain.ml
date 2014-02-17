@@ -41,18 +41,8 @@ let treat_source source =
     printf "\n"
   end ;
   if !ScilintOptions.print_messages then begin
-    let messages = ref [] in
-    let collect = object
-      inherit ast_iterator as mom
-      method! descr : 'a. 'a descr -> unit
-        = fun { meta ; loc } ->
-          List.iter
-            (fun msg -> messages := string_of_message (loc, msg) :: !messages)
-            meta
-    end in
-    collect # ast ast ;
-    let messages = List.rev !messages in
-    List.iter print_string messages
+    let messages = collect_messages ast in
+    output_messages !ScilintOptions.format messages stdout
   end
 
 (** a small toplevel for experimentation purposes *)

@@ -77,6 +77,16 @@ let merge_descr_locs exprs =
 (** Export utilities *)
 include Utils
 
+let collect_messages ast =
+  let res = ref [] in
+  let collector = object
+    inherit ast_iterator
+    method! descr : 'a.'a descr -> unit = fun descr ->
+      res := List.map (fun m -> descr.loc, m) descr.meta :: !res
+  end in
+  collector # ast ast ;
+  List.flatten !res
+
 (* printers *)
 module Sexp =
   ScilabAstSexpPrinter.Make (Parameters) (PrinterParameters) (Ast)

@@ -90,10 +90,10 @@ module Make (Parameters : Parameters) = struct
 
   (** Node wrapper for location and meta-information *)
   type 'a descr = {
-    cstr : 'a ;                 (** The raw AST node *)
-    loc : Parameters.loc ; (** code location *)
-    meta : Parameters.meta ;    (** Meta-information for the node *)
-    comment : string descr list ;   (** Attached comment, if any *)
+    mutable cstr : 'a ;                 (** The raw AST node *)
+    mutable loc : Parameters.loc ;      (** code location *)
+    mutable meta : Parameters.meta ;    (** Meta-information for the node *)
+    comment : string descr list ;       (** Attached comment, if any *)
   }
 
   (** Wrap a node inside a ghost node descriptor *)

@@ -1,10 +1,11 @@
 begin library "scilint_common"
   files =  [
   (* - common *)
+    "src/common/scilintManual.ml"
     "src/common/scilabLocations.ml"
+    "src/common/scilintWarning.mli"
     "src/common/scilintWarning.ml"
     "src/common/scilintOptions.ml"
-    "src/common/scilintManual.ml"
   (* - inputs *)
     "src/input/scilabTypedPrimitives.ml"
     "src/input/scilabTypedPrimitivesLexer.mll"
