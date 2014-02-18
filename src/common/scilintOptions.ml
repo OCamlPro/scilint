@@ -81,6 +81,55 @@ let format_arg =
 
 type parser_version = Five of bool | Six
 let parser = ref (Five true)
+
+module SelectedParser = struct
+  let filter ast =
+    let ast = ref ast in
+    let open ScilintWarning in
+    try
+      let checker = object
+        inherit ast_iterator
+        method! descr : 'a.'a descr -> unit = fun descr ->
+          List.iter
+            (function
+              | Recovered _ as m ->
+                let error = { descr with cstr = Error ; meta = [ m ] } in
+                ast := [ { descr with cstr = Exp error ; meta = [ m ] } ]
+              | _ -> ())
+            descr.meta
+      end in
+      checker # ast !ast ;
+      !ast
+    with Exit -> !ast
+
+  let parse_file f =
+    match !parser with
+    | Six ->
+      ScilabSixParser.parse_file f
+    | Five true ->
+      ScilabFiveParser.parse_file f
+    | Five false ->
+      filter (ScilabFiveParser.parse_file f)
+
+  let parse_string n s =
+    match !parser with
+    | Six ->
+      ScilabSixParser.parse_string n s
+    | Five true ->
+      ScilabFiveParser.parse_string n s
+    | Five false ->
+      filter (ScilabFiveParser.parse_string n s)
+
+  let parse_exec_string n s =
+    match !parser with
+    | Six ->
+      ScilabSixParser.parse_exec_string n s
+    | Five true ->
+      ScilabFiveParser.parse_exec_string n s
+    | Five false ->
+      filter (ScilabFiveParser.parse_exec_string n s)
+end
+
 let parser_arg =
   let set_parser = function
     | "scilab-6" -> parser := Six

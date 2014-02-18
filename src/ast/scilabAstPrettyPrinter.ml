@@ -282,7 +282,7 @@ module Make
     | Defun { name ; args ; rets = [ ret ] ; body } ->
       string "function" ^^ nbsp
       ^^ document_of_var ret ^^ nbsp ^^ string "="
-      ^^ bsp ^^ document_of_var name ^^ nbsp
+      ^^ nbsp ^^ document_of_var name ^^ nbsp
       ^^ group (string "("
                 ^^ align (flow (arg_sep false)
                             (List.map document_of_var args)

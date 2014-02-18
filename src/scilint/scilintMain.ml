@@ -14,40 +14,10 @@ open Printf
 
 (** called by the main on each code source passed on th CLI *)
 let treat_source source =
-  let parse_file, parse_string =
-    match !parser with
-    | Six ->
-      ScilabSixParser.parse_file,
-      ScilabSixParser.parse_string
-    | Five true ->
-      (fun f -> ScilabFiveParser.parse_file f),
-      (fun n s -> ScilabFiveParser.parse_string n s)
-    | Five false ->
-      let filter ast =
-        let ast = ref ast in
-        try
-          let checker = object
-            inherit ast_iterator
-            method! descr : 'a.'a descr -> unit = fun descr ->
-              List.iter
-                (function
-                  | Recovered _ as m ->
-                    let error = { descr with cstr = Error ; meta = [ m ] } in
-                    ast := [ { descr with cstr = Exp error ; meta = [ m ] } ]
-                  | _ -> ())
-                descr.meta
-          end in
-          checker # ast !ast ;
-          !ast
-        with Exit -> !ast
-      in
-      (fun f -> filter (ScilabFiveParser.parse_file f)),
-      (fun n s -> filter (ScilabFiveParser.parse_string n s))
-  in
   let parse () =
     match source with
-    | File fn -> parse_file fn
-    | String (name, str) -> parse_string name str
+    | File fn -> SelectedParser.parse_file fn
+    | String (name, str) -> SelectedParser.parse_string name str
     | _ -> assert false
   in 
   let ast =

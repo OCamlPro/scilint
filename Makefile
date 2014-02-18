@@ -105,6 +105,7 @@ SCINTAX_MLS = \
 	$(OCAML_COMMON_MLS) \
 	$(OCAML_AST_MLS) \
 	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
+	$(OCAML_SCILAB_SIX_PARSER_MLS) \
 	$(OCAML_SCINTAX_MLS)
 
 SCINTAX_MLIS = \
@@ -144,7 +145,7 @@ scilint.asm : $(SCILINT_CMXS)
 	  -o $@ $(SCILINT_CMXS)
 
 scintax.asm : $(SCINTAX_CMXS)
-	$(OCAMLOPT) $(OPTFLAGS) -package 'unix,pprint'  -linkpkg \
+	$(OCAMLOPT) $(OPTFLAGS) -package 'unix,uutf,pprint'  -linkpkg \
           -o $@ $(SCINTAX_CMXS)
 
 scilint_doc_gen.asm : $(SCILINT_DOC_GEN_CMXS)
@@ -156,7 +157,7 @@ scilint.byte : $(SCILINT_CMOS)
 	  -o $@ $(SCILINT_CMOS)
 
 scintax.byte : $(SCINTAX_CMOS)
-	$(OCAMLC) $(OCAML_INCL) -package 'unix,pprint'  -linkpkg \
+	$(OCAMLC) $(OCAML_INCL) -package 'unix,uutf,pprint'  -linkpkg \
           -o $@ $(SCINTAX_CMOS)
 
 scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)

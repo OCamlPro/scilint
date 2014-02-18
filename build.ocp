@@ -53,6 +53,7 @@ begin program "scintax"
   requires = [
     "scilab_ast"
     "scilab_five_parser"
+    "scilab_six_parser"
     "scilint_common"
   ]
 end

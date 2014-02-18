@@ -38,3 +38,6 @@ let parse_file name =
 
 let parse_string name str =
   failwith "ScilabSixParser.parse_string not implemented"
+
+let parse_exec_string name str =
+  failwith "ScilabSixParser.parse_exec_string not implemented"

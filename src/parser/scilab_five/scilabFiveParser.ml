@@ -1808,10 +1808,18 @@ let parse_file ?(allow_toplevel_exprs = false) name =
   close_in chan ;
   res
 
-(** Builds an AST from the program text contained in the passed
+(** Builds an AST from the program text contained in the given
     string. See {!parse_file} for a disclaimer. *)
 let parse_string ?(allow_toplevel_exprs = true) name str =
   let reader = ScilabStreamReader.string_reader str in
   ParserInternals.parse
     ~allow_toplevel_exprs
     reader (ScilabParserAst.String (name, str))
+
+(** Builds an AST from the program text contained in the given
+    string. See {!parse_file} for a disclaimer. *)
+let parse_exec_string ?(allow_toplevel_exprs = false) source str =
+  let reader = ScilabStreamReader.string_reader str in
+  ParserInternals.parse
+    ~allow_toplevel_exprs
+    reader (ScilabParserAst.Eval_string source)

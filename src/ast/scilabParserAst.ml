@@ -77,6 +77,9 @@ let merge_descr_locs exprs =
 (** Export utilities *)
 include Utils
 
+let ghost cstr =
+  { loc = ghost_loc ; meta = ghost_meta ; cstr ; comment = [] }
+
 let collect_messages ast =
   let res = ref [] in
   let collector = object
