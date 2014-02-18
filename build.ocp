@@ -5,7 +5,6 @@ begin library "scilint_common"
     "src/common/scilabLocations.ml"
     "src/common/scilintWarning.mli"
     "src/common/scilintWarning.ml"
-    "src/common/scilintOptions.ml"
   (* - inputs *)
     "src/input/scilabTypedPrimitives.ml"
     "src/input/scilabTypedPrimitivesLexer.mll"
@@ -48,6 +47,7 @@ end
 
 begin program "scintax"
   files = [
+    "src/common/scilintOptions.ml"
     "src/scintax/scintaxMain.ml"
   ]
   requires = [
@@ -59,6 +59,7 @@ end
 
 begin program "scilint"
   files = [
+    "src/common/scilintOptions.ml"
 (*    "src/scilint/config/scilintTree.ml";
     "src/scilint/config/scilintParser.mly";
     "src/scilint/config/scilintLexer.mll";
@@ -68,9 +69,10 @@ begin program "scilint"
     "src/scilint/scilintProject.ml";
     "src/scilint/scilabFunctionAnalyze.ml"
     "src/scilint/scilabDeffRefactoring.ml"
-    "src/scilint/scilabAstStats.ml"
-    "src/scilint/scilintMain.ml"*)
-  ]
+    "src/scilint/scilabAstStats.ml" *)
+   "src/scilint/scilintPassExpandEval.ml"
+    "src/scilint/scilintMain.ml"
+   ]
 
   requires = [
     "scilint_common"

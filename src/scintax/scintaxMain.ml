@@ -68,29 +68,19 @@ let interactive () =
 
 (** where the args are passed and all the fun starts *)
 let main () =
+  let open ScilintOptions in
   let sources : source list ref = ref [] in
-  let toplevel = ref false in
-  let open Arg in
   let options =
-    [ ScilintOptions.print_ast_arg ;
-      ScilintOptions.pretty_print_arg ;
-      ScilintOptions.print_messages_arg ;
-      ScilintOptions.print_time_arg ;
-      ScilintOptions.format_arg ;
-      ("-toplevel", Set toplevel,
-       "Launch an interactive toplevel after other inputs have been processed") ;
-      ("-s", String ( fun str -> sources := String ("argument" ,str) :: !sources),
-       "Add a verbatim text input from the command line") ]
-  and anon_fun fn =
-    sources := File fn :: !sources
+      [ print_ast_arg ; pretty_print_arg ; print_messages_arg ; print_time_arg ;
+        format_arg ; toplevel_mode_arg ; cli_input_arg sources ]
   and usage_msg =
     "Hello, I am Scintax, a syntax checker for Scilab.\n\
      Usage: scintax [OPTIONS] <file1.sci> <file2.sci> ..." ;
   in
-  parse options anon_fun usage_msg ;
-  if !sources = [] && not !toplevel then
-    usage options usage_msg ;
+  Arg.parse options (cli_input_anon sources) usage_msg ;
+  if !sources = [] && not !toplevel_mode then
+    Arg.usage options usage_msg ;
   List.iter treat_source (List.rev !sources) ;
-  if !toplevel then interactive ()
+  if !toplevel_mode then interactive ()
 
 let _ = main ()

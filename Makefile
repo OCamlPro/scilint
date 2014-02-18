@@ -12,7 +12,6 @@ OCAML_COMMON_MLS = \
   src/common/scilintManual.ml \
   src/common/scilintWarning.ml \
   src/common/scilabLocations.ml \
-  src/common/scilintOptions.ml \
   src/input/scilabTypedPrimitives.ml \
   src/input/scilabTypedPrimitivesLexer.ml \
   src/input/scilabTypedPrimitivesParser.ml \
@@ -55,12 +54,15 @@ OCAML_AST_MLS = \
   src/ast/scilabParserAstSerializer.ml
 
 OCAML_SCINTAX_MLS = \
+  src/common/scilintOptions.ml \
   src/scintax/scintaxMain.ml
 
 OCAML_SCILINT_DOC_GEN_MLS = \
   src/docgen/scilintDocGenMain.ml
 
 OCAML_SCILINT_MLS = \
+  src/common/scilintOptions.ml \
+  src/scilint/scilintPassExpandEval.ml \
   src/scilint/scilintMain.ml
 #  src/scilint/scilabDeffRefactoring.ml \
   src/scilint/scilintFirehosegen.ml \

@@ -9,15 +9,13 @@
 
 open ScilabParserAst
 open ScilintWarning
+open ScilintOptions
 open Printf
-
-(** activated analyses, may rewrite the original ast or change it in place *)
-let passes : (ast -> ast) list ref = ref []
 
 (** called by the main on each code source passed on th CLI *)
 let treat_source source =
   let parse_file, parse_string =
-    match !ScilintOptions.parser with
+    match !parser with
     | Six ->
       ScilabSixParser.parse_file,
       ScilabSixParser.parse_string
@@ -53,7 +51,7 @@ let treat_source source =
     | _ -> assert false
   in 
   let ast =
-    if !ScilintOptions.print_time then begin
+    if !print_time then begin
       printf "Parsing %s ...%!" (string_of_source source) ;
       let t0 = Sys.time () in
       let ast = parse () in
@@ -62,25 +60,25 @@ let treat_source source =
       ast
     end else parse ()
   in
-  if !ScilintOptions.print_ast then begin
-    printf "Raw syntax tree:\n" ;
+  let ast = List.fold_left (fun r (name, anal) -> anal r) ast !passes in
+  if !print_ast then begin
+    printf "Syntax tree:\n" ;
     Sexp.pretty_output stdout ast ;
     printf "\n"
   end ;
-  if !ScilintOptions.pretty_print then begin
+  if !pretty_print then begin
     printf "Pretty printed:\n" ;
     Pretty.pretty_output stdout ast ;
     printf "\n"
   end ;
-  let ast = List.fold_left (fun r anal -> anal r) ast !passes in
-  if !ScilintOptions.print_messages then begin
+  if !print_messages then begin
     let messages = collect_messages ast in
-    output_messages !ScilintOptions.format messages stdout
+    output_messages !format messages stdout
   end
 
 (** a small toplevel for experimentation purposes *)
 let interactive () =
-  ScilintOptions.print_ast := true ;
+  print_ast := true ;
   let rec interp acc nb =
     let open Printf in
     Printf.printf "--> %!" ;
@@ -102,29 +100,18 @@ let interactive () =
 (** where the args are passed and all the fun starts *)
 let main () =
   let sources : source list ref = ref [] in
-  let toplevel = ref false in
-  let open Arg in
   let options =
-    [ ScilintOptions.print_ast_arg ;
-      ScilintOptions.pretty_print_arg ;
-      ScilintOptions.print_messages_arg ;
-      ScilintOptions.print_time_arg ;
-      ScilintOptions.format_arg ;
-      ScilintOptions.parser_arg ;
-      ("-toplevel", Set toplevel,
-       "Launch an interactive toplevel after other inputs have been processed") ;
-      ("-s", String ( fun str -> sources := String ("argument" ,str) :: !sources),
-       "Add a verbatim text input from the command line") ]
-  and anon_fun fn =
-    sources := File fn :: !sources
+    [ print_ast_arg ; pretty_print_arg ; print_messages_arg ; print_time_arg ;
+      format_arg ; parser_arg ; toplevel_mode_arg ; cli_input_arg sources ]
+    @ !passes_args
   and usage_msg =
     "Hello, I am Scilint, a syntax checker for Scilab.\n\
      Usage: scilint [OPTIONS] <file1.sci> <file2.sci> ..." ;
   in
-  parse options anon_fun usage_msg ;
-  if !sources = [] && not !toplevel then
-    usage options usage_msg ;
+  Arg.parse options (cli_input_anon sources) usage_msg ;
+  if !sources = [] && not !toplevel_mode then
+    Arg.usage options usage_msg ;
   List.iter treat_source (List.rev !sources) ;
-  if !toplevel then interactive ()
+  if !toplevel_mode then interactive ()
 
 let _ = main ()

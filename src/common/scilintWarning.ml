@@ -237,38 +237,40 @@ let format_messages format messages ppf =
       match msg with
       | Warning (L descr) ->
         Format.fprintf ppf
-          (if colors then "\027[33m%aWarning L%03i:\027[0m %a\n" else "%aWarning L%03i: %a\n")
+          (if colors then "\027[33m%aWarning L%03i:\027[0m %a@," else "%aWarning L%03i: %a@,")
           (format_loc ~cap) (src, bounds)
           (num_of_local_warning descr)
           format_local_warning descr
       | Warning (S descr) ->
         Format.fprintf ppf
-          (if colors then "\027[33m%aWarning S%03i:\027[0m %a\n" else "%aWarning S%03i: %a\n")
+          (if colors then "\027[33m%aWarning S%03i:\027[0m %a@," else "%aWarning S%03i: %a@,")
           (format_loc ~cap) (src, bounds)
           (num_of_style_warning descr)
           format_style_warning descr
       | Warning (W (name, msg)) ->
         Format.fprintf ppf
-          (if colors then "\027[33m%aWarning %s:\027[0m %s\n" else "%aWarning %s: %s\n")
+          (if colors then "\027[33m%aWarning %s:\027[0m %s@," else "%aWarning %s: %s@,")
           (format_loc ~cap) (src, bounds) name msg
       | Recovered msg ->
         Format.fprintf ppf
-          (if colors then "\027[31m%aError:\027[0m %s\n" else "%aError: %s\n")
+          (if colors then "\027[31m%aError:\027[0m %s@," else "%aError: %s@,")
           (format_loc ~cap) (src, bounds) msg
       | Insert (point, kwd) ->
         Format.fprintf ppf
-          (if colors then "\027[32m%aInsert:\027[0m %S\n" else "%aInsert %S\n")
+          (if colors then "\027[32m%aInsert:\027[0m %S@," else "%aInsert %S@,")
           (format_loc ~cap) (src, (point, point)) kwd
       | Drop bounds ->
         Format.fprintf ppf
-          (if colors then "\027[32m%aDrop\027[0m\n" else "%aDrop:\n")
+          (if colors then "\027[32m%aDrop\027[0m@," else "%aDrop:@,")
           (format_loc ~cap) (src, bounds)
       | Replace (bounds, rep) ->
         Format.fprintf ppf
-          (if colors then "\027[32m%aReplace by:\027[0m %S\n" else "%aReplace by: %S\n")
+          (if colors then "\027[32m%aReplace by:\027[0m %S@," else "%aReplace by: %S@,")
           (format_loc ~cap) (src, bounds) rep
     in
-    List.iter (format_message ppf) messages
+    Format.fprintf ppf "@[<v>" ;
+    List.iter (format_message ppf) messages ;
+    Format.fprintf ppf "@]%!"
   and firehose () =
     let attrs ppf =
       List.iter (fun (n, v) -> Format.fprintf ppf " %s=%S" n v)
@@ -278,7 +280,7 @@ let format_messages format messages ppf =
       Format.fprintf ppf "@[<hv 2><%s%a>@,%a@;<0 -2>@]</%s>" n attrs a c () n
     and ocmarkup n a =
       Format.fprintf ppf "<%s%a/>" n attrs a
-    and break () =
+    and br () =
       Format.fprintf ppf "@,"
     in
     let location (source, ((ls, cs), (le, ce))) =
@@ -298,53 +300,53 @@ let format_messages format messages ppf =
          let name = Format.sprintf "(eval@%s)" (Buffer.contents buf) in
          ocmarkup "file" [ "given-path", name ]
       ) ;
-      break () ;
+      br () ;
       if ls = le && cs = ce then
         point ls cs
       else
-        markup "range" [] (fun _ -> point ls cs ; point le ce)
+        markup "range" [] (fun _ -> point ls cs ; point le ce) ;
  in
     let message ((src, bounds), msg) =
       match msg with
       | Warning (L descr) ->
         markup "issue" [ "test-id", Printf.sprintf "L%03i" (num_of_local_warning descr) ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; break () ;
+            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
             markup "message" [] (fun _ -> format_local_warning ppf descr))
       | Warning (S descr) ->
         markup "issue" [ "test-id", Printf.sprintf "S%03i" (num_of_style_warning descr) ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; break () ;
+            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
             markup "message" [] (fun _ -> format_style_warning ppf descr))
       | Warning (W (name, msg)) ->
         markup "issue" [ "test-id", "Warning" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; break () ;
+            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" msg))
       | Recovered msg ->
         markup "issue" [ "test-id", "Error" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; break () ;
+            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" msg))
       | Insert (point, kwd) ->
         markup "issue" [ "test-id", "Insert" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; break () ;
+            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" kwd))
       | Drop bounds ->
         markup "issue" [ "test-id", "Drop" ] (fun _ ->
             markup "location" [] (fun _ -> location (src, bounds)))
       | Replace (bounds, rep) ->
         markup "issue" [ "test-id", "Insert" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; break () ;
+            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" rep))
     in
     markup "analysis" [] (fun _ ->
         markup "meta" [] (fun _ ->
-            ocmarkup "generator" [ "name", "scilint"  ; "version", ScilintManual.version ] ; break () ;
+            ocmarkup "generator" [ "name", "scilint"  ; "version", ScilintManual.version ] ; br () ;
             markup "results" [] (fun _ ->
                 let rec sep = function
                   | [] -> ()
                   | [ m ] -> message m 
-                  | m :: ms -> message m ; break () ; sep ms
+                  | m :: ms -> message m ; br () ; sep ms
                 in
                 sep messages))) ;
-    Format.fprintf ppf "@."
+    Format.fprintf ppf "@,%!"
   in
   match format with
   | Emacs -> emacs false ()
