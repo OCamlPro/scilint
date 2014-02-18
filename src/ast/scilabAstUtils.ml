@@ -27,7 +27,7 @@ module Make
     method ast (stmts : ast) =
       List.map (self # stmt) stmts
 
-    (** This method is called by the specific [t_descr] methods for
+    (** This method is called by the specific [t] methods for
         all types [t]. Overriding if will affect the mapping of all
         node kinds. For targeting only the descriptors of a specific
         kind of node [t], override its [t] method instead,
@@ -143,7 +143,7 @@ module Make
     method ast (stmts : ast) =
       List.iter (self # stmt) stmts
 
-    (** This method is called by the specific [t_descr] methods for
+    (** This method is called by the specific [t] methods for
         all types [t]. Overriding if will affect the iteration on all
         node kinds. For targeting only the descriptors of a specific
         kind of node [t], override its [t] method instead,
