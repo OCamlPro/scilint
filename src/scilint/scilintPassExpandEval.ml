@@ -82,6 +82,8 @@ let pass ast =
         let var = self # fresh () in
         let code = var ^ "= " ^ code in
         begin match parse loc code with
+          | { cstr = Assign (_, { cstr = Error })} :: _ ->
+            exp
           | [ { cstr = Assign (_, exp')} ]  -> 
             let str = Pretty.to_compact_string [ ghost (Exp exp') ] in
             let meta = (exp.loc, Replace str) :: exp.meta in
@@ -118,6 +120,8 @@ let pass ast =
                          let var = Printf.sprintf "%s(%d,%d)" var i j in
                          let code = var ^ "= " ^ code in
                          begin match parse sloc code with
+                           | { cstr = Assign (_, { cstr = Error })} :: _ ->
+                             raise Exit
                            | [ { cstr = Assign (_, exp)} ] as is ->
                              instrs := is :: !instrs ;
                              { exp with comment }
