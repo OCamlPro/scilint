@@ -374,11 +374,23 @@ module Make
       document comment
     |> PrinterParameters.document_of_meta meta
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let pretty_output ?(width = 80) (fp : out_channel) ast =
     ToChannel.pretty 0.9 width fp (document_of_ast ast)
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let compact_output (fp : out_channel) ast =
     ToChannel.compact fp (document_of_ast ast)
-end
+
+  (** Output to a string using PPrint for great beauty. *)
+  let to_pretty_string ?(width = 80) ast =
+    let buf = Buffer.create 1000 in
+    ToBuffer.pretty 0.9 width buf (document_of_ast ast) ;
+    Buffer.contents buf
+ 
+  (** Output to a strint using PPrint for great beauty. *)
+  let to_compact_string ast =
+    let buf = Buffer.create 1000 in
+    ToBuffer.compact buf (document_of_ast ast) ;
+    Buffer.contents buf
+ end

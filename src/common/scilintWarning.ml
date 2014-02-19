@@ -16,11 +16,11 @@ type message = loc * message_contents
 
 (** Raw contents of a message *)
 and message_contents =
-  | Insert of point * string (** (where, what) *)
-  | Drop of bounds
-  | Replace of (point * point) * string (** (where, by what) *)
   | Warning of warning
   | Recovered of string
+  | Drop
+  | Insert of string
+  | Replace of string
 
 (** Various kinds of warnings *)
 and warning =
@@ -232,43 +232,43 @@ type format = Emacs | Firehose | Human
 (** Formats a list of messages *)
 let format_messages format messages ppf =
   let emacs colors () =
-    let rec format_message ppf ((src, bounds), msg) =
+    let rec format_message ppf (loc, msg) =
       let cap = true in
       match msg with
       | Warning (L descr) ->
         Format.fprintf ppf
           (if colors then "\027[33m%aWarning L%03i:\027[0m %a@," else "%aWarning L%03i: %a@,")
-          (format_loc ~cap) (src, bounds)
+          (format_loc ~cap) loc
           (num_of_local_warning descr)
           format_local_warning descr
       | Warning (S descr) ->
         Format.fprintf ppf
           (if colors then "\027[33m%aWarning S%03i:\027[0m %a@," else "%aWarning S%03i: %a@,")
-          (format_loc ~cap) (src, bounds)
+          (format_loc ~cap) loc
           (num_of_style_warning descr)
           format_style_warning descr
       | Warning (W (name, msg)) ->
         Format.fprintf ppf
           (if colors then "\027[33m%aWarning %s:\027[0m %s@," else "%aWarning %s: %s@,")
-          (format_loc ~cap) (src, bounds) name msg
+          (format_loc ~cap) loc name msg
       | Recovered msg ->
         Format.fprintf ppf
           (if colors then "\027[31m%aError:\027[0m %s@," else "%aError: %s@,")
-          (format_loc ~cap) (src, bounds) msg
-      | Insert (point, kwd) ->
+          (format_loc ~cap) loc msg
+      | Insert kwd ->
         Format.fprintf ppf
           (if colors then "\027[32m%aInsert:\027[0m %S@," else "%aInsert %S@,")
-          (format_loc ~cap) (src, (point, point)) kwd
-      | Drop bounds ->
+          (format_loc ~cap) loc kwd
+      | Drop ->
         Format.fprintf ppf
           (if colors then "\027[32m%aDrop\027[0m@," else "%aDrop:@,")
-          (format_loc ~cap) (src, bounds)
-      | Replace (bounds, rep) ->
+          (format_loc ~cap) loc
+      | Replace rep ->
         Format.fprintf ppf
           (if colors then "\027[32m%aReplace by:\027[0m %S@," else "%aReplace by: %S@,")
-          (format_loc ~cap) (src, bounds) rep
+          (format_loc ~cap) loc rep
     in
-    Format.fprintf ppf "@[<v>" ;
+     Format.fprintf ppf "@[<v>" ;
     List.iter (format_message ppf) messages ;
     Format.fprintf ppf "@]%!"
   and firehose () =
@@ -306,34 +306,34 @@ let format_messages format messages ppf =
       else
         markup "range" [] (fun _ -> point ls cs ; point le ce) ;
  in
-    let message ((src, bounds), msg) =
+    let message (loc, msg) =
       match msg with
       | Warning (L descr) ->
         markup "issue" [ "test-id", Printf.sprintf "L%03i" (num_of_local_warning descr) ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
+            markup "location" [] (fun _ -> location loc) ; br () ;
             markup "message" [] (fun _ -> format_local_warning ppf descr))
       | Warning (S descr) ->
         markup "issue" [ "test-id", Printf.sprintf "S%03i" (num_of_style_warning descr) ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
+            markup "location" [] (fun _ -> location loc) ; br () ;
             markup "message" [] (fun _ -> format_style_warning ppf descr))
       | Warning (W (name, msg)) ->
         markup "issue" [ "test-id", "Warning" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
+            markup "location" [] (fun _ -> location loc) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" msg))
       | Recovered msg ->
         markup "issue" [ "test-id", "Error" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
+            markup "location" [] (fun _ -> location loc) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" msg))
-      | Insert (point, kwd) ->
+      | Insert kwd ->
         markup "issue" [ "test-id", "Insert" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
+            markup "location" [] (fun _ -> location loc) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" kwd))
-      | Drop bounds ->
+      | Drop ->
         markup "issue" [ "test-id", "Drop" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)))
-      | Replace (bounds, rep) ->
+            markup "location" [] (fun _ -> location loc))
+      | Replace rep ->
         markup "issue" [ "test-id", "Insert" ] (fun _ ->
-            markup "location" [] (fun _ -> location (src, bounds)) ; br () ;
+            markup "location" [] (fun _ -> location loc) ; br () ;
             markup "message" [] (fun _ -> Format.fprintf ppf "%s" rep))
     in
     markup "analysis" [] (fun _ ->

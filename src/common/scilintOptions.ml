@@ -92,9 +92,9 @@ module SelectedParser = struct
         method! descr : 'a.'a descr -> unit = fun descr ->
           List.iter
             (function
-              | Recovered _ as m ->
-                let error = { descr with cstr = Error ; meta = [ m ] } in
-                ast := [ { descr with cstr = Exp error ; meta = [ m ] } ]
+              | (loc, Recovered _ as m) ->
+                let error = { descr with cstr = Error ; meta = [ m ] ; loc } in
+                ast := [ { descr with cstr = Exp error ; meta = [ m ] ; loc } ]
               | _ -> ())
             descr.meta
       end in

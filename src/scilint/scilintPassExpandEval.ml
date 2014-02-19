@@ -34,7 +34,18 @@ open Printf
    eval ('3, disp a') + eval ('2, disp b')] will be rewritten as
    [function %_h_0 = %_h_0_f (), %_h_0 = 3, disp "a", endfunction;
     function %_h_1 = %_h_1_f (), %_h_1 = 2, disp "b", endfunction;
-    r = %_h_0_f () + %_h_1_f ()]. *)
+    r = %_h_0_f () + %_h_1_f ()].
+
+   The eval function cam also take a matrix of strings as parameter,
+   and return a matrix of evaluation results. This is done in a very
+   similar way: the code str of every cell (i, j) is evaluated by
+   interpreting "%_h(i,j)= " ^ str. So when we encounter a matrix of
+   constant strings fed to eval, we do the same thing as with a single
+   string. If each parsed strings boils down to a single assignment,
+   we replace the whole matrix by the matrix of resulting right hand
+   sides. Otherwise, we build a temporary function that performs all
+   the assignments, and replace the matrix litteral by a call to this
+   generated function. *)
 
 let pass ast =
   let rewriter = object (self)
@@ -63,24 +74,77 @@ let pass ast =
       | cstr -> dad # stmt_cstr cstr
 
     method! exp exp =
+      let parse = ScilintOptions.SelectedParser.parse_exec_string in
       let exp = dad # exp exp in
       match exp.cstr with
-      | Call ({ cstr = Var { cstr = "eval" }}, [ None, { cstr = String code } ], _)->
+      | Call ({ cstr = Var { cstr = "eval" }},
+              [ None, { cstr = String code ; loc } ], _)->
         let var = self # fresh () in
         let code = var ^ "= " ^ code in
-        begin match ScilintOptions.SelectedParser.parse_exec_string exp.loc code with
-          | [ { cstr = Assign ([ { cstr = Var { cstr = c }} ], exp)} ] when c = var -> 
-            exp
-          | { cstr = Assign ([ { cstr = Var { cstr = c }} ], exp)} :: _ as instrs when c = var -> 
+        begin match parse loc code with
+          | [ { cstr = Assign (_, exp')} ]  -> 
+            let str = Pretty.to_compact_string [ ghost (Exp exp') ] in
+            let meta = (exp.loc, Replace str) :: exp.meta in
+            { exp' with meta }
+          | { cstr = Assign (_, exp)} :: _ as instrs -> 
             self # push (ghost (Defun { name = ghost (var ^ "_f") ;
                                         args = [] ; rets = [ ghost var ] ;
                                         body = ghost (Seq instrs) })) ;
             ghost (Call (ghost (Var (ghost (var ^ "_f"))), [], Tuplified))
-          | _ ->
-            { exp with meta = Recovered "unparsable eval" :: exp.meta }
+          | _ -> exp
+          (* { exp with meta = Recovered "unparsable eval" :: exp.meta } *)
         end
-      | Call ({ cstr = Var { cstr = "eval" }}, _, _) ->
-        { exp with meta = Recovered "unparsable eval" :: exp.meta }
+      | Call ({ cstr = Var { cstr = "eval" }},
+              [ None, { cstr = Matrix codes ; loc ; meta ; comment } ], _) ->
+        begin try
+            let cells =
+              List.mapi
+                (fun i { cstr = cells ; loc ; meta ; comment } ->
+                   List.mapi (fun j { cstr ; comment ; loc} ->
+                       match cstr with
+                       | String code -> i + 1, j + 1, code, loc, comment
+                       | _ -> raise Exit)
+                     cells, loc, meta, comment)
+                codes
+            in
+            let var = self # fresh () in
+            let all_simple = ref true in
+            let instrs = ref [] in
+            let parsed =
+              List.map
+                (fun (cells, loc, meta, comment) ->
+                   let cstr =
+                     List.map (fun (i, j, code, sloc, comment) ->
+                         let var = Printf.sprintf "%s(%d,%d)" var i j in
+                         let code = var ^ "= " ^ code in
+                         begin match parse sloc code with
+                           | [ { cstr = Assign (_, exp)} ] as is ->
+                             instrs := is :: !instrs ;
+                             { exp with comment }
+                           | { cstr = Assign (_, exp)} :: _ as is ->
+                             all_simple := false ;
+                             instrs := is :: !instrs ;
+                             ghost Error
+                           | _ -> raise Exit
+                         end)
+                       cells
+                   in { loc ; meta ; comment ; cstr } )
+                cells
+            in
+            if !all_simple then
+              let str = Pretty.to_compact_string [ ghost (Exp (ghost (Matrix parsed))) ] in
+              let meta = (loc, Replace str) :: meta in
+              { cstr = Matrix parsed ; loc ; meta ; comment }
+            else
+              let defun = { name = ghost (var ^ "_f") ;
+                            args = [] ; rets = [ ghost var ] ;
+                            body = ghost (Seq (List.flatten (List.rev !instrs))) } in
+              self # push (ghost (Defun defun)) ;
+              ghost (Call (ghost (Var (ghost (var ^ "_f"))), [], Tuplified))
+          with Exit -> (* not a parsable matrix *) exp
+        end
+      | Call ({ cstr = Var { cstr = "eval" }}, _, _) -> exp
+      (* { exp with meta = Recovered "unparsable eval" :: exp.meta } *)
       | _ -> exp
   end in
   rewriter # ast ast

@@ -230,11 +230,11 @@ module Make
     in
     left 0
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let pretty_output ?(width = 80) (fp : out_channel) ast =
     pretty_output ~width fp (sexp_of_ast ast)
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let compact_output (fp : out_channel) ast =
     compact_output fp (sexp_of_ast ast)
 end

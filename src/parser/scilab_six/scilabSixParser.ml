@@ -29,9 +29,9 @@ let parse_file name =
     close_in ch;
     let warns =
       match exn with
-      | ScilabSixGenParser.Error -> [ Recovered "syntax error" ]
-      | ScilabSixLexer.Error msg -> [ Recovered msg ]
-      | _ -> [ Recovered ("internal parser error" ^ Printexc.to_string exn) ]
+      | ScilabSixGenParser.Error -> [ loc, Recovered "syntax error" ]
+      | ScilabSixLexer.Error msg -> [ loc, Recovered msg ]
+      | _ -> [ loc, Recovered ("internal parser error" ^ Printexc.to_string exn) ]
     in
     [ let exp = descr ~warns ScilabParserAst.Error loc in
       descr (ScilabParserAst.Exp exp) loc ]

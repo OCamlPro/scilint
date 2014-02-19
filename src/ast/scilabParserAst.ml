@@ -24,7 +24,7 @@ module Parameters = struct
   type symbol = string
 
   (** Warnings emitted by the parser stored as meta-info *)
-  type meta = ScilintWarning.message_contents list
+  type meta = ScilintWarning.message list
 
   (** Dummy meta *)
   let ghost_meta = []
@@ -85,7 +85,7 @@ let collect_messages ast =
   let collector = object
     inherit ast_iterator
     method! descr : 'a.'a descr -> unit = fun descr ->
-      res := List.map (fun m -> descr.loc, m) descr.meta :: !res
+      res := descr.meta :: !res
   end in
   collector # ast ast ;
   List.flatten !res

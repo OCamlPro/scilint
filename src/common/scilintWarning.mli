@@ -16,11 +16,11 @@ type message = loc * message_contents
 
 (** Raw contents of a message *)
 and message_contents =
-  | Insert of point * string (** (where, what) *)
-  | Drop of bounds
-  | Replace of (point * point) * string (** (where, by what) *)
   | Warning of warning
   | Recovered of string
+  | Drop
+  | Insert of string
+  | Replace of string
 
 (** Various kinds of warnings *)
 and warning =

@@ -678,8 +678,8 @@ end = struct
     in
     let nop = clean op 0 0 in
     if nop <> op then
-      nop, [ Replace (bounds, nop) ;
-             Warning (S Spaces_in_operator)]
+      nop, [ bounds, Replace nop ;
+             bounds, Warning (S Spaces_in_operator)]
     else op, []
 
   let line_end = star (any_but "\n\000")
@@ -704,10 +704,13 @@ end = struct
   }
 
   let descr ?(warns = []) ?(comment = []) cstr ((sl, sc), (el, ec)) ctx =
+    let warns = List.map (fun (bounds, warn) ->  ((ctx.src, bounds), warn)) warns in
     { cstr ; comment ; loc = loc ctx.src sl sc el ec ; meta = warns }
 
   let descr_for_seq ?(warns = []) ?(comment = []) cstr seq =
-    { cstr ; loc = merge_descr_locs seq ; meta = warns ; comment }
+    let loc = merge_descr_locs seq in
+    let warns = List.map (fun (bounds, warn) ->  ((fst loc, bounds), warn)) warns in
+    { cstr ; loc ; meta = warns ; comment }
 
   let descr_exp descr =
     { descr with cstr = Exp descr ; meta = [] ; comment = [] }
@@ -736,7 +739,7 @@ end = struct
     | "%f" | "%F" -> descr (Bool false) bounds ctx
     | ":" -> descr Colon bounds ctx
     | _ ->
-      let warns = if keyword text then [ Warning (S Misused_keyword) ] else [] in
+      let warns = if keyword text then [ bounds, Warning (S Misused_keyword) ] else [] in
       descr ~warns (Var (string_descr (text, bounds) ctx)) bounds ctx
 
   let push kwd ?in_matrix ?in_function ?in_loop ctx =
@@ -798,12 +801,12 @@ end = struct
         let closer = closer (fst ctx.kwd) in
         restore ctx.st cp ;
         `End (closer,
-              [ Insert (point ctx.st, closer) ;
-                Recovered ("unterminated " ^ fst ctx.kwd) ])
+              [ here ctx.st, Insert (closer) ;
+                ((snd (snd ctx.kwd)), point ctx.st), Recovered ("unterminated " ^ fst ctx.kwd) ])
     else
       (* consume the keyword and produce an error statement. *)
-      let warns = [ Drop (snd term) ;
-                    Recovered ("unexpected '" ^ fst term ^ "'") ] in
+      let warns = [ snd term, Drop ;
+                    snd term, Recovered ("unexpected '" ^ fst term ^ "'") ] in
       `Stmt (descr_exp (descr ~warns Error (snd term) ctx))
 
   let rec terminate_expr term cp kwds ctx =
@@ -816,8 +819,8 @@ end = struct
       let closer = closer (fst ctx.kwd) in
       restore ctx.st cp ;
       (`Fake, closer,
-       `Warns [ Insert (point ctx.st, closer) ;
-                Recovered ("unterminated " ^ fst ctx.kwd)] )
+       `Warns [ here ctx.st, Insert closer ;
+                ((snd (snd ctx.kwd)), point ctx.st), Recovered ("unterminated " ^ fst ctx.kwd)] )
 
   let parse_string ctx =
     (* Consumes the contents of a string that has been started by
@@ -837,12 +840,12 @@ end = struct
          | _ ->
            let warns =
              if opn.[0] <> cls then
-               [ Warning (S Inconsistent_string_delimiters) ]
+               [ from ctx.st cp, Warning (S Inconsistent_string_delimiters) ]
              else []
            in
            descr ~warns (String (Buffer.contents buf)) (from ctx.st cp) ctx)
       | '\000' | '\n' ->
-        let warns = [ Recovered "unterminated string" ] in
+        let warns = [ from ctx.st cp, Recovered "unterminated string" ] in
         descr ~warns Error (from ctx.st cp) ctx
       | c ->
         Buffer.add_char buf c ; loop ()
@@ -965,22 +968,22 @@ end = struct
           | 'b', "break" ->
             let warns =
               (if not ctx.in_loop then
-                 [ Warning (L Break_outside_loop) ;
-                   Drop (id_bounds) ]
+                 [ id_bounds, Warning (L Break_outside_loop) ;
+                   id_bounds, Drop ]
                else [])
               @ (if not (exec empty_instr ctx.st) then
-                   [ Recovered "break takes no argument" ]
+                   [ id_bounds, Recovered "break takes no argument" ]
                  else [])
             in
             `Stmt (descr ~warns Break id_bounds ctx)
           | 'c', "continue" ->
             let warns =
               (if not ctx.in_loop then
-                 [ Warning (L Continue_outside_loop) ;
-                   Drop (id_bounds) ]
+                 [ id_bounds, Warning (L Continue_outside_loop) ;
+                   id_bounds, Drop ]
                else [])
               @ (if not (exec empty_instr ctx.st) then
-                   [ Recovered "continue takes no argument" ]
+                   [ id_bounds, Recovered "continue takes no argument" ]
                  else [])
             in
             `Stmt (descr ~warns Continue id_bounds ctx)
@@ -993,7 +996,8 @@ end = struct
 	    terminate id cp [ "function" ] ctx
           | ('t', "then") | ('d', "do")->
             let msg = id_text ^ " only allowed on the right of a condition" in
-            let warns = [ Drop (id_bounds) ; Recovered msg ] in
+            let warns = [ id_bounds, Drop ;
+                          id_bounds, Recovered msg ] in
             `Stmt (descr_exp (descr ~warns Error id_bounds ctx))
           | 'e', "else"
           | 'e', "elseif" ->
@@ -1032,8 +1036,8 @@ end = struct
         let ctns, bounds = extract_from ctx.st cp in
         let warns =
           if closing_keyword ctns then
-            [ Replace (bounds, ctns) ;
-              Warning (S Keyword_as_shell_arg) ]
+            [ bounds, Replace ctns ;
+              bounds, Warning (S Keyword_as_shell_arg) ]
           else []
         in
         skip (descr ~warns (String ctns) bounds ctx :: acc)
@@ -1065,8 +1069,8 @@ end = struct
         let nterm, nloc = extract_from ctx.st cp in
         if List.mem nterm terminators then
           let msg = sprintf "unexpected %S between condition and %S" term nterm in
-          let nexpr = { expr with meta = Drop (loc)
-                                         :: Recovered msg
+          let nexpr = { expr with meta = ((ctx.src, loc), Drop)
+                                         :: ((ctx.src, loc), Recovered msg)
                                          :: expr.meta } in
           nexpr, (`Term nloc, nterm)
         else (restore ctx.st cp ; res)
@@ -1081,13 +1085,16 @@ end = struct
       if exec (phantom (any_but ",;\000\n")) ctx.st then
         if exec (ident ||| unop ||| any_of "{[(") ctx.st then begin
           restore ctx.st cp ;
-          { expr with meta = Insert (checkpoint_point cp, ";")
-                             :: Recovered "unterminated statement"
+          let pt = checkpoint_point cp in
+          { expr with meta = ((ctx.src, (pt, pt)), Insert ";")
+                             :: ((ctx.src, (pt, pt)), Recovered "missing statement separator")
                              :: expr.meta }
         end else
           let text, bounds = drop_token ctx in
           let msg = sprintf "unexpected token %S after expression" text in
-          { expr with meta = Drop bounds :: Recovered msg :: expr.meta }
+          { expr with meta = ((ctx.src, bounds), Drop)
+                             :: ((ctx.src, bounds), Recovered msg)
+                             :: expr.meta }
       else expr)
     else expr
 
@@ -1109,19 +1116,19 @@ end = struct
         let eloc = point ctx.st in
         if exec ident ctx.st then
           let name, name_bounds = extract_from ctx.st cp in
-          let warns = if keyword name then [ Warning (S Misused_keyword) ] else [] in
+          let warns = if keyword name then [ name_bounds, Warning (S Misused_keyword) ] else [] in
           let rexpr = descr ~warns (String name) name_bounds ctx in
 	  let expr = Call (lexpr, [ None, rexpr], Field) in
           let warns =
             if not !blanks then []
-            else [ Warning (S Spaces_around_dot) ;
-                   Drop (sloc, eloc) ]
+            else [ (sloc, eloc), Warning (S Spaces_around_dot) ;
+                   (sloc, eloc), Drop ]
           in
           let expr = descr_for_seq ~warns expr [ lexpr ; rexpr ] in
           parse_extraction expr ctx
         else begin
           discard instr_end ctx.st ;
-          let warns = [ Recovered "a name is expected after this dot" ] in
+          let warns = [from ctx.st cp, Recovered "a name is expected after this dot" ] in
           let rexpr = descr ~warns Error (from ctx.st cp) ctx in
           descr_for_seq (Call (lexpr, [ None, rexpr], Field)) [ lexpr ; rexpr ]
         end
@@ -1137,7 +1144,9 @@ end = struct
 
   and parse_seq ctx =
     match parse_statements ctx with
-    | [i], (term, warns) -> { i with meta = warns @ i.meta }, term
+    | [i], (term, warns) ->
+      let warns = List.map (fun (l, w) -> (ctx.src, l), w) warns in
+      { i with meta = warns @ i.meta }, term
     | seq, (term, warns) -> descr_for_seq ~warns (Seq seq) seq, term
 
   and parse_matrix ctx sloc =
@@ -1182,7 +1191,7 @@ end = struct
       let warns =
         match fst ctx.kwd, clo with
         | "{", "]" | "[", "}" ->
-          [ Warning (S Inconsistent_matrix_delimiters) ]
+          [ (sloc, point ctx.st), Warning (S Inconsistent_matrix_delimiters) ]
         | _ -> []
       in
       let lines = List.rev (fst (change_row accs)) in
@@ -1198,8 +1207,9 @@ end = struct
       discard instr_end ctx.st ;
       ignore (parse_seq ctx) ;
       (* and reraise the error *)
-      let warns = [ Recovered msg ] in
-      descr_exp (descr ~warns Error (from_last "function" ctx) ctx)
+      let bounds = from_last "function" ctx in
+      let warns = [ bounds, Recovered msg ] in
+      descr_exp (descr ~warns Error bounds ctx)
     in
     let rec name rets =
       discard spaces ctx.st ;
@@ -1207,12 +1217,13 @@ end = struct
         | '=' ->
           advance_1 ctx.st ; discard spaces ctx.st ; []
 	| _ ->
-          [ Insert (point ctx.st, "=") ;
-            Recovered "equal sign required after return parameters" ]
+          let bounds = here ctx.st in
+          [ bounds, Insert "=" ;
+            bounds, Recovered "equal sign required after return parameters" ]
       in
       let id = group () in
       if exec (seq [ spaces ; store id ident ; spaces ]) ctx.st then
-        let mwarns = Warning (S Missing_function_parameters) :: warns in
+        let mwarns = (here ctx.st, Warning (S Missing_function_parameters)) :: warns in
         match peek ctx.st with
         | '(' -> advance_1 ctx.st ;
           args (string_descr ~warns (extract id) ctx) rets
@@ -1237,13 +1248,15 @@ end = struct
             | ';' ->
 	      let sloc = point ctx.st in
               advance_1 ctx.st ;
-              let meta = Replace ((sloc, point ctx.st), ",")
-                         :: Recovered "bad separator \";\"" :: var.meta in
+              let loc = ctx.src, (sloc, point ctx.st) in
+              let meta = (loc, Replace ",")
+                         :: (loc, Recovered "bad separator \";\"") :: var.meta in
               let var = { var with meta } in
               collect (var :: acc)
             | 'a'..'z' | 'A'..'Z' ->
-              let meta = Insert (point ctx.st, ",")
-                         :: Recovered "missing separator" :: var.meta in
+              let loc = ctx.src, here ctx.st in
+              let meta = (loc, Insert ",")
+                         :: (loc, Recovered "missing separator") :: var.meta in
               let var = { var with meta } in
 	      collect (var :: acc)
             | '}' | ']' -> advance_1 ctx.st ; name (List.rev (var :: acc))
@@ -1264,10 +1277,12 @@ end = struct
             | [], '(' ->
               advance_1 ctx.st ; args var []
             | [], ('\n' | ',' | ';') ->
-              let meta =  Warning (S Missing_function_parameters) :: var.meta in
+              let loc = ctx.src, here ctx.st in
+              let meta = (loc, Warning (S Missing_function_parameters)) :: var.meta in
               body { var with meta } [] []
             | [], '/' when peek_ahead ctx.st 1 = '/' ->
-              let meta =  Warning (S Missing_function_parameters) :: var.meta in
+              let loc = ctx.src, here ctx.st in
+              let meta = (loc, Warning (S Missing_function_parameters)) :: var.meta in
               body { var with meta } [] []
             | _, '(' ->
               error "invalid function name"
@@ -1283,8 +1298,8 @@ end = struct
     and args name rets =
       let check_eol () =
         if not (exec (seq [ star space ; comment ||| any_of ",;\n" ]) ctx.st) then
-          [ Insert (point ctx.st, "\n") ;
-	    Recovered "terminator expected after function parameters" ]
+          [ (ctx.src, here ctx.st), Insert "\n" ;
+	    (ctx.src, here ctx.st), Recovered "terminator expected after function parameters" ]
         else []
       in
       let rec loop acc =
@@ -1301,13 +1316,15 @@ end = struct
             | ';' ->
 	      let sloc = point ctx.st in
 	      advance_1 ctx.st ;
-              let meta = Replace ((sloc, point ctx.st), ",")
-                         :: Recovered "bad separator \";\"" :: var.meta in
+       let loc = ctx.src, (sloc, point ctx.st) in
+              let meta = (loc, Replace ",")
+                         :: (loc, Recovered "bad separator \";\"") :: var.meta in
               let var = { var with meta } in
 	      loop (var :: acc)
             | 'a'..'z' | 'A'..'Z' ->
-              let meta = Insert (point ctx.st, ",")
-                         :: Recovered "missing separator" :: var.meta in
+       let loc = ctx.src, here ctx.st in
+              let meta = (loc, Insert ",")
+                         :: (loc, Recovered "missing separator") :: var.meta in
               let var = { var with meta } in
 	      loop (var :: acc)
             | ')' ->
@@ -1333,12 +1350,14 @@ end = struct
       let body, _ = parse_seq ctx in
       let name =
         if (name.cstr.[0] < 'a' || name.cstr.[0] > 'z') && name.cstr.[0] <> '%' then
-          { name with meta = Warning (S Function_name_not_started_by_lowercase) :: name.meta }
+          { name with meta = (name.loc, Warning (S Function_name_not_started_by_lowercase))
+                             :: name.meta }
         else name
       in
       let name =
         if List.exists (String.contains name.cstr) ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9'] then
-          { name with meta = Warning (S Function_name_contains_digits) :: name.meta }
+          { name with meta =  (name.loc, Warning (S Function_name_contains_digits))
+                              :: name.meta }
         else name
       in
       descr ~comment (Defun { name ; args ; rets ; body })
@@ -1396,15 +1415,15 @@ end = struct
       | "else", Some _ ->
         let phrases, term = parse_seq ctx in
         let res = parse_case term default cases in
-        let meta = [ Drop (snd phrases.loc) ;
-                     Recovered "duplicate else branch" ] in
+        let meta = [ phrases.loc, Drop ;
+                     phrases.loc, Recovered "duplicate else branch" ] in
         { res with meta }
       | "case", Some _ ->
         let _ = parse_cond_expr [ "then" ] ctx in
         let phrases, term = parse_seq ctx in
         let res = parse_case term default cases in
-        let meta = [ Drop (snd phrases.loc) ;
-                     Recovered "useless case after else branch" ] in
+        let meta = [ phrases.loc, Drop ;
+                     phrases.loc, Recovered "useless case after else branch" ] in
         { res with meta }
       | "case", None ->
         let test, _ = parse_cond_expr [ "then" ] ctx in
@@ -1419,18 +1438,19 @@ end = struct
     let res = match term with
       | "case" -> parse_case term None []
       | "end" ->
-        let warns = [ Recovered "empty select" ] in
+        let warns = [ from_last "select" ctx, Recovered "empty select" ] in
         descr ~warns (Select { cond ; cases = [] ; default = None })
           (from_last "select" ctx) ctx
       | "else" ->
-        let warn = Recovered "expecting at least one case" in
         let res = parse_case term None [] in
+        let warn = res.loc, Recovered "expecting at least one case" in
         { res with meta = warn :: res.meta }
       | _ -> assert false
     in
     if phrases.cstr <> Seq [] then
       let msg = "the condition must be followed by a case" in
-      let meta = [ Drop (snd phrases.loc) ; Recovered msg ] in
+      let meta = [ phrases.loc, Drop ;
+                   phrases.loc, Recovered msg ] in
       { res with meta }
     else res
 
@@ -1442,9 +1462,9 @@ end = struct
       (* fixme: check "end" *)
       descr (Try (phrases, catch_phrases)) (from_last "try" ctx) ctx ;
     | _ (* "end" *) ->
-      let warns = [ Warning (S Missing_catch) ] in
       let sloc = point ctx.st in
       let fake = descr (Seq []) (sloc, sloc) ctx in
+      let warns = [ from_last "try" ctx, Warning (S Missing_catch) ] in
       descr ~warns (Try (phrases, fake )) (from_last "try" ctx) ctx
 
   and parse_while ctx =
@@ -1463,13 +1483,13 @@ end = struct
     let before_range = seq [ star space ; store iter ident ;
                              star space ; char '=' ; star space ] in
     if not (exec before_range ctx.st) then
-      let warns = [ Recovered "'for' must be followed by an assignment" ] in
+      let warns = [ from_last "for" ctx, Recovered "'for' must be followed by an assignment" ] in
       let res = descr_exp (descr ~warns Error (from_last "for" ctx) ctx) in
       ignore (parse_seq ctx) ; res
     else
       let (n, n_bounds) = extract iter in
       let msg = "for iterator cannot be a ':'" in
-      let warns = if n = ":" then [ Recovered msg ] else [] in
+      let warns = if n = ":" then [ n_bounds, Recovered msg ] else [] in
       let var = descr ~warns n n_bounds ctx in
       let range, _ = parse_cond_expr [ "do" ] ctx in
       let phrases, _ = parse_seq ctx in
@@ -1485,20 +1505,21 @@ end = struct
       | (`Fake | `Term _), ")" ->
         List.rev (arg :: acc), ws
       | (`Fake | `Term _), "\000" ->
-        let w = Recovered "unterminated argument list" in
+        let w = here ctx.st, Recovered "unterminated argument list" in
         List.rev (arg :: acc), (w :: ws)
       | (`Fake | `Term _), "\n" ->
-        let w = [ Insert (point ctx.st, ")") ;
-		  Recovered "unsupported line break in argument list" ] in
+        let w = [ here ctx.st, Insert ")" ;
+		  here ctx.st, Recovered "unsupported line break in argument list" ] in
         List.rev (arg :: acc), (w @ ws)
       | (`Fake | `Term _), ";" ->
-        let w = [ Drop (from_last "(" ctx) ;
-		  Recovered "unsupported argument separator \";\"" ] in
+        let b = from_last "(" ctx in
+        let w = [ b, Drop ;
+		  b, Recovered "unsupported argument separator \";\"" ] in
         loop (arg :: acc) (w @ ws)
       | _ ->
         restore ctx.st cp ;
-        let w = [ Insert (point ctx.st, ")") ;
-		  Recovered "unterminated argument list" ] in
+        let w = [ here ctx.st, Insert ")" ;
+		  here ctx.st, Recovered "unterminated argument list" ] in
         List.rev (arg :: acc), (w @ ws)
     in
     if exec (seq [ star space ; char ')' ]) ctx.st then
@@ -1526,20 +1547,21 @@ end = struct
       | (`Fake | `Term _), "," ->
         loop (arg :: acc) ws
       | (`Fake | `Term _), "\000" ->
-        let w = Recovered "unterminated argument list" in
+        let w = here ctx.st, Recovered "unterminated argument list" in
         List.rev (arg :: acc), (w :: ws)
       | (`Fake | `Term _), "\n" ->
-        let w = [ Insert (point ctx.st, ")") ;
-	          Recovered "unsupported line break in argument list" ] in
+        let w = [ here ctx.st, Insert ")" ;
+	          here ctx.st, Recovered "unsupported line break in argument list" ] in
         List.rev (arg :: acc), (w @ ws)
       | (`Fake | `Term _), ";" ->
-        let w = [ Drop (from_last "(" ctx) ;
-	          Recovered  "unsupported argument separator \";\"" ] in
+        let b = from_last "(" ctx in
+        let w = [ b, Drop ;
+	          b, Recovered  "unsupported argument separator \";\"" ] in
         loop (arg :: acc) (w @ ws)
       | _ ->
         restore ctx.st cp ;
-        let w = [ Insert (point ctx.st, ")") ;
-	          Recovered "unterminated argument list" ] in
+        let w = [ here ctx.st, Insert ")" ;
+	          here ctx.st, Recovered "unterminated argument list" ] in
         List.rev (arg :: acc), (w @ ws)
     in
     if exec (seq [ star space ; char ')' ]) ctx.st then
@@ -1569,14 +1591,14 @@ end = struct
         else (
           (* unknown keyword, keep it *)
           restore ctx.st cp ;
-          let w = [ Insert (point ctx.st, "\n") ;
-                    Recovered (sprintf "missing terminator before %S" id) ] in
+          let w = [ here ctx.st, Insert "\n" ;
+                    here ctx.st, Recovered (sprintf "missing terminator before %S" id) ] in
           (`Term (here ctx.st), fake, `Warns w))
       else
         (* drop any other kind of token *)
         let text, bounds = restore ctx.st cp ; drop_token ctx in
-        let warns = [ Drop bounds ;
-                      Recovered (sprintf "unexpected token %S" text) ] in
+        let warns = [ bounds, Drop ;
+                      bounds, Recovered (sprintf "unexpected token %S" text) ] in
         let err = descr ~warns Error bounds ctx in
         (`Fake, fake, `Err err)
 
@@ -1616,8 +1638,9 @@ end = struct
             match fs.[ String.length fs - 1], peek ctx.st with
             | '.',  ('/' | '*' | '^' | '\\') ->
               let _, (fl, fc) = f_bounds in
-              [ Drop ((fl, fc), (fl, fc - 1)) ;
-                Warning (S Ambiguous_dot_left_of_oper) ]
+              let bounds = ((fl, fc), (fl, fc - 1)) in
+              [ bounds, Drop ;
+                bounds, Warning (S Ambiguous_dot_left_of_oper) ]
             | _ -> []
           in
           transpose loc (descr ~warns (Num (float_of_string fs)) f_bounds ctx) eacc
@@ -1667,8 +1690,9 @@ end = struct
             let op, warns = drop_spaces op op_bounds in
             let warns =
               if op = "=" then
-		Replace (op_bounds, "==")
-                :: Warning (S (Deprecated ("operator \"=\""))) :: warns
+		(op_bounds, Replace "==")
+                :: (op_bounds, Warning (S (Deprecated ("operator \"=\""))))
+                :: warns
               else
                 match (op.[String.length op - 1],
                        peek ctx.st, peek_ahead ctx.st 1) with
@@ -1676,8 +1700,9 @@ end = struct
                   let cp = checkpoint ctx.st in
                   let dot, dot_bounds = save any ctx.st in
                   restore ctx.st cp ;
-                  Drop (dot_bounds)
-                  :: Warning (S Ambiguous_dot_right_of_oper)  :: warns
+                  (dot_bounds, Drop)
+                  :: (dot_bounds, Warning (S Ambiguous_dot_right_of_oper))
+                  :: warns
                 | _ -> warns
             in
             prefix (`Infix ((op, op_bounds), warns) :: eacc)
@@ -1714,15 +1739,15 @@ end = struct
           e, rest
         | `Error msg :: [] ->
           let loc = point ctx.st, point ctx.st in
-          let warns = [ Recovered msg ] in
+          let warns = [ loc, Recovered msg ] in
           descr ~warns Error loc ctx, []
         | `Comment (text, ((sloc, _) as bounds)) :: [] ->
           let comment = [ descr text bounds ctx ] in
-          let warns = [ Recovered "unterminated expression" ] in
+          let warns = [ bounds, Recovered "unterminated expression" ] in
           descr ~warns ~comment Error (sloc, sloc) ctx, []
         | [] ->
           let loc = point ctx.st, point ctx.st in
-          let warns = [ Recovered "unterminated expression" ] in
+          let warns = [ loc, Recovered "unterminated expression" ] in
           descr ~warns Error loc ctx, []
         | _ -> assert false
       and infix lvl tokens =
@@ -1764,6 +1789,7 @@ end = struct
           fst (apply_priorities (tokens @ [ `Atom err ]))
         | `Warns ws ->
           let exp = fst (apply_priorities tokens) in
+          let ws = List.map (fun (l, w) -> (ctx.src, l), w) ws in
           { exp with meta = ws @ exp.meta }
       in
       match tt, tn with 
@@ -1781,7 +1807,7 @@ end = struct
       descr_for_seq (Range (l, Some m, r)) [ l ; r ], term
     | l :: m :: r :: seq, term ->
       let loc = (descr_for_seq Error seq).loc in
-      let warns = [ Drop (snd loc) ; Recovered ("too many ':'") ] in 
+      let warns = [ snd loc, Drop ; snd loc, Recovered ("too many ':'") ] in 
       descr_for_seq ~warns (Range (l, Some m, r)) [ l ; r ], term
 
   let parse ?(allow_toplevel_exprs = false) state src =
