@@ -1,3 +1,5 @@
+.PHONY: clean
+
 all: \
   scilint.asm scintax.asm scilint_doc_gen.asm \
   scilint.byte scintax.byte scilint_doc_gen.byte
@@ -154,11 +156,10 @@ scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
 	$(OCAMLC) $(OCAML_INCL) -package 'unix'  -linkpkg \
           -o $@ $(SCILINT_DOC_GEN_CMOS)
 
-depend:
-	$(OCAMLDEP) -native $(OCAML_INCL) \
-	  $(SCILINT_DOC_GEN_MLS) $(SCILINT_DOC_GEN_MLIS) \
+.depend_ocaml: $(SCILINT_DOC_GEN_MLS) $(SCILINT_DOC_GEN_MLIS) \
 	  $(SCILINT_MLS) $(SCILINT_MLIS) \
-	  $(SCINTAX_MLS) $(SCINTAX_MLIS) > .depend_ocaml
+	  $(SCINTAX_MLS) $(SCINTAX_MLIS)
+	$(OCAMLDEP) -native $(OCAML_INCL) $^ > .depend_ocaml
 
 include .depend_ocaml
 
@@ -201,9 +202,9 @@ ChangeLog.txt: scilint_doc_gen.asm
 	$(OCAMLYACC) -v $<
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
 
-clean :
+clean:
 	rm -f \
-	  *.old \
+	  *.old _obuild \
 	  *~ */*~ */*/*~ */*/*/*~ \
 	  *.cm* */*.cm* */*/*.cm* */*/*/*.cm* \
 	  *.o */*.o */*/*.o */*/*/*.o \
