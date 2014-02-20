@@ -64,16 +64,6 @@ OCAML_SCILINT_MLS = \
   src/common/scilintOptions.ml \
   src/scilint/scilintPassExpandEval.ml \
   src/scilint/scilintMain.ml
-#  src/scilint/scilabDeffRefactoring.ml \
-  src/scilint/scilintFirehosegen.ml \
-  src/scilint/scilabUtils.ml \
-  src/scilint/config/scilintTree.ml \
-  src/scilint/config/scilintParser.ml \
-  src/scilint/config/scilintLexer.ml \
-  src/scilint/config/scilintConfig.ml \
-  src/scilint/scilintProject.ml \
-  src/scilint/scilabFunctionAnalyze.ml \
-  src/scilint/scilabAstStats.ml \
 
 src/scilint/config/scilintLexer.cmx: \
   src/scilint/config/scilintParser.cmi

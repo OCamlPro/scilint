@@ -61,16 +61,7 @@ end
 begin program "scilint"
   files = [
     "src/common/scilintOptions.ml"
-(*    "src/scilint/config/scilintTree.ml";
-    "src/scilint/config/scilintParser.mly";
-    "src/scilint/config/scilintLexer.mll";
-    "src/scilint/config/scilintConfig.ml";
-    "src/scilint/scilabUtils.ml"
-    "src/scilint/scilintFirehosegen.ml"
-    "src/scilint/scilintProject.ml";
-    "src/scilint/scilabFunctionAnalyze.ml"
-    "src/scilint/scilabDeffRefactoring.ml"
-    "src/scilint/scilabAstStats.ml" *)
+(*   "src/scilint/scilabFunctionAnalyze.ml"*)
    "src/scilint/scilintPassExpandEval.ml"
     "src/scilint/scilintMain.ml"
    ]

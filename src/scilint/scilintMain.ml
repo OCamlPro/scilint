@@ -19,7 +19,7 @@ let treat_source source =
     | File fn -> SelectedParser.parse_file fn
     | String (name, str) -> SelectedParser.parse_string name str
     | _ -> assert false
-  in 
+  in
   let ast =
     if !print_time then begin
       printf "Parsing %s ...%!" (string_of_source source) ;
