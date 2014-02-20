@@ -67,7 +67,7 @@ program:
 
 stmts (stop):
 | list (stmt_break) stmts = stmts_r (stop)
-  { descr (Seq stmts) (loc $startpos $endpos)}
+  { match stmts with [ s ] -> s | _ -> descr (Seq stmts) (loc $startpos $endpos)}
 
 stmts_r (stop):
 | first = stmt nonempty_list (stmt_break) rest = stmts_r (stop) { first :: rest }
@@ -261,8 +261,8 @@ if_body:
 if_then_token : THEN | if_cond_break option (THEN) {}
 
 select_control :
-| SELECT cond = commented (expression) select_cond_break cases = select_cases
-| SWITCH cond = commented (expression) select_cond_break cases = select_cases
+| SELECT cond = commented (expression) select_cond_break CASE cases = select_cases
+| SWITCH cond = commented (expression) select_cond_break CASE cases = select_cases
   { let cases, default = cases in
     let loc = loc $startpos $endpos in
     descr (Select { cond ; cases ; default }) loc }
@@ -270,12 +270,12 @@ select_control :
 %inline select_cond_break: COMMA | SEMI | EOL | COMMENT {}
 
 select_cases:
-| CASE first = select_case (CASE) rest = select_cases
+| first = select_case (CASE) rest = select_cases
   { let rest, def = rest in first :: rest, def }
-| CASE single = select_case (ELSE) def = stmts (END)
-| CASE single = select_case (OTHERWISE) def = stmts (END)
+| single = select_case (ELSE) def = stmts (END)
+| single = select_case (OTHERWISE) def = stmts (END)
   { [ single ], Some def }
-| CASE single = select_case (END)
+| single = select_case (END)
   { [ single ], None }
 
 select_case (stop):
