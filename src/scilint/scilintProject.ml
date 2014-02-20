@@ -33,7 +33,7 @@ let add_to_path dir =
 type fun_decl = {
   fun_name : string;
   fun_args : string array;
-  fun_loc : string * ScilabAst.location;
+  fun_loc : ScilabParserAst.loc;
 }
 
 type fun_status =

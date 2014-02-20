@@ -64,15 +64,18 @@ OCAML_SCILINT_DOC_GEN_MLS = \
 
 OCAML_SCILINT_MLS = \
   src/common/scilintOptions.ml \
+  src/scilint/scilabUtils.ml \
+  src/scilint/scilintProject.ml \
   src/scilint/scilintPassExpandEval.ml \
+  src/scilint/scilabFiveFunctionAnalyze.ml \
   src/scilint/scilintMain.ml
 
 src/scilint/config/scilintLexer.cmx: \
   src/scilint/config/scilintParser.cmi
 
 OCAML_SCILINT_MLIS = \
-  src/scilint/scilintProject.mli \
-  src/scilint/scilabUtils.mli
+  src/scilint/scilabUtils.mli \
+  src/scilint/scilintProject.mli
 
 ########## SCILINT
 
