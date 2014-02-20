@@ -61,8 +61,10 @@ end
 begin program "scilint"
   files = [
     "src/common/scilintOptions.ml"
-(*   "src/scilint/scilabFunctionAnalyze.ml"*)
-   "src/scilint/scilintPassExpandEval.ml"
+    "src/scilint/scilabUtils.ml"
+    "src/scilint/scilintProject.ml"
+    "src/scilint/scilintPassExpandEval.ml"
+    "src/scilint/scilabFiveFunctionAnalyze.ml"
     "src/scilint/scilintMain.ml"
    ]
 
