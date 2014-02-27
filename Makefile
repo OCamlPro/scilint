@@ -206,7 +206,7 @@ ChangeLog.txt: scilint_doc_gen.asm
 	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
 
 clean:
-	rm -f \
+	rm -fr \
 	  *.old _obuild \
 	  *~ */*~ */*/*~ */*/*/*~ \
 	  *.cm* */*.cm* */*/*.cm* */*/*/*.cm* \
