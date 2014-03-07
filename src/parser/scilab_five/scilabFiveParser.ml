@@ -664,8 +664,8 @@ end = struct
       seq [ char '.' ; star space ; any_of "*/\\" ; star space ; char '.' ;
             phantom (any_but ('0'--'9')) ] ;
       seq [ char '.' ; star space ; any_of "*/\\^" ] ]
-  let before_shell_call_arg =
-    seq [ spaces ; phantom (any_but ".-/+*&|<>=,;\n\000^") ]
+  let shell_call_start =
+    seq [ ident ; spaces ; phantom (any_but ".-/+*&|<>=,;\n\000^") ]
 
   let drop_spaces op bounds =
     (* clean spaces in element wise and kronecker operators *)
@@ -890,16 +890,23 @@ end = struct
 	if ctx.in_function || not ctx.allow_toplevel_exprs then
 	  (* nothing worked: parse as a shell call *)
 	  `Stmt (parse_shell_call ctx)
-	else
-          (* if we're at toplevel, it could also be an expr *)
-          let as_expr = parse_toplevel_expr ctx in
-          match as_expr.cstr with
-          | Error -> `Stmt (parse_shell_call ctx)
-          (* TODO: better heuristics ? macro generate 'typeof id = function' ? *)
-          | Var _ when exec before_shell_call_arg ctx.st ->
+      else 
+        (* if we're at toplevel, it could also be an expr *)
+        let as_expr = parse_toplevel_expr ctx in
+        match as_expr.cstr with
+        | Error -> `Stmt (parse_shell_call ctx)
+        (* TODO: better heuristics ? macro generate 'typeof id = function' ? *)
+        | Var _ ->
+          let cp' = checkpoint ctx.st in
+          restore ctx.st cp ;
+          if exec shell_call_start ctx.st then begin
             restore ctx.st cp ;
             `Stmt (parse_shell_call ctx)
-          | _ -> `Stmt (descr_exp as_expr)
+          end else begin
+            restore ctx.st cp' ;
+            `Stmt (descr_exp as_expr)
+          end
+        | _ -> `Stmt (descr_exp as_expr)
       else  `Stmt (descr_exp (parse_toplevel_expr ctx))
     in
     match peek ctx.st with

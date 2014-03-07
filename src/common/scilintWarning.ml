@@ -69,31 +69,32 @@ and style_warning =
 
 (** {2 Display} *)
 
-let rec format_source ppf ?(cap = true) source =
+let rec format_source ppf ?(inline = false) source =
   let open Printf in
   match source with
   | Forged ->
-    Format.fprintf ppf (if cap then "ghost code" else "Ghost code")
+    Format.fprintf ppf (if not inline then "ghost code" else "Ghost code")
   | String (name, _) ->
-    Format.fprintf ppf (if cap then "String %S" else "string %S") name
+    Format.fprintf ppf (if not inline then "String %S" else "string %S") name
   | File (name) ->
-    Format.fprintf ppf (if cap then "File %S" else "file %S") name
+    Format.fprintf ppf (if not inline then "File %S" else "file %S") name
   | Eval_string loc ->
     format_loc ppf loc ;
-    Format.fprintf ppf (if cap then "Eval string" else "eval string")
+    Format.fprintf ppf (if not inline then "Eval string" else "eval string")
 
-and format_loc ppf ?(cap = true) (source, ((ls, cs), (le, ce))) =
+and format_loc ppf ?(inline = false) (source, ((ls, cs), (le, ce))) =
   let open Printf in
   if ls = le then
     if cs = ce then
-      Format.fprintf ppf "%a, line %i, character %i:@ "
-        (format_source ~cap) source ls cs
+      Format.fprintf ppf "%a, line %i, character %i"
+        (format_source ~inline) source ls cs
     else
-      Format.fprintf ppf "%a, line %i, characters %i-%i:@ "
-        (format_source ~cap) source ls cs ce
+      Format.fprintf ppf "%a, line %i, characters %i-%i"
+        (format_source ~inline) source ls cs ce
   else
-    Format.fprintf ppf "%a, lines %i-%i, characters %i-%i:@ "
-      (format_source ~cap) source ls le cs ce
+    Format.fprintf ppf "%a, lines %i-%i, characters %i-%i"
+      (format_source ~inline) source ls le cs ce ;
+  if not inline then Format.fprintf ppf ":@ "
 
 let rec format_local_warning ppf descr =
   let open Printf in
@@ -120,7 +121,7 @@ let rec format_local_warning ppf descr =
     Format.fprintf ppf "overriding primitive %S" fun_name
   | Overriding_declared_function (fun_name, fun_loc) ->
     Format.fprintf ppf "overriding function %S already declared at %a"
-      fun_name (format_loc ~cap:false) fun_loc
+      fun_name (format_loc ~inline:true) fun_loc
   | Overriding_toplevel_function (fun_name, file) ->
     Format.fprintf ppf "overriding toplevel function %S of file %S" fun_name file
   | Unexpected_string_argument (fun_name, i, s, possible) ->
@@ -217,13 +218,17 @@ and format_style_warning ppf descr =
 (** Builds a displayable version of a location *)
 let string_of_loc loc =
   let buf = Buffer.create 200 in
-  format_loc (Format.formatter_of_buffer buf) ~cap:false loc ;
+  let ppf = Format.formatter_of_buffer buf in
+  format_loc ppf ~inline:true loc ;
+  Format.fprintf ppf "%!" ;
   Buffer.contents buf
 
 (** Builds a displayable version of a source *)
 let string_of_source source =
   let buf = Buffer.create 200 in
-  format_source (Format.formatter_of_buffer buf) ~cap:false source ;
+  let ppf = Format.formatter_of_buffer buf in
+  format_source ppf ~inline:true source ;
+  Format.fprintf ppf "%!" ;
   Buffer.contents buf
 
 (** Supported output formats *)
@@ -233,40 +238,40 @@ type format = Emacs | Firehose | Human
 let format_messages format messages ppf =
   let emacs colors () =
     let rec format_message ppf (loc, msg) =
-      let cap = true in
+      let inline = false in
       match msg with
       | Warning (L descr) ->
         Format.fprintf ppf
           (if colors then "\027[33m%aWarning L%03i:\027[0m %a@," else "%aWarning L%03i: %a@,")
-          (format_loc ~cap) loc
+          (format_loc ~inline) loc
           (num_of_local_warning descr)
           format_local_warning descr
       | Warning (S descr) ->
         Format.fprintf ppf
           (if colors then "\027[33m%aWarning S%03i:\027[0m %a@," else "%aWarning S%03i: %a@,")
-          (format_loc ~cap) loc
+          (format_loc ~inline) loc
           (num_of_style_warning descr)
           format_style_warning descr
       | Warning (W (name, msg)) ->
         Format.fprintf ppf
           (if colors then "\027[33m%aWarning %s:\027[0m %s@," else "%aWarning %s: %s@,")
-          (format_loc ~cap) loc name msg
+          (format_loc ~inline) loc name msg
       | Recovered msg ->
         Format.fprintf ppf
           (if colors then "\027[31m%aError:\027[0m %s@," else "%aError: %s@,")
-          (format_loc ~cap) loc msg
+          (format_loc ~inline) loc msg
       | Insert kwd ->
         Format.fprintf ppf
           (if colors then "\027[32m%aInsert:\027[0m %S@," else "%aInsert %S@,")
-          (format_loc ~cap) loc kwd
+          (format_loc ~inline) loc kwd
       | Drop ->
         Format.fprintf ppf
           (if colors then "\027[32m%aDrop\027[0m@," else "%aDrop:@,")
-          (format_loc ~cap) loc
+          (format_loc ~inline) loc
       | Replace rep ->
         Format.fprintf ppf
           (if colors then "\027[32m%aReplace by:\027[0m %S@," else "%aReplace by: %S@,")
-          (format_loc ~cap) loc rep
+          (format_loc ~inline) loc rep
     in
      Format.fprintf ppf "@[<v>" ;
     List.iter (format_message ppf) messages ;
@@ -296,7 +301,7 @@ let format_messages format messages ppf =
          ocmarkup "file" [ "given-path", name ]
        | Eval_string loc ->
          let buf = Buffer.create 200 in
-         format_loc (Format.formatter_of_buffer buf) ~cap:false loc ;
+         format_loc (Format.formatter_of_buffer buf) ~inline:true loc ;
          let name = Format.sprintf "(eval@%s)" (Buffer.contents buf) in
          ocmarkup "file" [ "given-path", name ]
       ) ;

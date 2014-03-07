@@ -58,6 +58,19 @@ begin program "scintax"
   ]
 end
 
+begin program "scifind"
+  files = [
+    "src/common/scilintOptions.ml"
+    "src/scifind/scifindMain.ml"
+  ]
+  requires = [
+    "scilab_ast"
+    "scilab_five_parser"
+    "scilab_six_parser"
+    "scilint_common"
+  ]
+end
+
 begin program "scilint"
   files = [
     "src/common/scilintOptions.ml"
