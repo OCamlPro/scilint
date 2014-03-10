@@ -12,11 +12,32 @@ open ScilabFiveParser
 open ScilabLocations
 open Printf
 
+let print_memory = ref false
+let print_memory_arg =
+  ("-show-groups", Arg.Set print_memory,
+   "Display the sub-expressions matched by named patterns")
+
 let matches stmt pat =
+  let memory = ref [] in
+  let memorize n stmt =
+    let len = String.length n in
+    if len > 0 && n.[0] = '%' then
+      if len > 1 then
+        try
+          if n.[1] = '%' || n.[1] = '_' then
+            if len = 2 then true else
+              let n = int_of_string (String.sub n 2 (len - 2)) in
+              memory := (n, stmt) :: !memory ;
+              true
+          else false
+        with _ -> false
+      else false
+    else false
+  in
   let rec match_stmt stmt pat =
     match stmt.cstr, pat.cstr with
-    | _, Exp { cstr = Var { cstr = "%%" } } -> true
-    | _, Seq [ { cstr = Exp { cstr = Var { cstr = "%%" } } } ] -> true
+    | _, Exp { cstr = Var { cstr = n } } when memorize n stmt -> true
+    | _, Seq [ { cstr = Exp { cstr = Var { cstr = n } } } ]  when memorize n stmt -> true
     | Seq (shd :: stl), Seq ({ cstr = Exp { cstr = Var { cstr = "%%" } } } :: ptl) ->
       match_stmt stmt ({ pat with cstr = Seq ptl })
       || match_stmt ({ stmt with cstr = Seq stl }) pat
@@ -37,7 +58,7 @@ let matches stmt pat =
     | Exp exp, Exp pexp ->
       match_exp exp pexp
     | Comment text, Comment ptext ->
-      match_string text ptext
+      match_string stmt text ptext
     | For (it, range, body), For (pit, prange, pbody) ->
       match_var it pit
       && match_exp range prange
@@ -100,6 +121,9 @@ let matches stmt pat =
       match_var n pn
       && match_exp ahd phd
       && match_args atl ptl 
+    | (None, ahd) :: atl, (None, phd) :: ptl ->
+      match_exp ahd phd
+      && match_args atl ptl 
     | [], [] -> true
     | _, _ -> false
   and match_cases cases pats =
@@ -112,11 +136,11 @@ let matches stmt pat =
     | [], [] -> true
     | _, _ -> false
   and match_var name pat =
-    match_string name.cstr pat.cstr
-  and match_string ctns pat =
-    match ctns, pat with
-    | _, "%%" -> true
-    | n, p -> n = p
+    memorize pat.cstr { name with cstr = Exp { name with cstr = Var name } }
+    || name.cstr = pat.cstr
+  and match_string stmt ctns pat =
+    memorize pat stmt
+    || ctns = pat
   and match_rows rows prows =
     (* TODO: better wildcards ? *)
     match rows, prows with
@@ -125,10 +149,11 @@ let matches stmt pat =
     | [], [] -> true
     | _, _ -> false
   and match_exp exp pat =
+    let stmt = { exp with cstr = Exp exp } in
     match exp.cstr, pat.cstr with
     | Error, _ -> false
     | _, Error -> false
-    | _, Var { cstr = "%%" } -> true
+    | _, Var { cstr = n } when memorize n stmt -> true
     | Call (name, args, kind), Call (pname, pargs, pkind) ->
       match_exp name pname
       && match_args args pargs
@@ -156,11 +181,11 @@ let matches stmt pat =
       && match_exp rexp prexp
     | Bool n, Bool p -> n = p
     | Num n, Num p -> n = p
-    | String s, String p -> match_string s p
+    | String s, String p -> match_string stmt s p
     | Colon, Colon -> true
     | _, _ -> false
   in
-  match_stmt stmt pat
+  match_stmt stmt pat, memory
 
 let search ast pat =
   let wildcard = ghost (Exp (ghost (Var (ghost "%%")))) in
@@ -169,10 +194,10 @@ let search ast pat =
   let rec search_seq acc ast pat =
     match ast, pat with
     | shd :: stl, phd :: ptl ->
-      if matches shd phd then search_seq (shd :: acc) stl ptl ;
+      if fst (matches shd phd) then search_seq (shd :: acc) stl ptl ;
       search_seq [] stl pat
     | _, [] when acc <> [] ->
-      result := res acc :: !result 
+      result := (res acc, []) :: !result 
     | _ -> ()
   and res acc =
     let acc = List.rev acc in
@@ -199,14 +224,18 @@ let search ast pat =
       | Seq ctns, _ ->
         List.iter self # stmt ctns ;
         search_seq [] ctns pat
+      | Exp _, _ ->
+        dad # stmt stmt
       | _ ->
-        if matches stmt ppat then
-          result := stmt :: !result ;
+        let res, mem = matches stmt ppat in
+        if res then
+          result := (stmt, !mem) :: !result ;
         dad # stmt stmt
     method! exp exp =
       let stmt = { exp with cstr = Exp exp } in
-      if matches stmt ppat then
-        result := stmt :: !result ;
+        let res, mem = matches stmt ppat in
+        if res then
+          result := (stmt, !mem) :: !result ;
       dad # exp exp
   end in
   let ast = res (List.rev ast) in
@@ -224,7 +253,7 @@ let search_in_source pattern source =
   in 
   let ast = parse () in
   let places = search ast pattern in
-  List.iter (fun stmt ->
+  List.iter (fun (stmt, mem) ->
       printf "Occurence found at %s.\n"
         (ScilintWarning.string_of_loc stmt.loc) ;
       if !ScilintOptions.print_ast then begin
@@ -236,6 +265,15 @@ let search_in_source pattern source =
         printf "Pretty printed:\n" ;
         Pretty.pretty_output stdout [ stmt ] ;
         printf "\n"
+      end ;
+      if !print_memory then begin
+        printf "Matched groups:\n" ;
+        List.iter
+          (fun (n, stmt) ->
+             Printf.printf " - %%%i: " n ;
+             Pretty.compact_output stdout [ stmt ] ;
+             printf "\n")
+          (List.sort compare mem) ;
       end)
     places
 
@@ -266,11 +304,18 @@ let main () =
   let open ScilintOptions in
   let sources : source list ref = ref [] in
   let options =
-    [ print_ast_arg ; pretty_print_arg ; print_messages_arg ; print_time_arg ;
+    [ print_ast_arg ; pretty_print_arg ; print_memory_arg ; print_time_arg ;
       format_arg ; toplevel_mode_arg ; cli_input_arg sources ]
   and usage_msg =
     "Hello, I am Scifind, a search & replace tool for Scilab.\n\
-     Usage: scifind <pattern> [OPTIONS] <file1.sci> <file2.sci> ..." ;
+     Usage: scifind <pattern> [OPTIONS] <file1.sci> <file2.sci> ...\n\
+    Where <patterns> is a scilab code extract with optional jokers\n\
+    \  - %% means any single expression\n\
+    \  - %_ means any (possibly empty) sequence of expressions\n\
+    \  If a pattern is followed by a number (%%1, %%_3, ...), the matched expression\n\
+    \  or sequence is stored in a correspondingly numbered memory cell.\n\
+    \  It can then be reused in a -replace pattern or displayed using -show-groups.\n\
+    Options:" ;
   in
   Arg.parse options (cli_input_anon sources) usage_msg ;
   let parse_pattern pattern =
