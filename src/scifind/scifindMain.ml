@@ -12,6 +12,20 @@ open ScilabFiveParser
 open ScilabLocations
 open Printf
 
+(*
+  Ideas:
+    - add a flag to the parser to accept patterns as identifiers.
+    - build a specific Ast in a second step, with var = Ident of string | Pattern of ...
+    - patterns :
+        wildcard:              %? %<id>?
+        repeat:                %?{rep, pat} %?{rep, pat, <min>, <max>}
+        alt:                   %?{or, pat, pat, ...}
+        group:                 %?{seq, pat, ..., pat}
+        string:                %?{str, 'regexp'}
+        variable:              %?{var, 'regexp'}
+        sequence wildcard:     %?? %<id>?? (as %?{rep, %?} %<id>?{rep, %?})
+*)
+
 let print_memory = ref false
 let print_memory_arg =
   ("-show-groups", Arg.Set print_memory,
@@ -21,24 +35,19 @@ let matches stmt pat =
   let memory = ref [] in
   let memorize n stmt =
     let len = String.length n in
-    if len > 0 && n.[0] = '%' then
-      if len > 1 then
-        try
-          if n.[1] = '%' || n.[1] = '_' then
-            if len = 2 then true else
-              let n = int_of_string (String.sub n 2 (len - 2)) in
-              memory := (n, stmt) :: !memory ;
-              true
-          else false
-        with _ -> false
-      else false
+    if len > 0 && n.[0] = '%' && String.contains n '?' then
+      let pos = String.index n '?' in
+      let name = String.sub n 1 (pos - 1) in
+      let format = String.sub n (pos + 1) (len - pos - 1) in
+      if name <> "" then memory := (name, stmt) :: !memory ;
+      true
     else false
   in
   let rec match_stmt stmt pat =
     match stmt.cstr, pat.cstr with
     | _, Exp { cstr = Var { cstr = n } } when memorize n stmt -> true
     | _, Seq [ { cstr = Exp { cstr = Var { cstr = n } } } ]  when memorize n stmt -> true
-    | Seq (shd :: stl), Seq ({ cstr = Exp { cstr = Var { cstr = "%%" } } } :: ptl) ->
+    | Seq (shd :: stl), Seq ({ cstr = Exp { cstr = Var { cstr = "%?" } } } :: ptl) ->
       match_stmt stmt ({ pat with cstr = Seq ptl })
       || match_stmt ({ stmt with cstr = Seq stl }) pat
     | Seq [], Seq [] -> true
@@ -88,8 +97,8 @@ let matches stmt pat =
     | _, _ -> false
   and match_exps exps pats =
     match exps, pats with
-    | _, [ { cstr = Var { cstr = "%%" } } ] -> true
-    | ehd :: etl, { cstr = Var { cstr = "%%" } } :: ptl ->
+    | _, [ { cstr = Var { cstr = "%?" } } ] -> true
+    | ehd :: etl, { cstr = Var { cstr = "%?" } } :: ptl ->
       match_exps exps ptl || match_exps etl pats
     | ehd :: etl, phd :: ptl ->
       match_exp ehd phd && match_exps etl ptl
@@ -99,7 +108,7 @@ let matches stmt pat =
     let module SS = Set.Make (String) in
     let pats, wildcard =
       List.fold_left
-        (fun (r, w) { cstr } -> if cstr = "%%" then r, true else cstr :: r, w)
+        (fun (r, w) { cstr } -> if cstr = "%?" then r, true else cstr :: r, w)
         ([], false) pats
     and params = List. map (fun { cstr } -> cstr) params in
     let pats = List.sort compare pats in
@@ -160,7 +169,7 @@ let matches stmt pat =
     | Identity args, Identity pargs ->
       match_exps args pargs
     | Range (sexp, None, eexp),
-      Range (psexp, (None | Some { cstr = Var { cstr = "%%" } } ), peexp) ->
+      Range (psexp, (None | Some { cstr = Var { cstr = "%?" } } ), peexp) ->
       match_exp sexp psexp
       && match_exp eexp peexp
     | Range (sexp, Some stepexp, eexp), Range (psexp, Some pstepexp, peexp) ->
@@ -188,7 +197,7 @@ let matches stmt pat =
   match_stmt stmt pat, memory
 
 let search ast pat =
-  let wildcard = ghost (Exp (ghost (Var (ghost "%%")))) in
+  let wildcard = ghost (Exp (ghost (Var (ghost "%?")))) in
   let ppat = ghost (Seq ([ wildcard ] @ pat @ [ wildcard ])) in
   let result = ref [] in
   let rec search_seq acc ast pat =
@@ -270,10 +279,10 @@ let search_in_source pattern source =
         printf "Matched groups:\n" ;
         List.iter
           (fun (n, stmt) ->
-             Printf.printf " - %%%i: " n ;
+             Printf.printf " - %s = " n ;
              Pretty.compact_output stdout [ stmt ] ;
              printf "\n")
-          (List.sort compare mem) ;
+          (List.rev mem) ;
       end)
     places
 
@@ -312,14 +321,14 @@ let main () =
     Where <patterns> is a scilab code extract with optional jokers\n\
     \  - %% means any single expression\n\
     \  - %_ means any (possibly empty) sequence of expressions\n\
-    \  If a pattern is followed by a number (%%1, %%_3, ...), the matched expression\n\
-    \  or sequence is stored in a correspondingly numbered memory cell.\n\
+    \  If an identifier is placed between the % and the ?, (%1?, %xy?, ...),\n\
+    \  the matched expression or sequence is stored in a correspondingly named memory cell.\n\
     \  It can then be reused in a -replace pattern or displayed using -show-groups.\n\
     Options:" ;
   in
   Arg.parse options (cli_input_anon sources) usage_msg ;
   let parse_pattern pattern =
-    let pattern = parse_string "pattern" pattern in
+    let pattern = parse_string ~allow_patterns:true "pattern" pattern in
     if !ScilintOptions.print_ast then begin
       printf "Raw syntax tree of pattern:\n" ;
       Sexp.pretty_output stdout pattern ;

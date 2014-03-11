@@ -564,6 +564,7 @@ end
 module ParserInternals : sig
   (** Returns the list of warnings along with the ast. *)
   val parse :
+    ?allow_patterns:bool ->
     ?allow_toplevel_exprs:bool ->
     ScilabStreamReader.state -> ScilabParserAst.source ->
     ScilabParserAst.ast
@@ -646,11 +647,15 @@ end = struct
       if peek state >= Char.chr 128 then exec utf state else false)
   let ident =
     let spchars_first = "_%#?$!" in
-    let spchars_next = "_%#?$!" ^ '0' -- '9' in
-    seq [ 
+    let spchars_next = "_#?$!" ^ '0' -- '9' in
+    seq [
       (any_of ('a'--'z' ^ 'A'--'Z' ^ spchars_first) ||| utf_opt) ;
       star (any_of ('a'--'z' ^ 'A'--'Z' ^ spchars_next) ||| utf_opt) ]
     ||| char ':'
+  let wildcard =
+    seq [ char '%' ;
+          star (any_of ('a' -- 'z' ^ 'A' -- 'Z' ^ '0' -- '9' ^ "_")) ;
+          char '?' ; maybe (char '?') ]
   let unop = any_of "@~-+"
   let binop =
     alts [
@@ -699,6 +704,7 @@ end = struct
     in_function : bool ; (* for parsing toplevel expresions or shell calls *)
     allow_toplevel_exprs : bool ; (* if false, toplevel phrases starting with
                                      an ident are always parsed as shell calls *)
+    allow_patterns : bool ; (* if true, parses scifind's pattern syntax *)
     in_loop : bool ; (* for warning about breaks *)
     next : context option ; (* link to the previous / upper context frame *)
   }
@@ -745,6 +751,7 @@ end = struct
   let push kwd ?in_matrix ?in_function ?in_loop ctx =
     { kwd ; src = ctx.src ; st = ctx.st ; next = Some ctx ;
       allow_toplevel_exprs = ctx.allow_toplevel_exprs ;
+      allow_patterns = ctx.allow_patterns ;
       in_matrix = (match in_matrix with None -> ctx.in_matrix | Some v -> v) ;
       in_function = (match in_function with None -> ctx.in_function | Some v -> v) ;
       in_loop = (match in_loop with None -> ctx.in_loop | Some v -> v) }
@@ -1052,14 +1059,48 @@ end = struct
     in
     skip []
 
+  and parse_wildcard_params pctx var =
+    let cp = checkpoint pctx.st in
+    if not pctx.in_matrix then discard spaces pctx.st ;
+    if read pctx.st = '{' then
+      let ctx = push ("{", here pctx.st) pctx in
+      discard spaces ctx.st ;
+      let cp = checkpoint ctx.st in
+      let rec drop_end nb =
+        match fst (drop_token ctx) with
+        | "{" -> drop_end (succ nb)
+        | "}" when nb > 0 -> drop_end (pred nb)
+        | "}" | "\000" | "\n" -> ()
+        | _ -> drop_end nb
+      in
+      if exec ident ctx.st then
+        match fst (extract_from ctx.st cp) with
+        | unknown ->
+          let warn = Warning (W ("PAT", "Unknown pattern specifier " ^ unknown)) in
+          { var with meta = ((ctx.src, from ctx.st cp), warn) :: var.meta }
+      else
+        let warn = Warning (W ("PAT", "Unrecognized pattern parameter")) in
+        { var with meta = ((ctx.src, from ctx.st cp), warn) :: var.meta }
+    else begin
+      restore pctx.st cp ;
+      var
+    end
+
   and parse_shell_call ctx =
-    let cp = checkpoint ctx.st in
-    if exec ident ctx.st then
-      let var = var_descr (extract_from ctx.st cp) ctx in
+    let parse_args var =
       let args = parse_shell_args ctx in
       let nargs = List.map (fun n -> (None, n)) args in
       let call = descr_for_seq (Call (var, nargs, Shell)) (var :: args) in
       descr_exp call
+    in
+    let cp = checkpoint ctx.st in
+    if exec wildcard ctx.st then
+      let var = var_descr (extract_from ctx.st cp) ctx in
+      let var = parse_wildcard_params ctx var in
+      parse_args var
+    else if exec ident ctx.st then
+      let var = var_descr (extract_from ctx.st cp) ctx in
+      parse_args var
     else
       descr_exp (parse_toplevel_expr ctx)
 
@@ -1651,6 +1692,15 @@ end = struct
             | _ -> []
           in
           transpose loc (descr ~warns (Num (float_of_string fs)) f_bounds ctx) eacc
+	else if exec wildcard ctx.st then
+          let var = var_descr (extract_from ctx.st cp) ctx in
+          let var = parse_wildcard_params ctx var in
+          if exec (before_field_dot ||| before_paren ctx.in_matrix) ctx.st then 
+            (* TODO: warn about spaces *)
+            let expr = parse_extraction var ctx in
+            transpose loc expr eacc
+          else
+            transpose loc var eacc
 	else if exec ident ctx.st then
           let var = var_descr (extract_from ctx.st cp) ctx in
           if exec (before_field_dot ||| before_paren ctx.in_matrix) ctx.st then 
@@ -1817,10 +1867,10 @@ end = struct
       let warns = [ snd loc, Drop ; snd loc, Recovered ("too many ':'") ] in 
       descr_for_seq ~warns (Range (l, Some m, r)) [ l ; r ], term
 
-  let parse ?(allow_toplevel_exprs = false) state src =
+  let parse ?(allow_patterns = false) ?(allow_toplevel_exprs = false) state src =
     let ctx = { src ; kwd = ("program", ((0,0), (0,0))) ; st = state ;
                 in_matrix = false ; in_loop = false ; in_function = false ;
-                next = None ; allow_toplevel_exprs } in
+                next = None ; allow_toplevel_exprs ; allow_patterns } in
     let ast, _ = parse_statements ctx in
     ast
 end
@@ -1832,27 +1882,27 @@ end
     AST is partial or the parser made non trivial decisions to build
     it. This error resilient parsing should only be used by tools to
     be able to give some information even on incomplete files. *)
-let parse_file ?(allow_toplevel_exprs = false) name =
+let parse_file ?(allow_patterns = false) ?(allow_toplevel_exprs = false) name =
   let chan = open_in name in
   let reader = ScilabStreamReader.channel_reader chan in
   let res = ParserInternals.parse
-	      ~allow_toplevel_exprs
-	      reader (ScilabParserAst.File name) in
+      ~allow_patterns ~allow_toplevel_exprs
+      reader (ScilabParserAst.File name) in
   close_in chan ;
   res
 
 (** Builds an AST from the program text contained in the given
     string. See {!parse_file} for a disclaimer. *)
-let parse_string ?(allow_toplevel_exprs = true) name str =
+let parse_string ?(allow_patterns = false) ?(allow_toplevel_exprs = true) name str =
   let reader = ScilabStreamReader.string_reader str in
   ParserInternals.parse
-    ~allow_toplevel_exprs
+    ~allow_patterns ~allow_toplevel_exprs
     reader (ScilabParserAst.String (name, str))
 
 (** Builds an AST from the program text contained in the given
     string. See {!parse_file} for a disclaimer. *)
-let parse_exec_string ?(allow_toplevel_exprs = false) source str =
+let parse_exec_string ?(allow_patterns = false) ?(allow_toplevel_exprs = false) source str =
   let reader = ScilabStreamReader.string_reader str in
   ParserInternals.parse
-    ~allow_toplevel_exprs
+    ~allow_patterns ~allow_toplevel_exprs
     reader (ScilabParserAst.Eval_string source)
