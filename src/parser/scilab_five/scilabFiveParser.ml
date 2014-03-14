@@ -618,9 +618,9 @@ end = struct
   let before_field_dot =
     seq [ star space ; phantom (seq [ char '.' ; any_but "*^/\\'" ]) ]
   let colon_op = seq [ star space ; char ':' ; star space ]
-  let before_paren =
-    let in_matrix = phantom (char '(')
-    and out_of_matrix = seq [ star space ; phantom (char '(') ]
+  let before_lax_paren =
+    let in_matrix = phantom (char '(' ||| char '[')
+    and out_of_matrix = seq [ star space ; phantom (char '(' ||| char '[') ]
     in function true -> in_matrix | false -> out_of_matrix
   let after_equal = seq [ star space ; char '=' ]
   let float =
@@ -670,7 +670,7 @@ end = struct
             phantom (any_but ('0'--'9')) ] ;
       seq [ char '.' ; star space ; any_of "*/\\^" ] ]
   let shell_call_start =
-    seq [ ident ; spaces ; phantom (any_but ".-/+*&|<>=,;\n\000^") ]
+    seq [ ident ; plus space ; phantom (any_but ".-/+*&|<>=,;\n\000^") ]
 
   let drop_spaces op bounds =
     (* clean spaces in element wise and kronecker operators *)
@@ -1024,7 +1024,10 @@ end = struct
           | 'c', "catch" -> terminate id cp [ "try" ] ctx
           | _ (* not a keyword *) ->
             (* detect injections "a (expr) = ... " *)
-            if exec (before_paren false) ctx.st then
+            if exec (seq [ plus space ; phantom (char '[') ]) ctx.st then
+              (* specific hack for handling x[3] and x [3] differently *)
+	      (restore ctx.st cp ; `Stmt (parse_shell_call ctx))
+            else if exec (before_lax_paren false) ctx.st then
               let lexpr = parse_extraction (var_descr id ctx) ctx in
               if exec empty_instr ctx.st then
                 `Stmt (descr_exp lexpr)
@@ -1034,7 +1037,7 @@ end = struct
                 let phrase = Assign ([ lexpr ], expr) in
                 `Stmt (descr phrase (fst id_bounds, point ctx.st) ctx)
               else
-                (* '(' read -> parse as expr, not shell call *)
+                (* 'f (...' -> parse as expr, not shell call *)
                 (restore ctx.st cp ; `Stmt (descr_exp (parse_toplevel_expr ctx)))
             else default true
       else default false
@@ -1164,8 +1167,16 @@ end = struct
     else expr
 
   and parse_extraction lexpr ctx =
-    if exec (before_paren ctx.in_matrix) ctx.st then
-      let args, warns = parse_args (push ~in_matrix:false (save any ctx.st) ctx) in
+    if exec (before_lax_paren ctx.in_matrix) ctx.st then
+      let paren, bounds as tok = save any ctx.st in
+      let args, warns = parse_args (push ~in_matrix:false tok ctx) in
+      let warns =
+        if paren = "[" then
+          (bounds, Recovered "invalid argument delimiter")
+          :: (bounds, Replace "(")
+          :: warns
+        else warns
+      in
       let _, (sloc, _) = lexpr.loc in
       let expr = Call (lexpr, args, Tuplified) in
       let expr = descr ~warns expr (sloc, point ctx.st) ctx in
@@ -1621,6 +1632,9 @@ end = struct
       match term with
       | (`Fake | `Term _), ")" ->
         List.rev (arg :: acc), ws
+      | (`Fake | `Term _), "]" ->
+        let w = here ctx.st, Recovered "invalid argument delimiter" in
+        List.rev (arg :: acc), w :: ws
       | (`Fake | `Term _), "," ->
         loop (arg :: acc) ws
       | (`Fake | `Term _), "\000" ->
@@ -1724,7 +1738,7 @@ end = struct
 	else if exec wildcard ctx.st then
           let var = string_descr (extract_from ctx.st cp) ctx in
           let var = parse_wildcard_params ctx var in
-          if exec (before_field_dot ||| before_paren ctx.in_matrix) ctx.st then 
+          if exec (before_field_dot ||| before_lax_paren ctx.in_matrix) ctx.st then 
             (* TODO: warn about spaces *)
             let expr = parse_extraction var ctx in
             transpose loc expr eacc
@@ -1732,7 +1746,7 @@ end = struct
             transpose loc var eacc
 	else if exec ident ctx.st then
           let var = var_descr (extract_from ctx.st cp) ctx in
-          if exec (before_field_dot ||| before_paren ctx.in_matrix) ctx.st then 
+          if exec (before_field_dot ||| before_lax_paren ctx.in_matrix) ctx.st then 
             (* TODO: warn about spaces *)
             let expr = parse_extraction var ctx in
             transpose loc expr eacc
