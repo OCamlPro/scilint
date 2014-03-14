@@ -84,8 +84,7 @@ let collect_messages ast =
   let res = ref [] in
   let collector = object
     inherit ast_iterator
-    method! descr : 'a.'a descr -> unit = fun descr ->
-      res := descr.meta :: !res
+    method! meta meta = res := meta :: !res
   end in
   collector # ast ast ;
   List.flatten !res

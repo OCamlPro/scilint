@@ -146,7 +146,7 @@ SCILINT_DOC_GEN_CMOS = $(SCILINT_DOC_GEN_MLS:.ml=.cmo)
 ########## COMMON FLAGS
 
 OCAML_INCL= \
-  $(shell ocamlfind query -i-format pprint uutf) \
+  -package 'unix,uutf,pprint,re,re.posix' \
   -I src/common -I src/input \
   -I src/ast -I src/parser/scilab_five \
   -I src/parser/scilab_six \
@@ -156,35 +156,35 @@ OCAML_INCL= \
 OPTFLAGS = -g -fPIC $(OCAML_INCL)
 
 scilint.asm : $(SCILINT_CMXS)
-	$(OCAMLOPT) -package 'unix,uutf,pprint' -linkpkg \
+	$(OCAMLOPT) $(OCAML_INCL) -linkpkg \
 	  -o $@ $(SCILINT_CMXS)
 
 scintax.asm : $(SCINTAX_CMXS)
-	$(OCAMLOPT) $(OPTFLAGS) -package 'unix,uutf,pprint'  -linkpkg \
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCINTAX_CMXS)
 
 scifind.asm : $(SCIFIND_CMXS)
-	$(OCAMLOPT) $(OPTFLAGS) -package 'unix,uutf,pprint'  -linkpkg \
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCIFIND_CMXS)
 
 scilint_doc_gen.asm : $(SCILINT_DOC_GEN_CMXS)
-	$(OCAMLOPT) $(OPTFLAGS) -package 'unix'  -linkpkg \
+	$(OCAMLOPT) $(OPTFLAGS) -package 'unix' -linkpkg \
           -o $@ $(SCILINT_DOC_GEN_CMXS)
 
 scilint.byte : $(SCILINT_CMOS)
-	$(OCAMLC) -package 'unix,uutf,pprint' -linkpkg \
+	$(OCAMLC) $(OCAML_INCL) -linkpkg \
 	  -o $@ $(SCILINT_CMOS)
 
 scintax.byte : $(SCINTAX_CMOS)
-	$(OCAMLC) $(OCAML_INCL) -package 'unix,uutf,pprint'  -linkpkg \
+	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCINTAX_CMOS)
 
 scifind.byte : $(SCIFIND_CMOS)
-	$(OCAMLC) $(OCAML_INCL) -package 'unix,uutf,pprint'  -linkpkg \
+	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCIFIND_CMOS)
 
 scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
-	$(OCAMLC) $(OCAML_INCL) -package 'unix'  -linkpkg \
+	$(OCAMLC) $(OCAML_INCL) -package 'unix' -linkpkg \
           -o $@ $(SCILINT_DOC_GEN_CMOS)
 
 .depend_ocaml: $(SCILINT_DOC_GEN_MLS) $(SCILINT_DOC_GEN_MLIS) \

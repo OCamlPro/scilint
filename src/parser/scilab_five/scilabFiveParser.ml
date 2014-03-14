@@ -836,27 +836,31 @@ end = struct
        character string consisting of a [quote]. Delim could be used to
        display a warning in case of inconsistent delimiters. *)
     let cp = checkpoint ctx.st in
-    let opn, _ = save string_delim ctx.st in
-    let buf = Buffer.create 80 in
-    let rec loop () =
-      match read ctx.st with
-      | '\'' | '"' as cls ->
-        (match peek ctx.st with
-         | '\'' | '"' as c ->
-           advance_1 ctx.st ; Buffer.add_char buf c ; loop ()
-         | _ ->
-           let warns =
-             if opn.[0] <> cls then
-               [ from ctx.st cp, Warning (S Inconsistent_string_delimiters) ]
-             else []
-           in
-           descr ~warns (String (Buffer.contents buf)) (from ctx.st cp) ctx)
-      | '\000' | '\n' ->
-        let warns = [ from ctx.st cp, Recovered "unterminated string" ] in
-        descr ~warns Error (from ctx.st cp) ctx
-      | c ->
-        Buffer.add_char buf c ; loop ()
-    in loop ()
+    if not (exec string_delim ctx.st) then
+      let warns = [ from ctx.st cp, Recovered "string expected" ] in
+      descr ~warns Error (from ctx.st cp) ctx
+    else
+      let opn, _ = extract_from ctx.st cp in
+      let buf = Buffer.create 80 in
+      let rec loop () =
+        match read ctx.st with
+        | '\'' | '"' as cls ->
+          (match peek ctx.st with
+           | '\'' | '"' as c ->
+             advance_1 ctx.st ; Buffer.add_char buf c ; loop ()
+           | _ ->
+             let warns =
+               if opn.[0] <> cls then
+                 [ from ctx.st cp, Warning (S Inconsistent_string_delimiters) ]
+               else []
+             in
+             descr ~warns (String (Buffer.contents buf)) (from ctx.st cp) ctx)
+        | '\000' | '\n' ->
+          let warns = [ from ctx.st cp, Recovered "unterminated string" ] in
+          descr ~warns Error (from ctx.st cp) ctx
+        | c ->
+          Buffer.add_char buf c ; loop ()
+      in loop ()
 
   let drop_token ctx =
     let cp = checkpoint ctx.st in
@@ -1073,19 +1077,32 @@ end = struct
         | "}" | "\000" | "\n" -> ()
         | _ -> drop_end nb
       in
-      if exec ident ctx.st then
+      try
+        if not (exec ident ctx.st) then failwith "expecting a pattern specifier" ;
         match fst (extract_from ctx.st cp) with
+        | "var" ->
+          discard spaces ctx.st ;
+          if not (exec (char ',') ctx.st) then failwith "bad pattern parameters" ;
+          discard spaces ctx.st ;
+          let regexp =
+            match (parse_string ctx).cstr with
+            | String s -> s
+            | _ -> failwith "bad pattern parameter, expecting a regular expression"
+          in
+          drop_end 0 ;
+          descr (Var { var with cstr = var.cstr ^ regexp }) (from ctx.st cp) ctx
         | unknown ->
-          let warn = Warning (W ("PAT", "Unknown pattern specifier " ^ unknown)) in
-          { var with meta = ((ctx.src, from ctx.st cp), warn) :: var.meta }
-      else
-        let warn = Warning (W ("PAT", "Unrecognized pattern parameter")) in
-        { var with meta = ((ctx.src, from ctx.st cp), warn) :: var.meta }
+          drop_end 0 ;
+          failwith ("unknown pattern specifier " ^ unknown)
+      with Failure message -> 
+        drop_end 0 ;
+        let warns = [ from ctx.st cp, Recovered message ] in
+        descr ~warns (Var var) (from ctx.st cp) ctx
     else begin
       restore pctx.st cp ;
-      var
+      descr (Var var) (snd var.loc) pctx
     end
-
+    
   and parse_shell_call ctx =
     let parse_args var =
       let args = parse_shell_args ctx in
@@ -1095,7 +1112,7 @@ end = struct
     in
     let cp = checkpoint ctx.st in
     if exec wildcard ctx.st then
-      let var = var_descr (extract_from ctx.st cp) ctx in
+      let var = string_descr (extract_from ctx.st cp) ctx in
       let var = parse_wildcard_params ctx var in
       parse_args var
     else if exec ident ctx.st then
@@ -1527,21 +1544,33 @@ end = struct
 
 
   and parse_for ctx =
-    let iter = group () in
-    let before_range = seq [ star space ; store iter ident ;
-                             star space ; char '=' ; star space ] in
-    if not (exec before_range ctx.st) then
-      let warns = [ from_last "for" ctx, Recovered "'for' must be followed by an assignment" ] in
-      let res = descr_exp (descr ~warns Error (from_last "for" ctx) ctx) in
-      ignore (parse_seq ctx) ; res
-    else
-      let (n, n_bounds) = extract iter in
-      let msg = "for iterator cannot be a ':'" in
-      let warns = if n = ":" then [ n_bounds, Recovered msg ] else [] in
-      let var = descr ~warns n n_bounds ctx in
-      let range, _ = parse_cond_expr [ "do" ] ctx in
-      let phrases, _ = parse_seq ctx in
-      descr (For (var, range, phrases)) (from_last "for" ctx) ctx
+    discard spaces ctx.st ;
+    let n, n_bounds, warns =
+      let cp = checkpoint ctx.st in
+      if exec wildcard ctx.st then
+        let var = string_descr (extract_from ctx.st cp) ctx in
+        match parse_wildcard_params ctx var with
+        | { cstr = Var { cstr = n } ; loc = _, n_bounds ; meta } ->
+          n, n_bounds, List.map (fun ((_,b), m) -> b, m) meta
+        | { cstr = _ ; loc = _, n_bounds ; meta } ->
+          let meta = List.map (fun ((_,b), m) -> b, m) meta in
+          var.cstr, n_bounds, (n_bounds, Recovered "inappropriate pattern") :: meta
+      else if exec ident ctx.st then
+        let n, n_bounds = extract_from ctx.st cp in
+        n, n_bounds, []
+      else "missing", here ctx.st, [ here ctx.st, Recovered "missing for iterator" ]
+    in
+    let msg = "for iterator cannot be a ':'" in
+    let warns = if n = ":" then (n_bounds, Recovered msg) :: warns else warns in
+    let var = descr ~warns n n_bounds ctx in    
+    let warns =
+      if not (exec (seq [ spaces ; char '=' ; spaces ]) ctx.st) then
+        [ here ctx.st, Recovered "missing = after for iterator" ]
+      else []
+    in
+    let range, _ = parse_cond_expr [ "do" ] ctx in
+    let phrases, _ = parse_seq ctx in
+    descr ~warns (For (var, range, phrases)) (from_last "for" ctx) ctx
 
   and parse_identity_args ctx =
     let rec loop acc ws =
@@ -1693,7 +1722,7 @@ end = struct
           in
           transpose loc (descr ~warns (Num (float_of_string fs)) f_bounds ctx) eacc
 	else if exec wildcard ctx.st then
-          let var = var_descr (extract_from ctx.st cp) ctx in
+          let var = string_descr (extract_from ctx.st cp) ctx in
           let var = parse_wildcard_params ctx var in
           if exec (before_field_dot ||| before_paren ctx.in_matrix) ctx.st then 
             (* TODO: warn about spaces *)

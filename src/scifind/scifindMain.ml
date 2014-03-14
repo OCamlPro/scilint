@@ -10,43 +10,41 @@
 open ScilabParserAst
 open ScilabFiveParser
 open ScilabLocations
+open ScilintWarning
 open Printf
 
-(*
-  Ideas:
-    - add a flag to the parser to accept patterns as identifiers.
-    - build a specific Ast in a second step, with var = Ident of string | Pattern of ...
-    - patterns :
-        wildcard:              %? %<id>?
-        repeat:                %?{rep, pat} %?{rep, pat, <min>, <max>}
-        alt:                   %?{or, pat, pat, ...}
-        group:                 %?{seq, pat, ..., pat}
-        string:                %?{str, 'regexp'}
-        variable:              %?{var, 'regexp'}
-        sequence wildcard:     %?? %<id>?? (as %?{rep, %?} %<id>?{rep, %?})
-*)
-
+(** Option set if matched groups are to be displayed *)
 let print_memory = ref false
 let print_memory_arg =
   ("-show-groups", Arg.Set print_memory,
    "Display the sub-expressions matched by named patterns")
 
+(** Tests if a statement matches a pattern and returns the matched
+    groups as a hash table. *)
 let matches stmt pat =
   let memory = ref [] in
-  let memorize n stmt =
+  let memorize kind n stmt =
     let len = String.length n in
     if len > 0 && n.[0] = '%' && String.contains n '?' then
       let pos = String.index n '?' in
       let name = String.sub n 1 (pos - 1) in
       let format = String.sub n (pos + 1) (len - pos - 1) in
-      if name <> "" then memory := (name, stmt) :: !memory ;
-      true
+      if format = "" then begin
+        if name <> "" then memory := (name, stmt) :: !memory ; true
+      end else match stmt.cstr, kind with
+        | Exp { cstr = Var { cstr = vname } }, `var
+          when Re.execp (Re_posix.(compile Re.(seq [ bos ; re format ; eos ]))) vname ->
+          if name <> "" then memory := (name, stmt) :: !memory ; true
+        | Exp { cstr = String ctns }, `string
+          when Re.execp (Re_posix.(compile Re.(seq [ bos ; re format ; eos ]))) ctns ->
+          if name <> "" then memory := (name, stmt) :: !memory ; true
+        | _ -> false
     else false
   in
   let rec match_stmt stmt pat =
     match stmt.cstr, pat.cstr with
-    | _, Exp { cstr = Var { cstr = n } } when memorize n stmt -> true
-    | _, Seq [ { cstr = Exp { cstr = Var { cstr = n } } } ]  when memorize n stmt -> true
+    | _, Exp { cstr = Var { cstr = n } } when memorize `var n stmt -> true
+    | _, Seq [ { cstr = Exp { cstr = Var { cstr = n } } } ]  when memorize `var n stmt -> true
     | Seq (shd :: stl), Seq ({ cstr = Exp { cstr = Var { cstr = "%?" } } } :: ptl) ->
       match_stmt stmt ({ pat with cstr = Seq ptl })
       || match_stmt ({ stmt with cstr = Seq stl }) pat
@@ -145,10 +143,9 @@ let matches stmt pat =
     | [], [] -> true
     | _, _ -> false
   and match_var name pat =
-    memorize pat.cstr { name with cstr = Exp { name with cstr = Var name } }
-    || name.cstr = pat.cstr
+    memorize `var pat.cstr { name with cstr = Exp { name with cstr = Var name } }
   and match_string stmt ctns pat =
-    memorize pat stmt
+    memorize `string pat stmt
     || ctns = pat
   and match_rows rows prows =
     (* TODO: better wildcards ? *)
@@ -162,7 +159,7 @@ let matches stmt pat =
     match exp.cstr, pat.cstr with
     | Error, _ -> false
     | _, Error -> false
-    | _, Var { cstr = n } when memorize n stmt -> true
+    | _, Var { cstr = n } when memorize `var n stmt -> true
     | Call (name, args, kind), Call (pname, pargs, pkind) ->
       match_exp name pname
       && match_args args pargs
@@ -196,6 +193,9 @@ let matches stmt pat =
   in
   match_stmt stmt pat, memory
 
+(** Crawls an ast searching for occurences of a pattern and return
+    these occurences as statement nodes with the hash tables of
+    matched groups. *)
 let search ast pat =
   let wildcard = ghost (Exp (ghost (Var (ghost "%?")))) in
   let ppat = ghost (Seq ([ wildcard ] @ pat @ [ wildcard ])) in
@@ -252,7 +252,7 @@ let search ast pat =
   !result
 
 
-(** called by the main on each code source passed on th CLI *)
+(** Called by the main on each code source passed on th CLI *)
 let search_in_source pattern source =
   let parse () =
     match source with
@@ -312,23 +312,52 @@ let interactive pattern =
 let main () =
   let open ScilintOptions in
   let sources : source list ref = ref [] in
+  let patterns_usage =
+      (List.map (fun (k, ex) -> Printf.sprintf "  %-20s %s" (k ^ ":") ex)
+         [ "anonymous wildcard", "%? (matches any single expression)" ;
+           "named wildcard", "%<id>? (useful for -replace or -show-groups)" ;
+           "sequence wildcard", "%?? %<id>?? (shortcut for %?{rep, %?} %<id>?{rep, %?})" ;
+           "repetition", "%?{rep, pat} %?{rep, <wildcard>, <min>, <max>}" ;
+           "alternatives", "%?{or, <wildcard>, <wildcard>, ...}" ;
+           "sequence", "%?{seq, <wildcard>, ..., <wildcard>}" ;
+           "string", "%?{str, '<regexp>'}" ;
+           "variable", "%?{var, '<regexp>'}" ])
+  in
   let options =
     [ print_ast_arg ; pretty_print_arg ; print_memory_arg ; print_time_arg ;
       format_arg ; toplevel_mode_arg ; cli_input_arg sources ]
   and usage_msg =
-    "Hello, I am Scifind, a search & replace tool for Scilab.\n\
-     Usage: scifind <pattern> [OPTIONS] <file1.sci> <file2.sci> ...\n\
-    Where <patterns> is a scilab code extract with optional jokers\n\
-    \  - %% means any single expression\n\
-    \  - %_ means any (possibly empty) sequence of expressions\n\
-    \  If an identifier is placed between the % and the ?, (%1?, %xy?, ...),\n\
-    \  the matched expression or sequence is stored in a correspondingly named memory cell.\n\
-    \  It can then be reused in a -replace pattern or displayed using -show-groups.\n\
-    Options:" ;
+    String.concat "\n"
+      ([ "Hello, I am Scifind, a search & replace tool for Scilab." ;
+         "Usage: scifind <pattern> [OPTIONS] <file1.sci> <file2.sci> ..." ;
+         "Examples:" ;
+         "  - find all assignemts of x" ;
+         "    scifind 'x = %?' *.sci" ;
+         "  - find all calls to disp with exactly two arguments" ;
+         "    scifind 'disp (%?, %?)' *.sci" ;
+         "  - find all calls to disp with two or more arguments" ;
+         "    scifind 'disp (%?, %??)' *.sci" ;
+         "  - find all strings that contains sci (using a regexp)" ;
+         "    scifind '%?{str, \".*bob.*\"}' *.sci" ;
+         "Advanced examples:" ;
+         "  - find all tests using the '<' operator and display the operands" ;
+         "    scifind 'if %lexp? < %rexp?, then %?, else %?, end' -pretty -show-groups *.sci" ;
+         "  - find and display all for iterators that do not start with i, j or k" ;
+         "    scifind 'for %idx?{var, \"[^ijk].*\"} = %?, do %?, end ' -pretty -show-groups *.sci" ;
+         "  - find all loops from 1 to something" ;
+         "    scifind 'for %? = 1 : %? : %?, do %?, end ' -pretty -show-groups *.sci" ;
+        "The <pattern> is a scilab code extract with optional wildcards as follows:" ]
+       @ patterns_usage
+       @ [ "Regular expressions must be written in posix style." ;
+           "Options:" ])
   in
   Arg.parse options (cli_input_anon sources) usage_msg ;
   let parse_pattern pattern =
     let pattern = parse_string ~allow_patterns:true "pattern" pattern in
+    if !print_messages then begin
+      let messages = collect_messages pattern in
+      output_messages !format messages stdout
+    end ;
     if !ScilintOptions.print_ast then begin
       printf "Raw syntax tree of pattern:\n" ;
       Sexp.pretty_output stdout pattern ;
