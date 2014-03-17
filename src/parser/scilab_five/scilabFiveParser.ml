@@ -780,6 +780,7 @@ end = struct
     | '(', _ -> ")"
     | '[', _ -> "]"
     | '{', _ -> "}"
+    | 'p',"pattern" -> "}"
     | 'e',"expression" -> ";"
     | 'f', "function" -> "endfunction"
     | 'p', "program" -> "\000"
@@ -802,9 +803,10 @@ end = struct
       if List.mem (fst ctx.kwd) kwds then
         (* we got a valid terminator *)
         `End (fst term, [])
-      else
-        (* do not consume the keyword for piggybactracking and
-           produce a warning and return a fake terminator *)
+      else if (fst ctx.kwd) = "expression" then
+        (restore ctx.st cp ; `End (";", []))
+      else (* do not consume the keyword for piggybactracking and
+              produce a warning and return a fake terminator *)
         let closer = closer (fst ctx.kwd) in
         restore ctx.st cp ;
         `End (closer,
@@ -822,6 +824,8 @@ end = struct
        statement to treat) *)
     if List.mem (fst ctx.kwd) kwds then
       (`Term (snd term), fst term, `Ok)
+    else if (fst ctx.kwd) = "expression" then
+      (restore ctx.st cp ; (`Fake, ";", `Ok))
     else
       let closer = closer (fst ctx.kwd) in
       restore ctx.st cp ;
@@ -901,7 +905,7 @@ end = struct
 	if ctx.in_function || not ctx.allow_toplevel_exprs then
 	  (* nothing worked: parse as a shell call *)
 	  `Stmt (parse_shell_call ctx)
-      else 
+      else
         (* if we're at toplevel, it could also be an expr *)
         let as_expr = parse_toplevel_expr ctx in
         match as_expr.cstr with
@@ -923,6 +927,19 @@ end = struct
     match peek ctx.st with
     | '\n' | ',' | ';' -> advance_1 ctx.st ; parse_statement ctx
     | '\000' -> terminate ("\000", from ctx.st cp) cp [ "program" ] ctx
+    | '}' ->
+      if inside [ "pattern" ] ctx then
+        (advance_1 ctx.st ; `End ("}", []))
+      else
+        let text, bounds = drop_token ctx in
+        let msg = sprintf "unexpected token %S" text in
+        (match parse_statement ctx with
+         | `End (kwd, ws) ->
+           let warns = [ bounds, Drop ; bounds, Recovered msg ] in
+           `End (kwd, warns @ ws)
+         | `Stmt stmt ->
+           let warns = [ (ctx.src, bounds), Drop ; (ctx.src, bounds), Recovered msg ] in
+           `Stmt { stmt with meta = warns @ stmt.meta })
     | '/' when peek_ahead ctx.st 1 = '/' ->
       let (text, bounds) = save comment ctx.st in
       `Stmt (descr (Comment text) bounds ctx)
@@ -949,8 +966,7 @@ end = struct
           loop (expr :: acc)
       in loop []
     | c ->
-      if exec ident ctx.st then
-        let id_text, id_bounds as id = extract_from ctx.st cp in
+      let rec after_ident ((id_text, id_bounds) as id) =
         if peek ctx.st = '.' then
           (* an extraction is performed if a dot follows an ident
                directly ("x.f = 3" but not "x . f = 3") even in
@@ -1023,25 +1039,38 @@ end = struct
           | 'c', "case" -> terminate id cp [ "select" ] ctx
           | 'c', "catch" -> terminate id cp [ "try" ] ctx
           | _ (* not a keyword *) ->
-            (* detect injections "a (expr) = ... " *)
             if exec (seq [ plus space ; phantom (char '[') ]) ctx.st then
               (* specific hack for handling x[3] and x [3] differently *)
 	      (restore ctx.st cp ; `Stmt (parse_shell_call ctx))
             else if exec (before_lax_paren false) ctx.st then
-              let lexpr = parse_extraction (var_descr id ctx) ctx in
-              if exec empty_instr ctx.st then
-                `Stmt (descr_exp lexpr)
-              else if exec after_equal ctx.st && peek ctx.st <> '=' then
-                (* parse as an assignment *)
-                let expr = parse_toplevel_expr ctx in
-                let phrase = Assign ([ lexpr ], expr) in
-                `Stmt (descr phrase (fst id_bounds, point ctx.st) ctx)
-              else
-                (* 'f (...' -> parse as expr, not shell call *)
-                (restore ctx.st cp ; `Stmt (descr_exp (parse_toplevel_expr ctx)))
+              after_exp (var_descr id ctx) (fst id_bounds)
             else default true
+      and after_exp exp sloc =
+        (* detect injections "a (expr) = ... " *)
+        let lexpr = parse_extraction exp ctx in
+        if exec empty_instr ctx.st then
+          `Stmt (descr_exp lexpr)
+        else if exec after_equal ctx.st && peek ctx.st <> '=' then
+          (* parse as an assignment *)
+          let expr = parse_toplevel_expr ctx in
+          let phrase = Assign ([ lexpr ], expr) in
+          `Stmt (descr phrase (sloc, point ctx.st) ctx)
+        else
+          (* 'f (...' -> parse as expr, not shell call *)
+          (restore ctx.st cp ; `Stmt (descr_exp (parse_toplevel_expr ctx)))
+      in
+      if exec wildcard ctx.st then
+        let var = string_descr (extract_from ctx.st cp) ctx in
+        match parse_wildcard_params_for_stmt ctx var with
+        | { cstr = Exp { cstr = Var var } } ->
+          after_ident (var.cstr, snd var.loc)
+        | { cstr = Exp exp } ->
+          after_exp exp (fst (snd var.loc))
+        | stmt -> `Stmt stmt
+      else if exec ident ctx.st then
+        after_ident (extract_from ctx.st cp)
       else default false
-    
+
   and parse_shell_args ctx =
     let rec skip acc =
       match peek ctx.st with
@@ -1066,13 +1095,15 @@ end = struct
     in
     skip []
 
-  and parse_wildcard_params pctx var =
+  and parse_wildcard_params
+    : 'a. context -> var ->
+      (context -> string -> (int -> unit) -> 'a) ->
+      (exp -> 'a) -> 'a
+     = fun pctx var seq_cb wrap_cb ->
     let cp = checkpoint pctx.st in
     if not pctx.in_matrix then discard spaces pctx.st ;
     if read pctx.st = '{' then
-      let ctx = push ("{", here pctx.st) pctx in
-      discard spaces ctx.st ;
-      let cp = checkpoint ctx.st in
+      let ctx = push ("pattern", here pctx.st) pctx in
       let rec drop_end nb =
         match fst (drop_token ctx) with
         | "{" -> drop_end (succ nb)
@@ -1081,30 +1112,99 @@ end = struct
         | _ -> drop_end nb
       in
       try
+        if var.cstr.[String.length var.cstr - 2] = '?' then
+          failwith "sequence wilcards do not take arguments" ;
+        discard spaces ctx.st ;
+        let cp = checkpoint ctx.st in
         if not (exec ident ctx.st) then failwith "expecting a pattern specifier" ;
         match fst (extract_from ctx.st cp) with
-        | "var" ->
+        | "var" | "str" as spec ->
           discard spaces ctx.st ;
           if not (exec (char ',') ctx.st) then failwith "bad pattern parameters" ;
           discard spaces ctx.st ;
           let regexp =
             match (parse_string ctx).cstr with
             | String s -> s
-            | _ -> failwith "bad pattern parameter, expecting a regular expression"
+            | _ -> failwith "bad pattern parameter, expecting a regexp"
           in
-          drop_end 0 ;
-          descr (Var { var with cstr = var.cstr ^ regexp }) (from ctx.st cp) ctx
-        | unknown ->
-          drop_end 0 ;
-          failwith ("unknown pattern specifier " ^ unknown)
+          discard spaces ctx.st ;
+          (match peek ctx.st with
+           | '}' -> discard any ctx.st
+           | _ -> failwith "too many pattern parameters") ;
+          let cstr = 
+            if spec = "var" then
+              Var { var with cstr = var.cstr ^ regexp }
+            else
+              String (var.cstr ^ regexp)
+          in
+          wrap_cb (descr cstr (from ctx.st cp) ctx)
+        | "rep" | "group" | "or" as kind ->
+          discard spaces ctx.st ;
+          if not (exec (char ',') ctx.st) then failwith "bad pattern parameters" ;
+          discard spaces ctx.st ;
+          seq_cb ctx kind drop_end
+        | unknown -> failwith ("unknown pattern specifier " ^ unknown)
       with Failure message -> 
         drop_end 0 ;
         let warns = [ from ctx.st cp, Recovered message ] in
-        descr ~warns (Var var) (from ctx.st cp) ctx
+        wrap_cb (descr ~warns (Var var) (from ctx.st cp) ctx)
     else begin
       restore pctx.st cp ;
-      descr (Var var) (snd var.loc) pctx
+      wrap_cb (descr (Var var) (snd var.loc) pctx)
     end
+
+  and parse_wildcard_params_for_stmt pctx var =
+    parse_wildcard_params pctx var
+      (fun ctx kind drop_end ->
+         match parse_statements ctx with
+         | [], ("}", _) -> failwith "missing pattern"
+         | stmts, ("}", warns) ->
+           let rec as_exps = function
+             | { cstr = Exp e } :: tl ->
+               (match as_exps tl with
+                | None -> None
+                | Some etl -> Some ((None, e) :: etl))
+             | [] -> Some []
+             | _ -> None
+           in
+           (match as_exps stmts with
+            | None ->
+              descr ~warns
+                (Seq ([ descr_exp (var_descr (var.cstr ^ kind, snd var.loc) ctx) ]
+                      @ stmts
+                      @ [ descr_exp (var_descr ("%end?", snd var.loc) ctx) ]))
+                (from_last "pattern" ctx)
+                ctx
+            | Some exps ->
+              let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) })) in
+              descr_exp (ghost (Call (name, exps, Tuplified))))
+         | _, (_, _) ->
+           drop_end 0 ;
+           failwith "bad pattern parameters")
+      descr_exp
+
+  and parse_wildcard_params_for_exp pctx var =
+    parse_wildcard_params pctx var
+      (fun ctx kind drop_end ->
+         let rec loop acc =
+           let arg, term = parse_expr ctx in
+           let cp = checkpoint ctx.st in
+           match term with
+           | (`Fake | `Term _), "," ->
+             loop ((None, arg) :: acc)
+           | (`Fake | `Term _), "}" ->
+             List.rev ((None, arg) :: acc)
+           | _ ->
+             drop_end 0 ;
+             failwith "bad pattern parameters"
+         in
+         if exec (seq [ star space ; char '}' ]) ctx.st then
+           failwith "missing pattern"
+         else
+           let exps = loop [] in
+           let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) })) in
+           ghost (Call (name, exps, Tuplified)))
+      (fun d -> d)
     
   and parse_shell_call ctx =
     let parse_args var =
@@ -1116,8 +1216,11 @@ end = struct
     let cp = checkpoint ctx.st in
     if exec wildcard ctx.st then
       let var = string_descr (extract_from ctx.st cp) ctx in
-      let var = parse_wildcard_params ctx var in
-      parse_args var
+      let var = parse_wildcard_params_for_stmt ctx var in
+      match var with
+      | { cstr = Exp ({ cstr = Var _ } as var) } ->
+        parse_args var
+      | stmt -> stmt
     else if exec ident ctx.st then
       let var = var_descr (extract_from ctx.st cp) ctx in
       parse_args var
@@ -1150,7 +1253,7 @@ end = struct
     if fst term = `Fake then (
       discard spaces ctx.st ;
       let cp = checkpoint ctx.st in
-      if exec (phantom (any_but ",;\000\n")) ctx.st then
+      if exec (phantom (any_but ",;}\000\n")) ctx.st then
         if exec (ident ||| unop ||| any_of "{[(") ctx.st then begin
           restore ctx.st cp ;
           let pt = checkpoint_point cp in
@@ -1560,7 +1663,7 @@ end = struct
       let cp = checkpoint ctx.st in
       if exec wildcard ctx.st then
         let var = string_descr (extract_from ctx.st cp) ctx in
-        match parse_wildcard_params ctx var with
+        match parse_wildcard_params_for_exp ctx var with
         | { cstr = Var { cstr = n } ; loc = _, n_bounds ; meta } ->
           n, n_bounds, List.map (fun ((_,b), m) -> b, m) meta
         | { cstr = _ ; loc = _, n_bounds ; meta } ->
@@ -1664,7 +1767,8 @@ end = struct
     let terminate opn = terminate_expr (extract_from ctx.st cp) cp opn ctx in
     match read ctx.st with
     | ')' -> terminate [ "(" ]
-    | ']' | '}' -> terminate [ "{" ; "[" ]
+    | ']' -> terminate [ "{" ; "[" ]
+    | '}' -> terminate [ "{" ; "[" ]
     | '\000' -> terminate [ "program" ; "expression" ]
     | ',' -> terminate [ "{" ; "[" ; "(" ; "expression" ]
     | ';' -> terminate [ "{" ; "[" ; "(" ; "expression" ]
@@ -1737,7 +1841,7 @@ end = struct
           transpose loc (descr ~warns (Num (float_of_string fs)) f_bounds ctx) eacc
 	else if exec wildcard ctx.st then
           let var = string_descr (extract_from ctx.st cp) ctx in
-          let var = parse_wildcard_params ctx var in
+          let var = parse_wildcard_params_for_exp ctx var in
           if exec (before_field_dot ||| before_lax_paren ctx.in_matrix) ctx.st then 
             (* TODO: warn about spaces *)
             let expr = parse_extraction var ctx in

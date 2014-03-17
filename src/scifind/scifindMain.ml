@@ -317,9 +317,9 @@ let main () =
          [ "anonymous wildcard", "%? (matches any single expression)" ;
            "named wildcard", "%<id>? (useful for -replace or -show-groups)" ;
            "sequence wildcard", "%?? %<id>?? (shortcut for %?{rep, %?} %<id>?{rep, %?})" ;
-           "repetition", "%?{rep, pat} %?{rep, <wildcard>, <min>, <max>}" ;
-           "alternatives", "%?{or, <wildcard>, <wildcard>, ...}" ;
-           "sequence", "%?{seq, <wildcard>, ..., <wildcard>}" ;
+           "group", "%?{group, <pattern>} %?{group, <pattern>, ..., <pattern>}" ;
+           "repetition", "%?{rep, <pattern>} %?{rep, <pattern>, ..., <pattern>}" ;
+           "alternatives", "%?{or, <pattern>, ..., <pattern>}" ;
            "string", "%?{str, '<regexp>'}" ;
            "variable", "%?{var, '<regexp>'}" ])
   in
