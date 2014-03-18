@@ -1,98 +1,107 @@
 begin library "scilint_common"
   files =  [
   (* - common *)
-    "src/common/scilintManual.ml"
-    "src/common/scilabLocations.ml"
-    "src/common/scilintWarning.mli"
-    "src/common/scilintWarning.ml"
+  begin (subdir = [ "src/common" ])
+    "scilintManual.ml"
+    "scilabLocations.ml"
+    "scilintWarning.mli"
+    "scilintWarning.ml"
+  end
+
   (* - inputs *)
-    "src/input/scilabTypedPrimitives.ml"
-    "src/input/scilabTypedPrimitivesLexer.mll"
-    "src/input/scilabTypedPrimitivesParser.mly"
-    "src/input/scilabTypedPrimitivesLoader.ml"
+  begin (subdir = [ "src/input" ])
+    "scilabTypedPrimitives.ml"
+    "scilabTypedPrimitivesLexer.mll"
+    "scilabTypedPrimitivesParser.mly"
+    "scilabTypedPrimitivesLoader.ml"
+  end
+
   ]
   ocamlyacc = [ "menhir" ]
 end
 
 begin library "scilab_ast"
+  dirname += [ "src/ast" ]
   files = [
-    "src/ast/scilabAst.ml"
-    "src/ast/scilabAstConverter.ml"
-    "src/ast/scilabAstUtils.ml"
-    "src/ast/scilabAstSexpPrinter.ml"
-    "src/ast/scilabAstPrettyPrinter.ml"
-    "src/ast/scilabParserAst.ml"
-    "src/ast/scilabParserAstSerializer.ml"
+    "scilabAst.ml"
+    "scilabAstConverter.ml"
+    "scilabAstUtils.ml"
+    "scilabAstSexpPrinter.ml"
+    "scilabAstPrettyPrinter.ml"
+    "scilabParserAst.ml"
+    "scilabParserAstSerializer.ml"
+
   ]
   requires = [ "pprint" "scilint_common" ]
 end
 
 begin library "scilab_five_parser"
+  dirname += [ "src/parser/scilab_five" ]
   files = [
-    "src/parser/scilab_five/scilabFiveParser.ml"
+    "scilabFiveParser.ml"
   ]
-  requires = [ "scilint_common" "scilab_ast" ]
+  requires = [ "scilab_ast" ]
 end
 
 begin library "scilab_six_parser"
+  dirname += [ "src/parser/scilab_six" ]
   files = [
-    "src/parser/scilab_six/scilabSixParserUtils.ml"
-    "src/parser/scilab_six/scilabSixGenParser.mly"
-    "src/parser/scilab_six/scilabSixLexer.mll"
-    "src/parser/scilab_six/scilabSixParser.ml"
+    "scilabSixParserUtils.ml"
+    "scilabSixGenParser.mly"
+    "scilabSixLexer.mll"
+    "scilabSixParser.ml"
   ]
   ocamlyacc = [ "menhir" ]
-  requires = [ "uutf" "scilint_common" "scilab_ast" "scilab_five_parser" ]
+  requires = [ "uutf" "scilab_ast" ]
+end
+
+begin library "scilab_parser"
+  dirname += [ "src/common" ]
+  files = [
+    "scilintOptions.ml"
+  ]
+  requires = [ "scilab_five_parser" "scilab_six_parser" ]
 end
 
 begin program "scintax"
+  dirname += [ "src/scintax" ]
   files = [
-    "src/common/scilintOptions.ml"
-    "src/scintax/scintaxMain.ml"
+    "scintaxMain.ml"
   ]
-  requires = [
-    "scilab_ast"
-    "scilab_five_parser"
-    "scilab_six_parser"
-    "scilint_common"
-  ]
+  requires = [ "scilab_parser" ]
 end
 
 begin program "scifind"
+  dirname += [ "src/scifind" ]
   files = [
-    "src/common/scilintOptions.ml"
-    "src/scifind/scifindMain.ml"
+    "scifindMain.ml"
   ]
   requires = [
-    "scilab_ast"
-    "scilab_five_parser"
-    "scilab_six_parser"
-    "scilint_common"
+    "scilab_parser"
+    "re.posix"
   ]
 end
 
 begin program "scilint"
+  dirname += [ "src/scilint" ]
   files = [
-    "src/common/scilintOptions.ml"
-    "src/scilint/scilabUtils.ml"
-    "src/scilint/scilintProject.ml"
-    "src/scilint/scilintPassExpandEval.ml"
-    "src/scilint/scilabFiveFunctionAnalyze.ml"
-    "src/scilint/scilintMain.ml"
+    "scilabUtils.ml"
+    "scilintProject.ml"
+    "scilintPassExpandEval.ml"
+    "scilabFiveFunctionAnalyze.ml"
+    "scilintMain.ml"
    ]
 
   requires = [
-    "scilint_common"
-    "scilab_ast"
-    "scilab_five_parser"
-    "scilab_six_parser"
+    "scilab_parser"
     "unix"
   ]
 end
 
 begin program "scilint_doc_gen"
+  dirname += [ "src/docgen" ]
   files = [
-    "src/docgen/scilintDocGenMain.ml"
+    "scilintDocGenMain.ml"
   ]
   requires = [
     "scilint_common"
