@@ -11,10 +11,10 @@
 module type ConverterParameters = sig
 
   (** Domain *)
-  module From : ScilabFiveAst.Parameters
+  module From : ScilabAst.Parameters
 
   (** Domain *)
-  module To : ScilabFiveAst.Parameters
+  module To : ScilabAst.Parameters
 
   (** Location converter *)
   val loc : From.loc -> To.loc
@@ -25,10 +25,10 @@ module type ConverterParameters = sig
 end
 
 module Make
-    (From : ScilabFiveAst.Parameters)
-    (To : ScilabFiveAst.Parameters)
-    (FromAst : module type of ScilabFiveAst.Make (From))
-    (ToAst : module type of ScilabFiveAst.Make (To))
+    (From : ScilabAst.Parameters)
+    (To : ScilabAst.Parameters)
+    (FromAst : module type of ScilabAst.Make (From))
+    (ToAst : module type of ScilabAst.Make (To))
     (Parameters : ConverterParameters with module From = From
                                        and module To = To) = struct
 
@@ -93,8 +93,10 @@ module Make
       Select { cond = convert_exp cond ; cases ; default = Some (convert_stmt d) } 
     | FromAst.Try (tbody, cbody)  ->
       Try (convert_stmt tbody, convert_stmt cbody) 
-    | FromAst.While (cond, body)  ->
-      While (convert_exp cond, convert_stmt body) 
+    | FromAst.While (cond, tbody, Some fbody)  ->
+      While (convert_exp cond, convert_stmt tbody, Some (convert_stmt fbody)) 
+    | FromAst.While (cond, tbody, None)  ->
+      While (convert_exp cond, convert_stmt tbody, None) 
         
   and convert_exp_cstr cstr =
     let open ToAst in

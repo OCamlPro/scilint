@@ -513,6 +513,8 @@ let warnings = [
 
 ]
 
+let version = "0.3"
+
 let changelog = [
     "0.1", "Sep 20, 2013", [
       "General", [

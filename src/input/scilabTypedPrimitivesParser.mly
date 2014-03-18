@@ -1,4 +1,4 @@
-(*  OCamlPro Scilab Toolbox - Typed primitives
+(*  OCamlPro Scilab Toolbox - Typed primitives importer from SILKAN's format
  *  Copyright (C) 2013 - OCamlPro - Benjamin CANOU
  *
  *  This file must be used under the terms of the CeCILL.
@@ -45,13 +45,13 @@ let process ir =
     (function
       | Markup _ -> ()
       | Def (e, name, ty) ->
-        map := SM.add name (e, ty :: find name) !map
+        map := SM.add name (e, narrow ty :: find name) !map
       | Alias (e, name, names) ->
         let tys = List.flatten (List.map find names) in
         map := SM.add name (e, tys) !map)
     ir ;
   SM.fold
-    (fun name (e, tys) r -> (name, tys) :: r)
+    (fun name (e, tys) r -> if e then (name, tys) :: r else r)
     !map []
 
 %}
@@ -115,19 +115,19 @@ ty:
   | STRING dim = option (delimited (OPAR, dim, CPAR)) { String dim }
   | COMPLEX { Complex }
   | s = CONST_STRING { Const_string s }
-  | STAR { TyVar (fresh ()) }
+  | STAR { Ty_var (fresh ()) }
   | SPARSE mat = mat
       { let ty, dims = mat in
         Mat (true, ty, dims) }
   | mat = mat
       { let ty, dims = mat in
         Mat (false, ty, dims) }
-  | i = DIMVAR { Dim (DimVar i) }
-  | i = CONST_INT { Dim (Const_int i) }
-  | i = DIMVAR PLUS e2 = dim { Dim (Add (DimVar i, e2)) }
-  | i = DIMVAR MINUS e2 = dim { Dim (Sub (DimVar i, e2)) }
-  | i = DIMVAR STAR e2 = dim { Dim (Mult (DimVar i, e2)) }
-  | i = DIMVAR DIV e2 = dim { Dim (Div (DimVar i, e2)) }
+  | i = CONST_INT { Const_int i }
+  | i = DIMVAR PLUS e2 = dim { Dim (Add (Dim_var i, e2)) }
+  | i = DIMVAR MINUS e2 = dim { Dim (Sub (Dim_var i, e2)) }
+  | i = DIMVAR STAR e2 = dim { Dim (Mult (Dim_var i, e2)) }
+  | i = DIMVAR DIV e2 = dim { Dim (Div (Dim_var i, e2)) }
+  | i = DIMVAR { Dim (Dim_var i) }
 ;
 
 %inline mat:
@@ -136,9 +136,9 @@ ty:
 ;
 
 dim:
-  | i = DIMVAR { DimVar i }
-  | STAR { DimVar (fresh ()) }
-  | i = CONST_INT { Const_int i }
+  | i = DIMVAR { Dim_var i }
+  | STAR { Dim_var (fresh ()) }
+  | i = CONST_INT { Dim_const i }
   | OPAR e = dim CPAR { e }
   | e1 = dim PLUS e2 = dim { Add (e1, e2) }
   | e1 = dim MINUS e2 = dim { Sub (e1, e2) }

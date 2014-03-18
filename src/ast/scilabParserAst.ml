@@ -24,7 +24,7 @@ module Parameters = struct
   type symbol = string
 
   (** Warnings emitted by the parser stored as meta-info *)
-  type meta = ScilintWarning.message_contents list
+  type meta = ScilintWarning.message list
 
   (** Dummy meta *)
   let ghost_meta = []
@@ -52,7 +52,7 @@ end
 (** Instance of AST parameters for use with the printer *)
 module PrinterParameters = struct
   include Parameters
-  open ScilabFiveAstSexpPrinter
+  open ScilabAstSexpPrinter
   let sexp_of_loc _ s = s
   let sexp_of_meta _ s = s
   let sexp_of_symbol s = L (Printf.sprintf "!%s" s)
@@ -61,8 +61,8 @@ module PrinterParameters = struct
   let document_of_symbol s = string s
 end
 
-module Ast = ScilabFiveAst.Make (Parameters)
-module Utils = ScilabFiveAstUtils.Make (Parameters) (Ast)
+module Ast = ScilabAst.Make (Parameters)
+module Utils = ScilabAstUtils.Make (Parameters) (Ast)
 
 (** Export ALL the types *)
 include Parameters
@@ -77,8 +77,20 @@ let merge_descr_locs exprs =
 (** Export utilities *)
 include Utils
 
+let ghost cstr =
+  { loc = ghost_loc ; meta = ghost_meta ; cstr ; comment = [] }
+
+let collect_messages ast =
+  let res = ref [] in
+  let collector = object
+    inherit ast_iterator
+    method! meta meta = res := meta :: !res
+  end in
+  collector # ast ast ;
+  List.flatten !res
+
 (* printers *)
 module Sexp =
-  ScilabFiveAstSexpPrinter.Make (Parameters) (PrinterParameters) (Ast)
+  ScilabAstSexpPrinter.Make (Parameters) (PrinterParameters) (Ast)
 module Pretty =
-  ScilabFiveAstPrettyPrinter.Make (Parameters) (PrinterParameters) (Ast)
+  ScilabAstPrettyPrinter.Make (Parameters) (PrinterParameters) (Ast)

@@ -7,13 +7,13 @@
  *  The terms are also available at
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
-open ScilabFiveAst
+open ScilabAst
 
 (** Instanciate this functor with the same {!Parameters} as the AST to
     obtain specialized utilities. *)
 module Make
     (Parameters : Parameters)
-    (Ast : module type of ScilabFiveAst.Make (Parameters)) = struct
+    (Ast : module type of ScilabAst.Make (Parameters)) = struct
   open Ast
 
   (** This class defines a method [t] of type [t -> t] per AST type
@@ -27,7 +27,7 @@ module Make
     method ast (stmts : ast) =
       List.map (self # stmt) stmts
 
-    (** This method is called by the specific [t_descr] methods for
+    (** This method is called by the specific [t] methods for
         all types [t]. Overriding if will affect the mapping of all
         node kinds. For targeting only the descriptors of a specific
         kind of node [t], override its [t] method instead,
@@ -65,14 +65,17 @@ module Make
     method stmt_cstr cstr =
       match cstr with
       | Assign (lefts, right) ->
-        Assign (List.map (self # exp) lefts, self # exp right)
+        let lefts = List.map (self # exp) lefts in
+        let right = self # exp right in
+        Assign (lefts, right)
       | Seq stmts ->
         Seq (List.map (self # stmt) stmts)
       | Defun { name ; args ; rets ; body } ->
-        Defun { name = self # var name ;
-                args = List.map (self # var) args ;
-                rets = List.map (self # var) rets ;
-                body = self # stmt body }
+        let name = self # var name in
+        let args = List.map (self # var) args in
+        let rets = List.map (self # var) rets in
+        let body = self # stmt body in
+        Defun { name ; args ; rets ; body }
       | Exp exp ->
         Exp (self # exp exp)
       | Break ->
@@ -82,34 +85,59 @@ module Make
       | Comment text ->
         Comment (self # comment text)
       | For (it, range, body) ->
-        For (self # var it, self # exp range, self # stmt body)
+        let it = self # var it in
+        let range = self # exp range in
+        let body = self # stmt body in
+        For (it, range, body)
       | If (cond, tbody, Some fbody)  ->
-        If (self # exp cond, self # stmt tbody, Some (self # stmt fbody)) 
+        let cond = self # exp cond in
+        let tbody = self # stmt tbody in
+        let fbody = self # stmt  fbody in
+        If (cond, tbody, Some fbody) 
       | If (cond, tbody, None)  ->
-        If (self # exp cond, self # stmt tbody, None) 
+        let cond = self # exp cond in
+        let tbody = self # stmt tbody in
+        If (cond, tbody, None) 
       | Return  ->
         Return 
       | Select { cond ; cases ; default = None }  ->
-        let cases = List.map (fun (e, s) -> self # exp e, self # stmt s) cases in
-        Select { cond = self # exp cond ; cases ; default = None } 
+        let cases = List.map (fun (e, s) -> let e = self # exp e in e, self # stmt s) cases in
+        let cond = self # exp cond in
+        Select { cond ; cases ; default = None } 
       | Select { cond ; cases ; default = Some d }  ->
-        let cases = List.map (fun (e, s) -> self # exp e, self # stmt s) cases in
-        Select { cond = self # exp cond ; cases ; default = Some (self # stmt d) } 
+        let cases = List.map (fun (e, s) -> let e = self # exp e in e, self # stmt s) cases in
+        let cond = self # exp cond in
+        Select { cond ; cases ; default = Some (self # stmt d) } 
       | Try (tbody, cbody)  ->
-        Try (self # stmt tbody, self # stmt cbody) 
-      | While (cond, body)  ->
-        While (self # exp cond, self # stmt body) 
+        let tbody = self # stmt tbody in
+        let cbody = self # stmt cbody in
+        Try (tbody, cbody) 
+      | While (cond, tbody, Some fbody)  ->
+        let cond = self # exp cond in
+        let tbody = self # stmt tbody in
+        let fbody = self # stmt  fbody in
+        While (cond, tbody, Some fbody) 
+      | While (cond, tbody, None)  ->
+        let cond = self # exp cond in
+        let tbody = self # stmt tbody in
+        While (cond, tbody, None) 
 
     method exp_cstr cstr =
       match cstr with
       | Call (name, args, kind) ->
-        Call (self # exp name, List.map (self # arg) args, kind)
+        let name = self # exp name in
+        Call (name, List.map (self # arg) args, kind)
       | Identity args ->
         Identity (List.map (self # exp) args)
       | Range (sexp, None, eexp) ->
-        Range (self # exp sexp, None, self # exp eexp)
+        let sexp = self # exp sexp in
+        let eexp = self # exp eexp in
+        Range (sexp, None, eexp)
       | Range (sexp, Some stepexp, eexp) ->
-        Range (self # exp sexp, Some (self # exp stepexp), self # exp eexp)
+        let sexp = self # exp sexp in
+        let stepexp = self # exp stepexp in
+        let eexp = self # exp eexp in
+        Range (sexp, Some stepexp, eexp)
       | Var sym ->
         Var (self # var sym)
       | Matrix rows ->
@@ -119,7 +147,9 @@ module Make
       | Unop (unop, exp) ->
         Unop (unop, self # exp exp)
       | Op (op, lexp, rexp) ->
-        Op (op, self # exp lexp, self # exp rexp)
+        let lexp = self # exp lexp in
+        let rexp = self # exp rexp in
+        Op (op, lexp, rexp)
       | Bool _ | Num _ | String _ | Colon as e -> e
       | Error -> Error
 
@@ -141,7 +171,7 @@ module Make
     method ast (stmts : ast) =
       List.iter (self # stmt) stmts
 
-    (** This method is called by the specific [t_descr] methods for
+    (** This method is called by the specific [t] methods for
         all types [t]. Overriding if will affect the iteration on all
         node kinds. For targeting only the descriptors of a specific
         kind of node [t], override its [t] method instead,
@@ -211,9 +241,13 @@ module Make
       | Try (tbody, cbody)  ->
         self # stmt tbody ;
         self # stmt cbody
-      | While (cond, body)  ->
+      | While (cond, tbody, Some fbody)  ->
         self # exp cond ;
-        self # stmt body
+        self # stmt tbody ;
+        self # stmt fbody
+      | While (cond, tbody, None)  ->
+        self # exp cond ;
+        self # stmt tbody
       | Return | Break | Continue -> ()
 
     method exp_cstr cstr =

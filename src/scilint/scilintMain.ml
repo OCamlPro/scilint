@@ -1,249 +1,87 @@
-let file = ref ""
-let test_flag = ref false
-let analyze_flag = ref false
-let type_flag = ref false
-let cfg_flag = ref false
-let cfg_file = ref false
-let args = Arg.align [("-I", Arg.String ScilintProject.add_to_path,"DIRECTORY Add DIRECTORY to search path");
-		      ScilintOptions.format_arg ]
+(*  OCamlPro Scilab Toolbox - Scilint, a static analyzer for Scilab
+ *  Copyright (C) 2013 - OCamlPro - Benjamin CANOU
+ *
+ *  This file must be used under the terms of the CeCILL.
+ *  This source file is licensed as described in the file COPYING, which
+ *  you should have received as part of this distribution.
+ *  The terms are also available at
+ *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
-(* let args = [("-t", Arg.Unit (fun () -> test_flag := true), ": make stats on scilab code base"); *)
-(*             ("-a", Arg.String (fun s -> analyze_flag := true; file := s), ": analyze scilab source code"); *)
-(*             ("-typ", Arg.String (fun s -> type_flag := true; file := s), ": try to type a scilab program"); *)
-(*             ("-cfg", Arg.Unit (fun () -> cfg_flag := true), ": try to create config file if current dir is a scilab project"); *)
-(*             ("-load", Arg.String (fun s -> cfg_file := true; file := s), ": try to load config file if current dir is a scilab project")] *)
-(* let usage = "Usage: " ^ Sys.argv.(0) ^ " [-t] [-a file] [-typ file] [-cfg] [-load] [file]" *)
-let usage = "Usage: " ^ Sys.argv.(0) ^ " [file]"
+open ScilabParserAst
+open ScilintWarning
+open ScilintOptions
+open Printf
 
-let cpt_files = ref 0
+(** called by the main on each code source passed on th CLI *)
+let treat_source source =
+  let parse () =
+    match source with
+    | File fn -> SelectedParser.parse_file fn
+    | String (name, str) -> SelectedParser.parse_string name str
+    | _ -> assert false
+  in
+  let ast =
+    if !print_time then begin
+      printf "Parsing %s ...%!" (string_of_source source) ;
+      let t0 = Sys.time () in
+      let ast = parse () in
+      let t1 = Sys.time () in
+      printf "\b\b\bdone in %gms.\n%!" ((t1 -. t0) *. 1000.) ;
+      ast
+    end else parse ()
+  in
+  let ast = List.fold_left (fun r (name, anal) -> anal r) ast !passes in
+  if !print_ast then begin
+    printf "Syntax tree:\n" ;
+    Sexp.pretty_output stdout ast ;
+    printf "\n"
+  end ;
+  if !pretty_print then begin
+    printf "Pretty printed:\n" ;
+    Pretty.pretty_output stdout ast ;
+    printf "\n"
+  end ;
+  if !print_messages then begin
+    let messages = collect_messages ast in
+    output_messages !format messages stdout
+  end
 
-let list_ext = [ ".sci"; ".sce"; ".tst" ]
+(** a small toplevel for experimentation purposes *)
+let interactive () =
+  print_ast := true ;
+  let rec interp acc nb =
+    let open Printf in
+    Printf.printf "--> %!" ;
+    let phrase =
+      try input_line stdin
+      with End_of_file -> exit 0
+    in
+    if phrase = "" then begin
+      treat_source (String ("input-" ^ string_of_int nb, acc)) ;
+      interp "" (succ nb)
+    end else
+      let acc = if acc = "" then acc else acc ^ "\n" in
+      interp (acc ^ phrase) nb
+  in
+  printf "Welcome to Scilint's interactive mode\n%!" ;
+  printf "Type your phrases, leave an empty line to submit, Ctrl-C to quit\n%!" ;
+  interp "" 0
 
-let list_ext_bin = [ ".sci.bin"; ".sce.bin"; ".tst.bin" ]
+(** where the args are passed and all the fun starts *)
+let main () =
+  let sources : source list ref = ref [] in
+  let options =
+    [ print_ast_arg ; pretty_print_arg ; print_messages_arg ; print_time_arg ;
+      format_arg ; parser_arg ; toplevel_mode_arg ; cli_input_arg sources ]
+    @ !passes_args
+  and usage_msg =
+    "Hello, I am Scilint, a syntax checker for Scilab.\n\
+     Usage: scilint [OPTIONS] <file1.sci> <file2.sci> ..." ;
+  in
+  Arg.parse options (cli_input_anon sources) usage_msg ;
+  if !sources = [] && not !toplevel_mode then
+    Arg.usage options usage_msg ;
+  List.iter treat_source (List.rev !sources) ;
+  if !toplevel_mode then interactive ()
 
-let scilab5_modules_path = "/home/michael/scilab.5/scilab-5.4.0/modules/"
-
-let scilab6_test_path = "/home/michael/scilab.6/scilab/test/"
-
-let richelieu_test_path = "/home/michael/dev_sci/richelieu/"
-
-let scilab_forge_test_path = "/home/michael/test_forge/mirror.forge.scilab.org-1.4GB/"
-
-exception ParserError of string * string * int * int
-exception LexerError of string * string * int * int
-
-let print_error file msg line char =
-  ScilabUtils.print_loc file line char msg
-
-let print_parser_infos file token line char =
-  let msg = "Error : Parsing error at token " ^ token in
-  print_error file msg line char
-    
-let print_lex_infos file token line char =
-  let msg = "Error : Syntax error at token " ^ token  in
-  print_error file msg line char
-    
-let print_err = function
-  | ParserError (file, tok, line, char) -> 
-      print_parser_infos file tok line char
-  | LexerError (file, tok, line, char) -> 
-      print_lex_infos file tok line char
-  | _ as err -> raise err
-
-let print_err = function
-  | ParserError (file, tok, line, char) ->
-      print_parser_infos file tok line char
-  | LexerError (file, tok, line, char) ->
-      print_lex_infos file tok line char
-  | _ as err -> raise err
-
-let get_length ic =
-  let buf = Buffer.create 4 in
-  Buffer.add_channel buf ic 4;
-  let s = Buffer.contents buf in
-  let c0 = int_of_char (String.unsafe_get s 0) in
-  let c1 = int_of_char (String.unsafe_get s 1) in
-  let c2 = int_of_char (String.unsafe_get s 2) in
-  let c3 = int_of_char (String.unsafe_get s 3) in
-  c0 + ((c1 + ((c2 + (c3 lsl 8)) lsl 8)) lsl 8)
-
-let parse_file file =
-  let ch = if file = "" then stdin else open_in file in
-  let (new_prog, corrupt_zone) = ScilabPreParser.pre_parse ch in
-  let lexbuf = Lexing.from_string new_prog in
-  ScilabLexer.init_lexer_var ();
-  try
-    ScilabParserUtils.init_var_corrupt corrupt_zone;
-    let ast = ScilabParser.program ScilabLexer.token lexbuf in
-    flush stdout;
-    close_in ch;
-    ast
-  with
-    | Parsing.Parse_error ->
-        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
-        flush stdout;
-        close_in ch;
-        raise (ParserError (file, tok, line, cnum))
-    | ScilabLexer.Err_str str_err ->
-        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
-        print_string str_err;
-        flush stdout;
-        close_in ch;
-        raise (LexerError (file, tok, line, cnum))
-    | ScilabLexer.Lex_err str_lex ->
-        let (tok, line, cnum) = ScilabUtils.get_location_from_lexbuf lexbuf in
-        print_string str_lex;
-        flush stdout;
-        close_in ch;
-        raise (LexerError (file, tok, line, cnum))
-    | _ as err -> raise err
-
-let run_deff file =
-  try
-    let ast = parse_file file in
-    match ast with
-      | ScilabAst.Exp exp ->
-          print_endline "-> OK\n";
-          ScilabDeffRefactoring.refactor_deff exp
-      | _ -> print_endline "-> Error not an Exp\n"
-  with _ as err -> print_err err
-
-let run_test file =
-  try
-    let ast = parse_file file in
-    match ast with
-      | ScilabAst.Exp exp -> 
-          print_endline "-> OK\n";
-          print_endline (ScilabAstPrinter.to_string exp)
-      | _ -> print_endline "-> Error not an Exp\n"
-  with _ as err -> print_err err
-
-let run_type_file file =
-  let firehose = ScilintOptions.(!format = Firehose) in
-  if not firehose then Printf.printf "File %S\n%!" file;
-  try
-    let ast = parse_file file in
-    match ast with
-      | ScilabAst.Exp exp ->
-        if firehose then ScilintFirehosegen.print_header ();
-        (* call the resilient parser for syntax / style warnings *)
-        (* this is a quick and dirty integration before the AST merge *)
-        let open ScilabFiveParserAst in
-        let open ScilabFiveParser in
-        let open ScilintWarning in
-        let ast = parse_file file in
-        let print_messages = object
-          inherit ast_iterator as mom
-          method! descr : 'a. 'a descr -> unit
-            = fun { meta ; loc = (_, ((sl, sc), (el, ec))) as loc } ->
-              let ast_loc =
-                ScilabAst.({ first_line = sl ; first_column = sc ;
-                             last_line = el ; last_column = ec }) in
-              List.iter
-                (fun w ->
-                   if firehose then
-                     match w with
-                     | Warning (L w) ->
-                       print_endline
-                         (ScilintFirehosegen.warning_to_firehose
-                            (num_of_local_warning w)
-                            [ (file, ast_loc), string_of_local_warning w ])
-                     | Warning (S w) ->
-                       print_endline
-                         (ScilintFirehosegen.warning_to_firehose
-                            (num_of_style_warning w + 6)
-                            [ (file, ast_loc), string_of_style_warning w ])
-                     | _ -> ()
-                   else
-                     match w with
-                     | Warning _ ->
-                       print_endline (string_of_message (loc, w))
-                     | _ -> (* skip error recovery for now *) ())
-                meta
-        end in
-        print_messages # ast ast ;
-        ScilabFunctionAnalyze.analyze file exp;
-        if firehose then ScilintFirehosegen.print_trailer ()
-      | _ -> print_endline "-> Error not an Exp\n"
-  with _ as err -> print_err err
-
-let run_analyze_file file =
-  try
-    let ast = parse_file file in
-     match ast with
-     | ScilabAst.Exp exp -> 
-       print_endline "-> OK\n";
-       incr cpt_files;
-       ScilabAstStats.analyze_ast exp;
-       ScilabFunctionAnalyze.analyze file exp
-     | _ -> print_endline "-> Error not an Exp\n" ;    
-  with _ as err -> print_err err
-
-let rec run_tests fun_iter dirname =
-  let files = Sys.readdir dirname in
-  (* Printf.printf "# tests to run in %s : %i\n\n" dirname (Array.length files); *)
-  Array.iter (fun file ->
-    try
-      let file = Filename.concat dirname file in
-      if Sys.is_directory file then run_tests fun_iter file;
-      if List.exists (Filename.check_suffix file) list_ext then
-        begin
-          fun_iter file
-          (* printf.printf "%s \n" dirname *)
-        end
-    with _ -> ()
-  ) files
-
-let _ =
-  (* Printf.printf "scilint: scilab code checker, by OCamlPro SAS\n%!"; *)
-  Arg.parse args (fun s -> run_type_file s) usage;
-  if !test_flag
-  then
-    begin
-      let dir_tests =
-        [ (* My tests *)
-          (* "test/"; *)
-
-          (* Scilab 6' tests *)
-          (* scilab6_test_path*)
-
-          (* Scilab 5' tests *)
-          (* scilab5_modules_path*)
-
-          (* Richelieu' tests *)
-          (* richelieu_test_path *)
-
-          (* Scilab forge *)
-          scilab_forge_test_path
-
-         (* "/home/michael/git_scilab/richelieu/scilab/modules/jit_ocaml/test_stats" *)
-        ] in
-      List.iter (run_tests run_type_file) dir_tests;
-      ScilabAstStats.print_fun_stats ();
-      Printf.printf "\n Analyzes run on %i files.\n" !cpt_files
-    end
-  else
-    if !analyze_flag
-    then run_analyze_file !file
-    else
-      if !type_flag
-      then run_type_file !file
-      else
-        if !cfg_flag
-        then ScilintConfig.print_config ()
-        else
-          if !cfg_file
-        then ScilintConfig.print_files (ScilintConfig.read_config !file)
-
-
-
-
-
-
-
-
-
-
-
-
-
+let _ = main ()

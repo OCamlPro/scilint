@@ -40,7 +40,7 @@ let pretty_output ?(width = 80) (fp : out_channel) (s : sexp) =
 let compact_output (fp : out_channel) (s : sexp) =
   PPrint.ToChannel.compact fp (document_of_sexp s)  
 
-open ScilabFiveAst
+open ScilabAst
 
 (** Parameters for the printer: AST type parameters and their
     projections to {!sexp} *)
@@ -56,7 +56,7 @@ end
 module Make
     (Parameters : Parameters)
     (PrinterParameters : PrinterParameters with module Parameters := Parameters)
-    (Ast : module type of ScilabFiveAst.Make (Parameters)) = struct
+    (Ast : module type of ScilabAst.Make (Parameters)) = struct
   open Ast
 
   (** Convert an AST to its S-expr intermediate representation *)
@@ -194,8 +194,10 @@ module Make
          @ [ B [ L "default" ; sexp_of_stmt d ] ])
     | Try (tbody, cbody)  ->
       B [ L "try" ; sexp_of_stmt tbody ; sexp_of_stmt cbody ]
-    | While (cond, body)  ->
-      B [ L "while" ; sexp_of_exp cond ; sexp_of_stmt body ]
+    | While (cond, tbody, Some fbody)  ->
+      B [ L "while" ; sexp_of_exp cond ; sexp_of_stmt tbody ; sexp_of_stmt fbody ]
+    | While (cond, tbody, None)  ->
+      B [ L "while" ; sexp_of_exp cond ; sexp_of_stmt tbody ]
 
   and sexp_of_case (exp, stmt) =
     B [ L "case" ; sexp_of_exp exp ; sexp_of_stmt stmt ]
@@ -228,11 +230,11 @@ module Make
     in
     left 0
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let pretty_output ?(width = 80) (fp : out_channel) ast =
     pretty_output ~width fp (sexp_of_ast ast)
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let compact_output (fp : out_channel) ast =
     compact_output fp (sexp_of_ast ast)
 end

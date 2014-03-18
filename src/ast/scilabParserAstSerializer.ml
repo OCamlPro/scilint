@@ -7,7 +7,7 @@
  *  The terms are also available at
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
-open ScilabFiveParserAst
+open ScilabParserAst
 
 (** Builds a linear, binary representation of the ast. The format is a
     prefix traversal of the tree in which every node is output as
@@ -134,10 +134,13 @@ let serialize_ast =
         output_location cloc ;
         output_stmts tbody ;
         output_stmts cbody
-      | While (cond, body)  ->
+      | While (cond, body, None)  ->
         output_header loc 16 (* WhileExp *) ;
         output_exp cond ;
         output_stmt body
+      | While (cond, body, Some _)  ->
+        (* FIXME: macro generate ?? *)
+        failwith "Unsupported while with else"
       | Return ->
         output_header loc 20 (* ReturnExp *) ;
         output_bool true (* no parameters *)

@@ -7,7 +7,7 @@
  *  The terms are also available at
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
-open ScilabFiveAst
+open ScilabAst
 open PPrint
 
 (** Parameters for the printer: AST type parameters and their
@@ -23,7 +23,7 @@ end
 module Make
     (Parameters : Parameters)
     (PrinterParameters : PrinterParameters with module Parameters := Parameters)
-    (Ast : module type of ScilabFiveAst.Make (Parameters)) = struct
+    (Ast : module type of ScilabAst.Make (Parameters)) = struct
   open Ast
 
   let instr_end =
@@ -282,7 +282,7 @@ module Make
     | Defun { name ; args ; rets = [ ret ] ; body } ->
       string "function" ^^ nbsp
       ^^ document_of_var ret ^^ nbsp ^^ string "="
-      ^^ bsp ^^ document_of_var name ^^ nbsp
+      ^^ nbsp ^^ document_of_var name ^^ nbsp
       ^^ group (string "("
                 ^^ align (flow (arg_sep false)
                             (List.map document_of_var args)
@@ -347,10 +347,17 @@ module Make
       ^^ string "catch" ^^ instr_end
       ^^ nest 2 (instr_end ^^ document_of_stmt cbody) ^^ instr_end
       ^^ string "end"
-    | While (cond, body)  ->
+    | While (cond, tbody, Some fbody)  ->
       string "while" ^^ nbsp ^^ document_of_exp cond
-      ^^ nbsp ^^ string "do"
-      ^^ nest 2 (instr_end ^^ document_of_stmt body) ^^ instr_end
+      ^^ nbsp ^^ string "then"
+      ^^ nest 2 (instr_end ^^ document_of_stmt tbody) ^^ instr_end
+      ^^ string "else"
+      ^^ nest 2 (instr_end ^^ document_of_stmt fbody) ^^ instr_end
+      ^^ string "end"
+    | While (cond, tbody, None)  ->
+      string "while" ^^ nbsp ^^ document_of_exp cond
+      ^^ nbsp ^^ string "then"
+      ^^ nest 2 (instr_end ^^ document_of_stmt tbody) ^^ instr_end
       ^^ string "end"
 
   and document_of_case (exp, stmt) =
@@ -367,11 +374,23 @@ module Make
       document comment
     |> PrinterParameters.document_of_meta meta
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let pretty_output ?(width = 80) (fp : out_channel) ast =
     ToChannel.pretty 0.9 width fp (document_of_ast ast)
 
-  (** Output an S-expr to a channel using PPrint for great beauty. *)
+  (** Output to a channel using PPrint for great beauty. *)
   let compact_output (fp : out_channel) ast =
     ToChannel.compact fp (document_of_ast ast)
-end
+
+  (** Output to a string using PPrint for great beauty. *)
+  let to_pretty_string ?(width = 80) ast =
+    let buf = Buffer.create 1000 in
+    ToBuffer.pretty 0.9 width buf (document_of_ast ast) ;
+    Buffer.contents buf
+ 
+  (** Output to a strint using PPrint for great beauty. *)
+  let to_compact_string ast =
+    let buf = Buffer.create 1000 in
+    ToBuffer.compact buf (document_of_ast ast) ;
+    Buffer.contents buf
+ end
