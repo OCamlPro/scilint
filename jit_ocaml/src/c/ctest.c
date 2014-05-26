@@ -1,7 +1,10 @@
-int ctest(char* in, char* out)
-{
-     //out = malloc(1024);
-     //strcpy(out, in);
-     sprintf(out, "%s.sci", in);
-     return 0;
+#include <stdlib.h>
+#include <stdio.h>
+
+int ctest(int i){
+     char *v[1];
+     v[0] = "";
+     printf("We are in it boys\n");
+     caml_startup(v);
+     return -1;
 }

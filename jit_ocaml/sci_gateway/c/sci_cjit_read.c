@@ -397,67 +397,36 @@ int get_value_boolean(char *fname, char* pstData, int* piAddr){
      
      int bVal;
      int* bValMat;
-     
-     sciErr = getVarDimension(pvApiCtx, piAddr, &iRows, &iCols);
-     
-     if (iRows == 1 && iCols == 1)
+
+     sciErr = getMatrixOfBoolean(pvApiCtx, 
+                                 piAddr, 
+                                 &iRows, 
+                                 &iCols, 
+                                 &bValMat);
+     if(sciErr.iErr)
      {
-          iRet = getScalarBoolean(pvApiCtx, piAddr, &bVal);
-          if(iRet)
-          {
-               Scierror(999, 
-                        "%s: can't get boolean value for %s.\n", 
-                        fname, 
-                        pstData,
-                        1);
-               AssignOutputVariable(pvApiCtx, 1) = 0;
-          }
-          iRet = createScalarBoolean(pvApiCtx, 
-                                     nbInputArgument(pvApiCtx) + 1, 
-                                     bVal);
-          if(iRet)
-          {
-               Scierror(999, 
-                        "%s: can't return boolean value for %s.\n", 
-                        fname, 
-                        pstData, 
-                        1);
+          Scierror(999, 
+                   "%s: can't get boolean value for %s.\n", 
+                   fname, 
+                   pstData,
+                   1);
                AssignOutputVariable(pvApiCtx, 1) = 0;
                return 1;
-          }
      }
-     else
+     sciErr = createMatrixOfBoolean(pvApiCtx, 
+                                    nbInputArgument(pvApiCtx) + 1, 
+                                    iRows, 
+                                    iCols, 
+                                    bValMat);
+     if(sciErr.iErr)
      {
-          sciErr = getMatrixOfBoolean(pvApiCtx, 
-                                      piAddr, 
-                                      &iRows, 
-                                      &iCols, 
-                                      &bValMat);
-          if(sciErr.iErr)
-          {
-               Scierror(999, 
-                        "%s: can't get boolean value for %s.\n", 
-                        fname, 
-                        pstData,
-                        1);
-               AssignOutputVariable(pvApiCtx, 1) = 0;
-          }
-          sciErr = createMatrixOfBoolean(pvApiCtx, 
-                                         nbInputArgument(pvApiCtx) + 1, 
-                                         iRows, 
-                                         iCols, 
-                                         bValMat);
-          if(sciErr.iErr)
-          {
-               Scierror(999, 
-                        "%s: can't return double value for %s.\n", 
-                        fname, 
-                        pstData,
-                        1);
-               AssignOutputVariable(pvApiCtx, 1) = 0;
-               return 1;
-          }
-          free(bValMat);
+          Scierror(999, 
+                   "%s: can't return boolean value for %s.\n", 
+                   fname, 
+                   pstData,
+                   1);
+          AssignOutputVariable(pvApiCtx, 1) = 0;
+          return 1;
      }
      AssignOutputVariable(pvApiCtx, 1) = nbInputArgument(pvApiCtx) + 1;
      ReturnArguments(pvApiCtx);  
@@ -476,10 +445,6 @@ int get_value_string(char *fname, char* pstData, int* piAddr)
      //output variable
      char** pstOut	= NULL;
      
-     //check input and output arguments
-     CheckInputArgument(pvApiCtx, 1, 1);
-     CheckOutputArgument(pvApiCtx, 1, 1);
-
      sciErr = getVarDimension(pvApiCtx, piAddr, &iRows, &iCols);
      if(sciErr.iErr)
      {
@@ -980,7 +945,7 @@ int get_value(char *fname, char* pstData, int* piAddr)
      sciErr = getVarType(pvApiCtx, piAddr, &iType);
      if(sciErr.iErr)
      {
-          return 0;
+          return 1;
      }
 
      switch(iType)
