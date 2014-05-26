@@ -9,13 +9,18 @@ function builder_c()
   
   CFLAGS = ilib_include_flag(src_c_path);
   
+  caml_lib_path = "../../lib/libcamlrun_shared"
+  //caml_lib_path = ""
+  
   tbx_build_src(["ctest"],       ..
                 ["ctest.c"],     ..
                 "c",             ..
                 src_c_path,      ..
+                [caml_lib_path], ..
                 "",              ..
-                "",              ..
-                CFLAGS);
+                "");
+  
+  // CFLAGS
                 
 endfunction
 

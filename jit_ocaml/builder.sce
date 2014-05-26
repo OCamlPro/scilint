@@ -37,7 +37,7 @@ end
 // =============================================================================
 
 tbx_builder_macros(toolbox_dir);
-tbx_builder_src(toolbox_dir);
+//tbx_builder_src(toolbox_dir);
 tbx_builder_gateway(toolbox_dir);
 //tbx_builder_help(toolbox_dir);
 tbx_build_loader(TOOLBOX_NAME, toolbox_dir);

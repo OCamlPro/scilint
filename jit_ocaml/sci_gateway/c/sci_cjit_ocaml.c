@@ -1,35 +1,37 @@
 #include "api_scilab.h"
 
-/* ==================================================================== */
-extern int ctest(int i);
-/* ==================================================================== */
-int sci_ctest(char *fname)
+int sci_cjit_ocaml(char *fname)
 {
      SciErr sciErr;
-     int iRet,iRows, iCols, complex;
 
-     int *piAddr = NULL;
-     
+     int iRet, iRows, iCols, complex;
+
+     int *piAddrArg = NULL;
+
      double pdblReal;
-
+     sciprint("DUDE\n");
      CheckInputArgument(pvApiCtx, 1, 1) ;
      CheckOutputArgument(pvApiCtx, 1, 1) ;
-
-     sciErr = getVarAddressFromPosition(pvApiCtx, 1, &piAddr);
+     sciprint("DUDE1\n");
+     /* get variable name which is 1st argument */
+     sciErr = getVarAddressFromPosition(pvApiCtx, 1, &piAddrArg);
      if (sciErr.iErr)
      {
+          sciprint("DUDE2\n");
           printError(&sciErr, 0);
           return 0;
      }
      
-     if ( !isDoubleType(pvApiCtx, piAddr) )
+     if ( !isDoubleType(pvApiCtx, piAddrArg) )
      {
-          Scierror(999, "%s: Wrong type for input argument #%d: A double expected.\n", fname, 1);
-          return 0;
+          Scierror(999, 
+                   "%s: Wrong type for input argument #%d: A double expected.\n", 
+                   fname, 
+                   1);
+          return 1;
      }
-     
-     sciErr = getVarDimension(pvApiCtx, piAddr, &iRows, &iCols);   
- 
+
+     sciErr = getVarDimension(pvApiCtx, piAddrArg, &iRows, &iCols);   
      
      if (iRows != 1 || iCols != 1) {
           Scierror(999, 
@@ -38,8 +40,8 @@ int sci_ctest(char *fname)
                    1);
           return 1;
      }
-     
-     complex = isVarComplex(pvApiCtx, piAddr);
+
+     complex = isVarComplex(pvApiCtx, piAddrArg);
      
      if (complex) {
           Scierror(999, 
@@ -48,18 +50,20 @@ int sci_ctest(char *fname)
                    1);
           return 1;
      }
-     
-     iRet = getScalarDouble(pvApiCtx, piAddr, &pdblReal);
-     
+
+     iRet = getScalarDouble(pvApiCtx, piAddrArg, &pdblReal);
+
      if (iRet)
      {
           return iRet;
      }
-     
+
      // Call OCaml code !!!
-     ctest(0);
-     //caml_startup(NULL);
+     
+     caml_startup(argv);
      /* Do some computation */
+     int result = fib((int) pdblReal);
+     sciprint("res = %i\n", result);
      // ===================
      
      iRet = createScalarDouble(pvApiCtx, nbInputArgument(pvApiCtx) + 1, pdblReal);
@@ -68,9 +72,7 @@ int sci_ctest(char *fname)
      {
           return iRet;
      }
-     
 
      AssignOutputVariable(pvApiCtx, 1) = nbInputArgument(pvApiCtx) + 1;
      ReturnArguments(pvApiCtx);
-     
 }
