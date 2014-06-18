@@ -3,8 +3,8 @@
 
 // This file is released under the 3-clause BSD license. See COPYING-BSD.
 
-load("SCI/modules/jit_ocaml3/macros/lib");
-exec(pathconvert("SCI/modules/jit_ocaml3/sci_gateway/loader_gateway.sce",%f));
+load("SCI/modules/jit_ocaml/macros/lib");
+exec(pathconvert("SCI/modules/jit_ocaml/sci_gateway/loader_gateway.sce",%f));
 
 // function toolbox_skeletonlib = startModule()
    
