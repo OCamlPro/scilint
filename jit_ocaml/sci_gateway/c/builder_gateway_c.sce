@@ -6,11 +6,9 @@ function builder_gw_c()
 
   tbx_build_gateway("jit_c", ..
                     ["c_jit","sci_cjit"; ..
-		    "jit_start", "sci_jitstart"; ..
 		    "c_jit_read", "sci_cjit_read"; ..
 		    "c_jit_write", "sci_cjit_write"], ..
                     ["sci_cjit.c"; ..
-		    "sci_start_ocaml.c"; ..
 		    "sci_cjit_read.c"; ..
 		    "sci_cjit_write.c"], ..
                     get_absolute_file_path("builder_gateway_c.sce"), ..

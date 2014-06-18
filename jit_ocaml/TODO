@@ -1,3 +1,2 @@
 - builder_src : unix_g(), Windows portability
-- caml_startup : delete jit_start and add test so caml_starup is only launch once
 - embedd OCaml

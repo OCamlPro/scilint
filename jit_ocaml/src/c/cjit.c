@@ -33,5 +33,13 @@ int call_caml(char * expr, char ** vars, int* types, int* complexs, int** dims, 
 }
 
 int cjit(char * expr, char **vars, int * types, int* complexs, int**dims, int length){
-  return call_caml(expr, vars, types, complexs, dims, length);
+  static int ocaml_started = 0;
+  if (ocaml_started) return call_caml(expr, vars, types, complexs, dims, length);
+  else {
+    char *v[1];
+    v[0] = "";
+    caml_startup(v);
+    ocaml_started = 1;
+    return call_caml(expr, vars, types, complexs, dims, length);
+  }
 }
