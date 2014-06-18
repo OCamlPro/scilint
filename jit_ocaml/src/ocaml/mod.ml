@@ -39,14 +39,19 @@ let type_of_int = function
   | 6 -> String
   | _ -> Non_supported
 
-let jit_expr expr vars types =
+let jit_expr expr vars types complex dims =
   print_endline ("OCamlJIT expr: " ^ expr);
-  print_endline "Free Variables :";
   Array.iteri (fun i var -> 
       print_string "  ";
       print_string var; 
       print_string " : "; 
-      print_endline (string_of_type (type_of_int (Array.get types i)))) vars
+      print_string (string_of_type (type_of_int (Array.get types i)));
+      print_string "(";
+      print_string (string_of_int (Array.get dims (i * 2)));
+      print_string "x";
+      print_string (string_of_int (Array.get dims ((i * 2) + 1)));
+      print_string "); isComplex : ";
+      print_endline (string_of_int (Array.get complex i))) vars
 
 let _ = Callback.register "jit_expr" jit_expr
 

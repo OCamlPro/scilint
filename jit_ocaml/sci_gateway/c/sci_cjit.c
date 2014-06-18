@@ -1,25 +1,28 @@
 #include "api_scilab.h"
 
 /* ==================================================================== */
-extern int cjit(char * expr, char **vars, int * types, int length);
+extern int cjit(char * expr, char **vars, int * types, int* complexs, int** dims, int length);
 /* ==================================================================== */
-
-int get_types_from_names(char* fname, void *pvApiCtx, char** strData, int *types, int length);
 
 int sci_cjit(char *fname, void *pvApiCtx)
 {
-     SciErr sciErr;;
+     SciErr sciErr;
      int *piAddrExpr = NULL;
      int *piAddrVars = NULL;
+     int *piAddrVar = NULL;
      char* pstData;
      int iRet;
-
      int i,j;
+     int iType;
      int iRows		= 0;
      int iCols		= 0;
+     int dim1           = 0;
+     int dim2           = 0;
      int* piLen		= NULL;
      char** strData	= NULL;
      int* types         = NULL;
+     int* complexs      = NULL;
+     int** dims         = NULL;
      char** pstOut	= NULL;
 
      CheckInputArgument(pvApiCtx, 2, 2);
@@ -49,7 +52,7 @@ int sci_cjit(char *fname, void *pvApiCtx)
      }
 
      if ( !isStringType(pvApiCtx, piAddrVars) ) {
-       Scierror(999, "%s: Wrong type for input argument #%d: A string vector expected.\n", fname, 2);
+       Scierror(999, "%s: Wrong type for input argument #%d: A string matrix expected.\n", fname, 2);
        return 0;
      }
 
@@ -63,10 +66,10 @@ int sci_cjit(char *fname, void *pvApiCtx)
      }
 
      if (iRows != 1 && iCols != 1) {
-       Scierror(999, 
-		"%s: 2nd arguments should be a vector.\n", 
-		fname, 
-		1);
+       Scierror(999,
+     		"%s: 2nd arguments should be a vector.\n",
+     		fname,
+     		1);
        return 1;
      }
 
@@ -116,15 +119,53 @@ int sci_cjit(char *fname, void *pvApiCtx)
        return 1;
      }
      types = (int*)malloc(sizeof(int) * (iRows * iCols));
-     get_types_from_names(fname, pvApiCtx, strData, types, iRows * iCols);
-     
-     cjit(pstData, strData, types, iRows * iCols);
+     //get_types_from_names(fname, pvApiCtx, strData, types, iRows * iCols);
+     complexs = (int*)malloc(sizeof(int) * (iRows * iCols));
+     //get_complex_from_names(fname, pvApiCtx, strData, complexs, iRows * iCols);
+     dims = (int*)malloc(sizeof(int) * (iRows * iCols * 2));
+
+     for (i = 0; i < iRows * iCols ; i++) {
+       sciErr = getVarAddressFromName(pvApiCtx, strData[i], &piAddrVar);
+       if (sciErr.iErr) {
+	 sciprint("warning : variable %s not found.\n", strData[i]);
+	 types[i] = -1;
+	 complexs[i] = -1;
+	 dims[i * 2] = -1;
+	 dims[(i * 2) + 1] = -1;
+	 continue;
+       }
+       sciErr = getVarType(pvApiCtx, piAddrVar, &iType);
+       if(sciErr.iErr) {
+	 sciprint("warning : can't type variable %s.\n", strData[i]);
+	 types[i] = -1;
+	 complexs[i] = -1;
+	 dims[i * 2] = -1;
+	 dims[(i * 2) + 1] = -1;
+	 continue;
+       }
+       types[i] = get_camlint_from_scitype(iType); 
+       complexs[i] = isVarComplex(pvApiCtx, piAddrVar);
+       sciErr = getVarDimension(pvApiCtx, piAddrVar, &dim1, &dim2);
+       if(sciErr.iErr) {
+	 sciprint("warning : can't get dimension from variable %s.\n", strData[i]);
+	 dims[i * 2] = -1;
+	 dims[(i * 2) + 1] = -1;
+	 continue;
+       }
+       dims[i * 2] = dim1;
+       dims[(i * 2) + 1] = dim2;
+       //printf("%s %d (%d * %d) %d", strData[i], iType, dims[i * 2], dims[(i * 2) + 1], complexs[i]);
+     }
+     cjit(pstData, strData, types, complexs, dims, iRows * iCols);
 
      free(piLen);
      for(i = 0 ; i < iRows * iCols ; i++)
      {
           free(strData[i]);
      }
+     free(dims);
+     free(types);
+     free(complexs);
      free(strData);
      free(pstData);
      return 0;
@@ -145,31 +186,4 @@ int get_camlint_from_scitype(int scitype) {
     case sci_mlist : return 9;
     default : return -1;
     }
-}
-
-int get_types_from_names(char* fname, void *pvApiCtx, char** strData, int *types, int length) {
-  SciErr sciErr;  
-  int *piAddrVar = NULL;
-  
-  int i, iType;
-
-  int res[length];
-  
-  for (i = 0; i < length ; i++) {
-    sciErr = getVarAddressFromName(pvApiCtx, strData[i], &piAddrVar);
-    if (sciErr.iErr) {
-      sciprint("warning : variable %s not found.\n", strData[i]);
-      types[i] = -1;
-      continue;
-    }
-    sciErr = getVarType(pvApiCtx, piAddrVar, &iType);
-    if(sciErr.iErr) {
-      sciprint("warning : can't type variable %s.\n", strData[i]);
-      types[i] = -1;
-      continue;
-    }
-    types[i] = get_camlint_from_scitype(iType); 
-  }
-  return 0;
-  
 }
