@@ -1,9 +1,9 @@
 #include "api_scilab.h"
 #include <string.h>
 
-int get_value(char* fname, char* pstData, int* _piAddr);
+int get_value(char* fname, void* pvApiCtx, char* pstData, int* _piAddr);
 
-int sci_cjit_read(char* fname)
+int sci_cjit_read(char* fname, void* pvApiCtx)
 {
      SciErr sciErr;
 
@@ -50,7 +50,7 @@ int sci_cjit_read(char* fname)
      /* ============================================================= */
      
      /* print infos about var */
-     iRet = get_value(fname, pstData, piAddrVar);
+     iRet = get_value(fname, pvApiCtx, pstData, piAddrVar);
      if(iRet)
      {
           Scierror(999, 
@@ -64,7 +64,7 @@ int sci_cjit_read(char* fname)
      return 0;
 }
 
-int get_value_double(char *fname, char* pstData, int* piAddr){
+int get_value_double(char *fname, void* pvApiCtx, char* pstData, int* piAddr){
      SciErr sciErr;
      int iRet;
 
@@ -145,7 +145,7 @@ int get_value_double(char *fname, char* pstData, int* piAddr){
      ReturnArguments(pvApiCtx);  
 }
 
-int get_value_poly(char *fname, char* pstData, int* piAddr){
+int get_value_poly(char *fname, void* pvApiCtx, char* pstData, int* piAddr){
      SciErr sciErr;
 
      int complex = isVarComplex(pvApiCtx, piAddr);
@@ -389,7 +389,7 @@ int get_value_poly(char *fname, char* pstData, int* piAddr){
      ReturnArguments(pvApiCtx);  
 }
 
-int get_value_boolean(char *fname, char* pstData, int* piAddr){
+int get_value_boolean(char *fname, void* pvApiCtx, char* pstData, int* piAddr){
      SciErr sciErr;
      int iRet;
      
@@ -432,7 +432,7 @@ int get_value_boolean(char *fname, char* pstData, int* piAddr){
      ReturnArguments(pvApiCtx);  
 }
 
-int get_value_string(char *fname, char* pstData, int* piAddr)
+int get_value_string(char *fname, void* pvApiCtx, char* pstData, int* piAddr)
 {
      SciErr sciErr;
      int i,j;
@@ -542,7 +542,7 @@ int get_value_string(char *fname, char* pstData, int* piAddr)
      ReturnArguments(pvApiCtx);
 }
 
-int get_value_sparse(char *fname, char* pstData, int* piAddr)
+int get_value_sparse(char *fname, void* pvApiCtx, char* pstData, int* piAddr)
 {
      SciErr sciErr;
 
@@ -639,7 +639,7 @@ int get_value_sparse(char *fname, char* pstData, int* piAddr)
      ReturnArguments(pvApiCtx);
 }
 
-int get_value_boolean_sparse(char *fname, char* pstData, int* piAddr)
+int get_value_boolean_sparse(char *fname, void* pvApiCtx, char* pstData, int* piAddr)
 {
      SciErr sciErr;
 
@@ -690,7 +690,7 @@ int get_value_boolean_sparse(char *fname, char* pstData, int* piAddr)
      ReturnArguments(pvApiCtx);
 }
 
-int get_value_int(char *fname, char* pstData, int* piAddr)
+int get_value_int(char *fname, void* pvApiCtx, char* pstData, int* piAddr)
 {
      SciErr sciErr;
      int iPrec, iRows, iCols;
@@ -937,7 +937,7 @@ int get_value_int(char *fname, char* pstData, int* piAddr)
      ReturnArguments(pvApiCtx);
 }
 
-int get_value(char *fname, char* pstData, int* piAddr)
+int get_value(char *fname, void* pvApiCtx, char* pstData, int* piAddr)
 {
      SciErr sciErr;
      int iType;
@@ -951,25 +951,25 @@ int get_value(char *fname, char* pstData, int* piAddr)
      switch(iType)
      {
      case sci_matrix :
-          get_value_double(fname, pstData, piAddr);
+          get_value_double(fname, pvApiCtx, pstData, piAddr);
           break;
      case sci_poly :
-          get_value_poly(fname, pstData, piAddr);
+          get_value_poly(fname, pvApiCtx, pstData, piAddr);
           break;
      case sci_boolean :
-          get_value_boolean(fname, pstData, piAddr);
+          get_value_boolean(fname, pvApiCtx, pstData, piAddr);
           break;
      case sci_sparse :
-          get_value_sparse(fname, pstData, piAddr);
+          get_value_sparse(fname, pvApiCtx, pstData, piAddr);
           break;
      case sci_boolean_sparse :
-          get_value_boolean_sparse(fname, pstData, piAddr);
+          get_value_boolean_sparse(fname, pvApiCtx, pstData, piAddr);
           break;
      case sci_ints :
-          get_value_int(fname, pstData, piAddr);
+          get_value_int(fname, pvApiCtx, pstData, piAddr);
           break;
      case sci_strings :
-          get_value_string(fname, pstData, piAddr);
+          get_value_string(fname, pvApiCtx, pstData, piAddr);
           break;
      case sci_list :
           Scierror(999, "%s: can't get value for %s(sci_list).\n", fname, pstData, 1);

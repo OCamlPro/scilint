@@ -1,10 +1,10 @@
 #include "api_scilab.h"
 #include <string.h>
 
-int set_value(char* fname, char* pstData, int* _piAddrVal);
+int set_value(char* fname, void* pvApiCtx, char* pstData, int* _piAddrVal);
 //int set_new_value(char* fname, char* pstData, int* _piAddrVal);
 
-int sci_cjit_write(char* fname)
+int sci_cjit_write(char* fname, void* pvApiCtx)
 {
      SciErr sciErr;
      
@@ -50,7 +50,7 @@ int sci_cjit_write(char* fname)
           return 0;
      }
      
-     iRet = set_value(fname, pstData, piAddrVal);
+     iRet = set_value(fname, pvApiCtx, pstData, piAddrVal);
      if(iRet)
      {
           Scierror(999, 
@@ -64,7 +64,7 @@ int sci_cjit_write(char* fname)
      return 0;
 }
 
-int set_value_double(char *fname, char* pstData, int* piAddrVal)
+int set_value_double(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal)
 {
      SciErr sciErr;
      int iRet;
@@ -144,7 +144,7 @@ int set_value_double(char *fname, char* pstData, int* piAddrVal)
      ReturnArguments(pvApiCtx);  
 }
 
-int set_value_boolean(char *fname, char* pstData, int* piAddrVal)
+int set_value_boolean(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal)
 {
      SciErr sciErr;
      int iRet;
@@ -186,7 +186,7 @@ int set_value_boolean(char *fname, char* pstData, int* piAddrVal)
      ReturnArguments(pvApiCtx); 
 }
 
-int set_value_string(char *fname, char* pstData, int* piAddrVal)
+int set_value_string(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal)
 {
      SciErr sciErr;
      int i,j;
@@ -291,7 +291,7 @@ int set_value_string(char *fname, char* pstData, int* piAddrVal)
      ReturnArguments(pvApiCtx);
 }
 
-int set_value_int(char *fname, char* pstData, int* piAddrVal)
+int set_value_int(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal)
 {
      SciErr sciErr;
      int iPrec, iRows, iCols;
@@ -521,7 +521,7 @@ int set_value_int(char *fname, char* pstData, int* piAddrVal)
      ReturnArguments(pvApiCtx);
 }
 
-int set_value_sparse(char *fname, char* pstData, int* piAddrVal)
+int set_value_sparse(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal)
 {
      SciErr sciErr;
 
@@ -613,7 +613,7 @@ int set_value_sparse(char *fname, char* pstData, int* piAddrVal)
      ReturnArguments(pvApiCtx);
 }
 
-int set_value_boolean_sparse(char *fname, char* pstData, int* piAddrVal)
+int set_value_boolean_sparse(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal)
 {
      SciErr sciErr;
 
@@ -661,7 +661,7 @@ int set_value_boolean_sparse(char *fname, char* pstData, int* piAddrVal)
      ReturnArguments(pvApiCtx);
 }
 
-int set_value_poly(char *fname, char* pstData, int* piAddrVal){
+int set_value_poly(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal){
      SciErr sciErr;
 
      int complex = isVarComplex(pvApiCtx, piAddrVal);
@@ -890,7 +890,7 @@ int set_value_poly(char *fname, char* pstData, int* piAddrVal){
      ReturnArguments(pvApiCtx);  
 }
 
-int set_value(char *fname, char* pstData, int* piAddrVal)
+int set_value(char *fname, void* pvApiCtx, char* pstData, int* piAddrVal)
 {
      SciErr sciErr;
      int iType;
@@ -904,39 +904,39 @@ int set_value(char *fname, char* pstData, int* piAddrVal)
      switch(iType)
      {
      case sci_matrix :
-          set_value_double(fname, pstData, piAddrVal);
-          break;
+       set_value_double(fname, pvApiCtx, pstData, piAddrVal);
+       break;
      case sci_poly :
-          set_value_poly(fname, pstData, piAddrVal);
-          break;
+       set_value_poly(fname, pvApiCtx, pstData, piAddrVal);
+       break;
      case sci_boolean :
-          set_value_boolean(fname, pstData, piAddrVal);
-          break;
+       set_value_boolean(fname, pvApiCtx, pstData, piAddrVal);
+       break;
      case sci_sparse :
-          set_value_sparse(fname, pstData, piAddrVal);
-          break;
+       set_value_sparse(fname, pvApiCtx, pstData, piAddrVal);
+       break;
      case sci_boolean_sparse :
-          set_value_boolean_sparse(fname, pstData, piAddrVal);
-          break;
+       set_value_boolean_sparse(fname, pvApiCtx, pstData, piAddrVal);
+       break;
      case sci_ints :
-          set_value_int(fname, pstData, piAddrVal);
-          break;
+       set_value_int(fname, pvApiCtx, pstData, piAddrVal);
+       break;
      case sci_strings :
-          set_value_string(fname, pstData, piAddrVal);
-          break;
+       set_value_string(fname, pvApiCtx, pstData, piAddrVal);
+       break;
      case sci_list :
-          Scierror(999, "%s: can't set value for %s(sci_list).\n", fname, pstData, 1);
-          break;
+       Scierror(999, "%s: can't set value for %s(sci_list).\n", fname, pstData, 1);
+       break;
      case sci_tlist :
-          Scierror(999, "%s: can't set value for %s(sci_tlist).\n", fname, pstData, 1);
-          break;
+       Scierror(999, "%s: can't set value for %s(sci_tlist).\n", fname, pstData, 1);
+       break;
      case sci_mlist :
-          Scierror(999, "%s: can't set value for %s(sci_mlist).\n", fname, pstData, 1);
-          break;
+       Scierror(999, "%s: can't set value for %s(sci_mlist).\n", fname, pstData, 1);
+       break;
      default :
-          Scierror(999, "%s: unknown type for %s.\n", fname, pstData, 1);
-          return 1;
+       Scierror(999, "%s: unknown type for %s.\n", fname, pstData, 1);
+       return 1;
      }
-    
+     
      return 0;
 }
