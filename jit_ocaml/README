@@ -1,0 +1,10 @@
+How to run JitOcaml :
+- cp -r jit_ocaml SCI/modules
+- .SCI/bin/scilab-cli
+- exec modules/jit_ocaml/builder.sce
+- exec modules/jit_ocaml/loader.sce
+
+jit_start() : run once before using jit_expr
+jit_expr(expr, freevars) :
+  * expr : expression
+  * freevars : matrix of variable names that are free in expr

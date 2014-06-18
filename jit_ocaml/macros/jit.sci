@@ -1,4 +1,3 @@
-function jit(val)
-  v = c_test(val)
-  disp(v)
+function jit(expr, list)
+  c_jit(expr, list)
 endfunction
