@@ -11,6 +11,8 @@ OCAMLLEX=ocamllex
 OCAMLDEP=ocamlfind ocamldep
 
 OCAML_COMMON_MLS = \
+  src/third_party/ptmap.ml \
+  src/third_party/ptset.ml \
   src/common/scilintManual.ml \
   src/common/scilintWarning.ml \
   src/common/scilabLocations.ml \
@@ -20,6 +22,8 @@ OCAML_COMMON_MLS = \
   src/input/scilabTypedPrimitivesLoader.ml
 
 OCAML_COMMON_MLIS = \
+  src/third_party/ptset.mli \
+  src/third_party/ptmap.mli \
   src/common/scilintWarning.mli \
 
 src/input/scilabTypedPrimitivesParser.cmi: \
@@ -136,7 +140,7 @@ SCILINT_DOC_GEN_MLS = \
 	$(OCAML_COMMON_MLS) \
 	$(OCAML_SCILINT_DOC_GEN_MLS)
 
-SCILINIT_DOC_GEN_MLIS = \
+SCILINT_DOC_GEN_MLIS = \
 	$(OCAML_COMMON_MLIS) \
 
 SCILINT_DOC_GEN_CMIS = $(SCILINT_DOC_GEN_MLS:.ml=.cmi) $(SCILINT_DOC_GEN_MLIS:.mli=.cmi)
@@ -149,6 +153,7 @@ OCAML_INCL= \
   -package 'unix,uutf,pprint,re,re.posix' \
   -I src/common -I src/input \
   -I src/ast -I src/parser/scilab_five \
+  -I src/third_party \
   -I src/parser/scilab_six \
   -I src/scilint -I src/scilint/config \
   -I src/scintax -I src/scifind -I src/docgen \
@@ -188,6 +193,7 @@ scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
           -o $@ $(SCILINT_DOC_GEN_CMOS)
 
 .depend_ocaml: $(SCILINT_DOC_GEN_MLS) $(SCILINT_DOC_GEN_MLIS) \
+	  $(OCAML_COMMON_MLS) $(OCAML_COMMON_MLIS) \
 	  $(SCILINT_MLS) $(SCILINT_MLIS) \
 	  $(SCINTAX_MLS) $(SCINTAX_MLIS) \
 	  $(SCIFIND_MLS) $(SCIFIND_MLIS)

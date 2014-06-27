@@ -78,7 +78,8 @@ let merge_descr_locs exprs =
 include Utils
 
 let ghost cstr =
-  { loc = ghost_loc ; meta = ghost_meta ; cstr ; comment = [] }
+  { loc = ghost_loc ; meta = ghost_meta ; cstr ;
+    comment = [] ; id = UUID.make () }
 
 let collect_messages ast =
   let res = ref [] in

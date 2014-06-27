@@ -8,6 +8,13 @@ begin library "scilint_common"
     "scilintWarning.ml"
   end
 
+  begin (subdir = [ "src/third_party" ])
+    "ptmap.mli"
+    "ptset.mli"
+    "ptmap.ml"
+    "ptset.ml"
+  end
+
   (* - inputs *)
   begin (subdir = [ "src/input" ])
     "scilabTypedPrimitives.ml"

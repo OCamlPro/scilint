@@ -652,10 +652,29 @@ end = struct
       (any_of ('a'--'z' ^ 'A'--'Z' ^ spchars_first) ||| utf_opt) ;
       star (any_of ('a'--'z' ^ 'A'--'Z' ^ spchars_next) ||| utf_opt) ]
     ||| char ':'
-  let wildcard =
+  let nested s e stop =
+    callback (fun st ->
+        let cp = checkpoint st in
+        let rec loop n =
+          if exec stop st then
+            (restore st cp ; false)
+          else
+            let c = read st in
+            if c = e && n = 0 then true
+            else if c = e then loop (n - 1)
+            else if c = s then loop (n + 1)
+            else loop n
+        in
+        if read st = s then loop 0
+        else (restore st cp ; false))
+  let simple_wildcard =
     seq [ char '%' ;
           star (any_of ('a' -- 'z' ^ 'A' -- 'Z' ^ '0' -- '9' ^ "_")) ;
-          char '?' ; maybe (char '?') ]
+          char '?' ]
+  let wildcard =
+    seq [ simple_wildcard ; maybe (char '?') ]
+  let wildcard_with_args =
+    seq [ simple_wildcard ; spaces ; nested '{' '}' (any_of "\000\n") ]
   let unop = any_of "@~-+"
   let binop =
     alts [
@@ -670,7 +689,10 @@ end = struct
             phantom (any_but ('0'--'9')) ] ;
       seq [ char '.' ; star space ; any_of "*/\\^" ] ]
   let shell_call_start =
-    seq [ ident ; plus space ; phantom (any_but ".-/+*&|<>=,;\n\000^") ]
+    alts [ seq [ wildcard_with_args ; plus space ;
+                 phantom (any_but ".-/+*&|<>=,;\n\000^") ] ;
+           seq [ ident ; plus space ;
+                 phantom (any_but ".-/+*&|<>=,;\n\000{^") ] ]
 
   let drop_spaces op bounds =
     (* clean spaces in element wise and kronecker operators *)
@@ -711,15 +733,17 @@ end = struct
 
   let descr ?(warns = []) ?(comment = []) cstr ((sl, sc), (el, ec)) ctx =
     let warns = List.map (fun (bounds, warn) ->  ((ctx.src, bounds), warn)) warns in
-    { cstr ; comment ; loc = loc ctx.src sl sc el ec ; meta = warns }
+    { cstr ; comment ; loc = loc ctx.src sl sc el ec ; meta = warns ;
+      id = UUID.make () }
 
   let descr_for_seq ?(warns = []) ?(comment = []) cstr seq =
     let loc = merge_descr_locs seq in
     let warns = List.map (fun (bounds, warn) ->  ((fst loc, bounds), warn)) warns in
-    { cstr ; loc ; meta = warns ; comment }
+    { cstr ; loc ; meta = warns ; comment ; id = UUID.make () }
 
   let descr_exp descr =
-    { descr with cstr = Exp descr ; meta = [] ; comment = [] }
+    { descr with cstr = Exp descr ; meta = [] ; comment = [] ;
+                 id = UUID.make () }
 
   let string_descr ?warns (tok, (s, e)) ctx =
     descr ?warns tok (s, e) ctx
@@ -900,6 +924,7 @@ end = struct
     discard spaces ctx.st ;
     let cp = checkpoint ctx.st in
     let default id =
+      (* TODO: Ambiguous_toplevel_expression *)
       restore ctx.st cp ;
       if id then
 	if ctx.in_function || not ctx.allow_toplevel_exprs then
@@ -910,8 +935,7 @@ end = struct
         let as_expr = parse_toplevel_expr ctx in
         match as_expr.cstr with
         | Error -> `Stmt (parse_shell_call ctx)
-        (* TODO: better heuristics ? macro generate 'typeof id = function' ? *)
-        | Var _ ->
+        | Var { cstr } ->
           let cp' = checkpoint ctx.st in
           restore ctx.st cp ;
           if exec shell_call_start ctx.st then begin
@@ -921,7 +945,10 @@ end = struct
             restore ctx.st cp' ;
             `Stmt (descr_exp as_expr)
           end
-        | _ -> `Stmt (descr_exp as_expr)
+        | _ ->
+          (* it's a bit ugly: we try to parse the line as a shell call
+             to issue an ambiguity warning *)
+          `Stmt (descr_exp as_expr)
       else  `Stmt (descr_exp (parse_toplevel_expr ctx))
     in
     match peek ctx.st with
@@ -1133,7 +1160,7 @@ end = struct
            | _ -> failwith "too many pattern parameters") ;
           let cstr = 
             if spec = "var" then
-              Var { var with cstr = var.cstr ^ regexp }
+              Var { var with cstr = var.cstr ^ regexp ; id = UUID.make () }
             else
               String (var.cstr ^ regexp)
           in
@@ -1176,7 +1203,8 @@ end = struct
                 (from_last "pattern" ctx)
                 ctx
             | Some exps ->
-              let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) })) in
+              let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) ;
+                                                id = UUID.make () })) in
               descr_exp (ghost (Call (name, exps, Tuplified))))
          | _, (_, _) ->
            drop_end 0 ;
@@ -1188,7 +1216,6 @@ end = struct
       (fun ctx kind drop_end ->
          let rec loop acc =
            let arg, term = parse_expr ctx in
-           let cp = checkpoint ctx.st in
            match term with
            | (`Fake | `Term _), "," ->
              loop ((None, arg) :: acc)
@@ -1202,7 +1229,8 @@ end = struct
            failwith "missing pattern"
          else
            let exps = loop [] in
-           let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) })) in
+           let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) ;
+                                             id = UUID.make () })) in
            ghost (Call (name, exps, Tuplified)))
       (fun d -> d)
     
@@ -1768,9 +1796,9 @@ end = struct
     match read ctx.st with
     | ')' -> terminate [ "(" ]
     | ']' -> terminate [ "{" ; "[" ]
-    | '}' -> terminate [ "{" ; "[" ]
+    | '}' -> terminate [ "{" ; "[" ; "pattern" ]
     | '\000' -> terminate [ "program" ; "expression" ]
-    | ',' -> terminate [ "{" ; "[" ; "(" ; "expression" ]
+    | ',' -> terminate [ "{" ; "[" ; "(" ; "expression" ; "pattern" ]
     | ';' -> terminate [ "{" ; "[" ; "(" ; "expression" ]
     | '\n' -> terminate [ "{" ; "[" ; "expression" ]
     | ':' ->

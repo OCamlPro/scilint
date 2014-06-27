@@ -41,7 +41,8 @@ module Make
     { loc = Parameters.loc loc ;
       meta = Parameters.meta meta ;
       cstr = convert cstr ;
-      comment = List.map (convert_descr (fun x -> x)) comment }
+      comment = List.map (convert_descr (fun x -> x)) comment ;
+      id = UUID.make () }
 
   and convert_matrix_contents rows =
     let convert_row row = List.map convert_exp row in 

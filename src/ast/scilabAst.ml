@@ -27,8 +27,29 @@ module type Parameters = sig
 
 end
 
+(** Unique identifiers *)
+module UUID : sig
+
+  (** The type of unique identifiers, coerceable to int *)
+  type t = int
+
+  (** Unique identifier generator *)
+  val make : unit -> t
+
+  module Set : Ptset.T with type elt = t
+  module Map : Ptmap.T with type key = t
+end = struct
+  type t = int
+  let make =
+    let cur = ref 0 in
+    fun () -> incr cur ; assert (!cur <> 0) ; !cur
+  module Set = Ptset
+  module Map = Ptmap
+end
+
 (** Types shared between Ast instances *)
 module Shared = struct
+
   (** This flag is used to preserve the concrete syntax of the call *)
   type call_kind =
     | Tuplified                        (** f (x, y) *)
@@ -94,14 +115,19 @@ module Make (Parameters : Parameters) = struct
     mutable loc : Parameters.loc ;      (** code location *)
     mutable meta : Parameters.meta ;    (** Meta-information for the node *)
     comment : string descr list ;       (** Attached comment, if any *)
+    id : UUID.t ;                       (** A unique int for identifying the node *)
   }
+
+  (** Export UUID primitives *)
+  module UUID = UUID
 
   (** Wrap a node inside a ghost node descriptor *)
   let ghost cstr =
     { cstr ;
       comment = [] ;
       loc = Parameters.ghost_loc ;
-      meta = Parameters.ghost_meta }
+      meta = Parameters.ghost_meta ;
+      id = UUID.make () }
 
   (** Export shared types *)
   include Shared
