@@ -1,4 +1,4 @@
-let _ = print_endline "OCaml's running"
+let _ = print_endline "OCaml running"
 
 type sci_type = 
   | Double 
@@ -11,7 +11,7 @@ type sci_type =
   | List of sci_type list 
   | TList of sci_type list 
   | MList of sci_type list
-  | Non_supported
+  | Not_supported
   | NotFoundType
 
 let string_of_type = function 
@@ -25,7 +25,7 @@ let string_of_type = function
   | List _ -> "list"
   | TList _ -> "tlist"
   | MList _ -> "mlist"
-  | Non_supported -> "not supported"
+  | Not_supported -> "not supported"
   | NotFoundType -> "type not found"
     
 let type_of_int = function
@@ -37,7 +37,10 @@ let type_of_int = function
   | 4 -> Boolean_sparse
   | 5 -> Int
   | 6 -> String
-  | _ -> Non_supported
+  | _ -> Not_supported
+
+let jit_test ctx = 
+  Context.test ctx
 
 let jit_expr expr vars types complex dims =
   print_endline ("OCamlJIT expr: " ^ expr);
@@ -54,4 +57,4 @@ let jit_expr expr vars types complex dims =
       print_endline (string_of_int (Array.get complex i))) vars
 
 let _ = Callback.register "jit_expr" jit_expr
-
+let _ = Callback.register "jit_test" jit_test

@@ -1,10 +1,10 @@
 // This file is released under the 3-clause BSD license. See COPYING-BSD.
 
-function call_make(path)
+function call_make(path, rule)
   if ( ilib_verbose() <> 0 ) then
      mprintf(gettext("   Running the Makefile\n"));
   end
-  cmd = "make -C " + path
+  cmd = "make -C " + path + " " + rule;
   [msg, ierr, stderr] = unix_g(cmd);
   
   if ierr <> 0 then
@@ -28,10 +28,14 @@ endfunction
 
 function builder_src()
   src_path = get_absolute_file_path("builder_src.sce");
-  // OCaml src
-  call_make(src_path + "ocaml");  
-  // C wrapper src
-  call_make(src_path + "c");  
+  // OCaml context's src
+  call_make(src_path + "ocaml", "context");  
+  // C Context wrapper src
+  call_make(src_path + "c", "stubs");  
+  // Ocaml src
+  call_make(src_path + "ocaml", "all");  
+  // C wrapper
+  call_make(src_path + "c", "all");  
 endfunction
 
 builder_src();
