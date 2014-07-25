@@ -127,7 +127,7 @@ int sci_cjit(char *fname, void *pvApiCtx)
      for (i = 0; i < iRows * iCols ; i++) {
        sciErr = getVarAddressFromName(pvApiCtx, strData[i], &piAddrVar);
        if (sciErr.iErr) {
-	 sciprint("warning : variable %s not found.\n", strData[i]);
+	 sciprint("warning : variable \'%s\' not found.\n", strData[i]);
 	 types[i] = -1;
 	 complexs[i] = -1;
 	 dims[i * 2] = -1;

@@ -951,38 +951,66 @@ int get_value(char *fname, void* pvApiCtx, char* pstData, int* piAddr)
      switch(iType)
      {
      case sci_matrix :
-          get_value_double(fname, pvApiCtx, pstData, piAddr);
-          break;
+       get_value_double(fname, pvApiCtx, pstData, piAddr);
+       break;
      case sci_poly :
-          get_value_poly(fname, pvApiCtx, pstData, piAddr);
-          break;
+       get_value_poly(fname, pvApiCtx, pstData, piAddr);
+       break;
      case sci_boolean :
-          get_value_boolean(fname, pvApiCtx, pstData, piAddr);
-          break;
+       get_value_boolean(fname, pvApiCtx, pstData, piAddr);
+       break;
      case sci_sparse :
-          get_value_sparse(fname, pvApiCtx, pstData, piAddr);
-          break;
+       get_value_sparse(fname, pvApiCtx, pstData, piAddr);
+       break;
      case sci_boolean_sparse :
-          get_value_boolean_sparse(fname, pvApiCtx, pstData, piAddr);
-          break;
+       get_value_boolean_sparse(fname, pvApiCtx, pstData, piAddr);
+       break;
      case sci_ints :
-          get_value_int(fname, pvApiCtx, pstData, piAddr);
-          break;
+       get_value_int(fname, pvApiCtx, pstData, piAddr);
+       break;
      case sci_strings :
-          get_value_string(fname, pvApiCtx, pstData, piAddr);
-          break;
+       get_value_string(fname, pvApiCtx, pstData, piAddr);
+       break;
      case sci_list :
-          Scierror(999, "%s: can't get value for %s(sci_list).\n", fname, pstData, 1);
-          break;
+       Scierror(999, "%s: can't get value for %s(sci_list).\n", fname, pstData, 1);
+       break;
      case sci_tlist :
-          Scierror(999, "%s: can't get value for %s(sci_tlist).\n", fname, pstData, 1);
-          break;
+       Scierror(999, "%s: can't get value for %s(sci_tlist).\n", fname, pstData, 1);
+       break;
      case sci_mlist :
-          Scierror(999, "%s: can't get value for %s(sci_mlist).\n", fname, pstData, 1);
-          break;
+       Scierror(999, "%s: can't get value for %s(sci_mlist).\n", fname, pstData, 1);
+       break;
+     case sci_handles :
+       Scierror(999, "%s: can't get value for %s(sci_handles).\n", fname, pstData, 1);
+       break;
+     case sci_c_function :
+       Scierror(999, "%s: can't get value for %s(sci_c_function).\n", fname, pstData, 1);
+       /* GatewayStruct* pStr = (GatewayStruct*)_pvCtx; */
+       /* ast::ConstVisitor node = pStr->m_pVisitor; */
+       /* printAstTask(node, false); */
+       callScilabFunction(pvApiCtx, pstData, 1, 1, 0);
+       break;
+     case sci_u_function :
+       Scierror(999, "%s: can't get value for %s(sci_u_function).\n", fname, pstData, 1);
+       break;
+     case sci_pointer :
+       Scierror(999, "%s: can't get value for %s(sci_pointer).\n", fname, pstData, 1);
+       break;
+     case sci_implicit_poly :
+       Scierror(999, "%s: can't get value for %s(sci_implicit_poly).\n", fname, pstData, 1);
+       break;
+     case sci_intrinsic_function :
+       Scierror(999, "%s: can't get value for %s(sci_intrinsic_function).\n", fname, pstData, 1);
+       break;
+     case sci_matlab_sparse :
+       Scierror(999, "%s: can't get value for %s(sci_matlab_sparse).\n", fname, pstData, 1);
+       break;
+     case sci_lib :
+       Scierror(999, "%s: can't get value for %s(sci_lib).\n", fname, pstData, 1);
+       break;
      default :
-          Scierror(999, "%s: unknown type for %s.\n", fname, pstData, 1);
-          return 1;
+       Scierror(999, "%s: unknown type for %s.\n", fname, pstData, 1);
+       return 1;
      }
     
      return 0;
