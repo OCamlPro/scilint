@@ -26,11 +26,11 @@ function res = make_int8 (varargin)
     res = []
     for i = 1:varargin(1) do
       for j = 1:varargin(2) do
-        res(i, j) = int8 (rand() * 30) + 1
+        res(i, j) = int8 (rand() * 30) - 15
       end
     end
   else
-    res = int8 (rand() * 30) + 1
+    res = int8 (rand() * 30) - 15
   end
 endfunction
 
@@ -50,11 +50,11 @@ function res = make_int16 (varargin)
     res = []
     for i = 1:varargin(1) do
       for j = 1:varargin(2) do
-        res(i, j) = int16 (rand() * 30) + 1
+        res(i, j) = int16 (rand() * 30) -15
       end
     end
   else
-    res = int16 (rand() * 30) + 1
+    res = int16 (rand() * 30) - 15
   end
 endfunction
 
@@ -74,11 +74,11 @@ function res = make_int32 (varargin)
     res = []
     for i = 1:varargin(1) do
       for j = 1:varargin(2) do
-        res(i, j) = int32 (rand() * 30) + 1
+        res(i, j) = int32 (rand() * 30) - 15
       end
     end
   else
-    res = int32 (rand() * 30) + 1
+    res = int32 (rand() * 30) - 15
   end
 endfunction
 
@@ -98,11 +98,11 @@ function res = make_float (varargin)
     res = []
     for i = 1:varargin(1) do
       for j = 1:varargin(2) do
-        res(i, j) = rand() * 1000. + 2.
+        res(i, j) = rand() * 1000 - 500
       end
     end
   else
-    res = rand() * 1000. + 2.
+    res = rand() * 1000 - 500
   end
 endfunction
 
@@ -122,11 +122,11 @@ function res = make_complex (varargin)
     res = []
     for i = 1:varargin(1) do
       for j = 1:varargin(2) do
-        res(i, j) = rand() * 1000. + %i * rand() * 1000.
+        res(i, j) = rand() * 1000  - 500 + %i * (rand() * 1000 - 500)
       end
     end
   else
-    res = rand() * 1000. + %i * rand() * 1000.
+    res = rand() * 1000  - 500 + %i * (rand() * 1000 - 500)
   end
 endfunction
 
@@ -217,6 +217,10 @@ types = list (..
 )
 
 function name = typenameof (types, v)
+  if type (v) == 15 then
+    name = 'List'
+    return
+  end
   for ty = types
     if ty.tester (v) then
       if size (v) == [1, 1] then
@@ -266,19 +270,26 @@ function test_call (types, name, args)
   printf ("], %s ;\n", nr)
 endfunction
 
-function dynfer (name, maxa)
+function dynfer (name, maxa, samples)
   test_call (types, name, list())
   indexes = (1:size(types))
   tindexes = indexes'
   for it = 1:maxa
     for i = 1:size(tindexes, 1)
-      args = list()
-      for j = 1:size(tindexes, 2)
-        sampler = types(tindexes(i, j)).sampler
-        args(j) = sampler ()
-        clear sampler
+      for s = 0:samples
+        args = list()
+        for j = 1:size(tindexes, 2)
+          sampler = types(tindexes(i, j)).sampler
+          select floor (rand () * 4)
+          case 0, args(j) = sampler ()
+          case 1, args(j) = sampler (3, 3)
+          case 2, args(j) = sampler (1, 3)
+          case 3, args(j) = sampler (3, 1)
+          end
+          clear sampler
+        end
+        test_call (types, name, args)
       end
-      test_call (types, name, args)
     end
     tmpindexes = []
     for i = 1:size(indexes, 2) do
@@ -289,8 +300,7 @@ function dynfer (name, maxa)
   end
 endfunction
 
-dynfer ('cos', 4) 
-dynfer ('sin', 4) 
-dynfer ('acos', 4) 
-dynfer ('atan', 4) 
-dynfer ('sqrt', 4) 
+dynfer ('cos', 4, 10)
+dynfer ('atan', 4, 10)
+dynfer ('sqrt', 4, 10)
+quit

@@ -231,6 +231,23 @@ end = struct
     let (line, column) = state.point in
     state.point <- (line, column + 1)
 
+  let eat_comment state =
+    (* Ugly hack, because "..( .)*\n" are not taken into account after
+       a "//". This function has no other use case than eating
+       comments until the next line feed (skippable or not). It
+       positions the state at line's end and declares all dots as
+       meaningful ones by changing them into '\003'. See {!read}.  *)
+    let rec eat () =
+      match StreamReader.read state.reader_state with
+      | '\r' | '\n' | '\002' -> StreamReader.rewind state.reader_state 1
+      | '.' ->
+        StreamReader.rewind state.reader_state 1 ;
+        StreamReader.write state.reader_state '\003' ;
+        column_feed state ; eat ()
+      | '\000' -> ()
+      | _ -> column_feed state ; eat ()
+    in eat ()
+
   let eat_lf state =
     (* See {!read} for explanation. *)
     match StreamReader.peek state.reader_state with
@@ -239,11 +256,36 @@ end = struct
 
   let rec eol_dots state =
     (* See {!read} for explanation. *)
-    match StreamReader.read state.reader_state with
-    | '.' | ' ' -> eol_dots state
-    | '\n' -> line_feed state ; true
-    | '\r' -> line_feed state ; eat_lf state ; true
+    match StreamReader.peek state.reader_state with
+    | '.' | ' ' ->
+      StreamReader.skip state.reader_state 1 ;
+      eol_dots state
+    | '\n' ->
+      StreamReader.write state.reader_state '\002' ;
+      true
+    | '\r' ->
+      StreamReader.write state.reader_state '\002' ;
+      eat_lf state ; true
+    | '/' ->
+      StreamReader.skip state.reader_state 1 ;
+      (* preserve any comment between a line continuator and a line terminator *)
+      if StreamReader.peek state.reader_state = '/' then begin
+        eat_comment state ;
+        eol_dots state
+      end else false
     | _ -> false
+
+  let rec patch_eol state =
+    (* See {!read} for explanation. *)
+    match StreamReader.peek state.reader_state with
+    | '\002' -> () (* stop at line stop *)
+    | '/'
+      (* TODO: accept or drop in-expression / in-word comments as in
+         "1 + ..//x\n 2" or "12..//x\n34" *)
+    | _ ->
+      StreamReader.write state.reader_state '\001' ;
+      column_feed state ;
+      patch_eol state
 
   let rec read state =
     (* To be able to extract text and to speed up, we scan for line
@@ -252,24 +294,20 @@ end = struct
        skippable line break and '\003' for meaningful dots that have
        already been scanned as such. *)
     match StreamReader.read state.reader_state with
-    | '.' -> 
+    | '.' when StreamReader.peek state.reader_state = '.' -> 
       StreamReader.rewind state.reader_state 1 ;
       let spos = StreamReader.pos state.reader_state in
       if eol_dots state then begin
-        let epos = StreamReader.pos state.reader_state in
         StreamReader.go_to state.reader_state spos ;
-        StreamReader.write state.reader_state '\002' ;
-        while StreamReader.pos state.reader_state < epos do
-          StreamReader.write state.reader_state '\001'
-        done ;
-        line_feed state ; read state
+        patch_eol state ;
+        read state
       end else begin
         StreamReader.go_to state.reader_state spos ;
         while StreamReader.peek state.reader_state = '.' do
           StreamReader.write state.reader_state '\003'
         done ;
         StreamReader.go_to state.reader_state spos ;
-        StreamReader.discard state.reader_state ;
+        StreamReader.skip state.reader_state 1 ;
         column_feed state ; '.'
       end
     | '\r' ->
@@ -278,13 +316,13 @@ end = struct
       eat_lf state ; line_feed state ; '\n'
     | '\n' as res -> line_feed state ; res
     | '\000' -> '\000'
-    | '\001' -> read state
+    | '\001' -> column_feed state ; read state
     | '\002' -> line_feed state ; read state
     | '\003' -> column_feed state ; '.'
     | res -> column_feed state ; res
 
   let advance state n =
-    for i = 1 to n do ignore (read state) done
+    for i = 1  to n do ignore (read state) done
 
   let advance_1 state =
     ignore (read state)
@@ -328,22 +366,6 @@ end = struct
 
   let from state (pos, loc) =
     (loc, point state)
-
-  let eat_comment state =
-    (* Ugly hack, because "..( .)*\n" are not taken into account after
-       a "//". This function has no other use case than eating
-       comments. It positions the state at line's end and declares all
-       dots as meaningful ones by changing them into '\003'. See {!read}.  *)
-    let rec eat () =
-      match StreamReader.read state.reader_state with
-      | '\r' | '\n' -> StreamReader.rewind state.reader_state 1
-      | '.' ->
-        StreamReader.rewind state.reader_state 1 ;
-        StreamReader.write state.reader_state '\003' ;
-        column_feed state ; eat ()
-      | '\000' -> ()
-      | _ -> column_feed state ; eat ()
-    in eat ()
 end
 
 (** A quick and dirty regexp-like matching module based on
@@ -1884,8 +1906,7 @@ end = struct
             transpose loc expr eacc
           else
             transpose loc var eacc
-	else
-        if exec comment ctx.st then
+	else if exec comment ctx.st then
           let com = extract_from ctx.st cp in
           let term = detect_end_of_expr terminators ctx in
           List.rev (`Comment com :: eacc), term
