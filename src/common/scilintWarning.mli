@@ -66,6 +66,7 @@ and style_warning =
   | Deprecated of string
   | Ambiguous_dot_left_of_oper
   | Ambiguous_dot_right_of_oper
+  | Ambiguous_toplevel_expression
 
 (** {2 Display} *)
 

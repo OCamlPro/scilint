@@ -66,6 +66,7 @@ and style_warning =
   | Deprecated of string
   | Ambiguous_dot_left_of_oper
   | Ambiguous_dot_right_of_oper
+  | Ambiguous_toplevel_expression
 
 (** {2 Display} *)
 
@@ -182,6 +183,7 @@ and num_of_style_warning descr =
   | Deprecated arg -> 012
   | Ambiguous_dot_left_of_oper -> 013
   | Ambiguous_dot_right_of_oper -> 014
+  | Ambiguous_toplevel_expression -> 015
 
 and format_style_warning ppf descr =
   let open Printf in
@@ -214,6 +216,8 @@ and format_style_warning ppf descr =
     Format.fprintf ppf "ambiguous decimal dot before operator"
   | Ambiguous_dot_right_of_oper ->
     Format.fprintf ppf "ambiguous decimal dot after operator"
+  | Ambiguous_toplevel_expression ->
+    Format.fprintf ppf "cannot decide between a toplevel expression or a shell call"
 
 (** Builds a displayable version of a location *)
 let string_of_loc loc =
