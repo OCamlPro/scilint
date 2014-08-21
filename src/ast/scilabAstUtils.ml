@@ -11,9 +11,7 @@ open ScilabAst
 
 (** Instanciate this functor with the same {!Parameters} as the AST to
     obtain specialized utilities. *)
-module Make
-    (Parameters : Parameters)
-    (Ast : module type of ScilabAst.Make (Parameters)) = struct
+module Make (Ast : ScilabAst.S) = struct
   open Ast
 
   (** This class defines a method [t] of type [t -> t] per AST type
@@ -156,9 +154,9 @@ module Make
     method unop (unop : unop) = unop
     method op (op : op) = op
     method comment (comment : string) = comment
-    method loc (loc : Parameters.loc) = loc
-    method meta (meta : Parameters.meta) = meta
-    method symbol (symbol : Parameters.symbol) = symbol
+    method loc (loc : loc) = loc
+    method meta (meta : meta) = meta
+    method symbol (symbol : symbol) = symbol
   end
 
   (** This class defines a method [t] of type [t -> unit] per AST type
@@ -280,8 +278,8 @@ module Make
     method unop (unop : unop) = ()
     method op (op : op) = ()
     method comment (comment : string) = ()
-    method loc (loc : Parameters.loc) = ()
-    method meta (meta : Parameters.meta) = ()
-    method symbol (symbol : Parameters.symbol) = ()
+    method loc (loc : loc) = ()
+    method meta (meta : meta) = ()
+    method symbol (symbol : symbol) = ()
   end
 end

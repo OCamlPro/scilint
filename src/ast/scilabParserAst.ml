@@ -7,15 +7,16 @@
  *  The terms are also available at
  *  http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt *)
 
+(** Locations as given from the parser, taken from ScilabWarnings *)
+include ScilabLocations
+
+(** Location builder *)
+let loc source fl fc ll lc =
+  (source, ((fl, fc), (ll, lc)))
+
 (** Instance of AST parameters *)
 module Parameters = struct
-
-  (** Locations as given from the parser, taken from ScilabWarnings *)
-  include ScilabLocations
-
-  (** Location builder *)
-  let loc source fl fc ll lc =
-    (source, ((fl, fc), (ll, lc)))
+  type loc = ScilabLocations.loc
 
   (** Location with every field at -1 *)
   let ghost_loc = loc Forged (-1) (-1) (-1) (-1)
@@ -28,25 +29,6 @@ module Parameters = struct
 
   (** Dummy meta *)
   let ghost_meta = []
-
-  (** Forge a location that contains all the others. *)
-  let rec merge_locs locs =
-    match locs with
-    | [] -> ghost_loc
-    | [ loc ] -> loc
-    | loc :: locs ->
-      List.fold_left
-	(fun
-          (srcr, ((flr, fcr), (llr, lcr)))
-          (srce, ((fle, fce), (lle, lce))) ->
-          ((if srcr = srce then srcr else Forged),
-           ((if fle < flr then fle, fce
-             else if fle = flr then fle, min fce fcr
-             else flr, fcr),
-            (if lle > llr then lle, lce
-             else if lle = llr then lle, max lce lcr
-             else llr, lcr))))
-        loc locs
 end
 
 (** Instance of AST parameters for use with the printer *)
@@ -62,13 +44,29 @@ module PrinterParameters = struct
 end
 
 module Ast = ScilabAst.Make (Parameters)
-module Utils = ScilabAstUtils.Make (Parameters) (Ast)
-
-(** Export ALL the types *)
-include Parameters
+module Utils = ScilabAstUtils.Make (Ast)
 
 (** Export the pre-instanciated AST *)
-include Ast
+include (Ast : module type of Ast with type loc := loc)
+
+(** Forge a location that contains all the others. *)
+let rec merge_locs locs =
+  match locs with
+  | [] -> ghost_loc
+  | [ loc ] -> loc
+  | loc :: locs ->
+    List.fold_left
+      (fun
+        (srcr, ((flr, fcr), (llr, lcr)))
+        (srce, ((fle, fce), (lle, lce))) ->
+        ((if srcr = srce then srcr else Forged),
+         ((if fle < flr then fle, fce
+           else if fle = flr then fle, min fce fcr
+           else flr, fcr),
+          (if lle > llr then lle, lce
+           else if lle = llr then lle, max lce lcr
+           else llr, lcr))))
+      loc locs
 
 (** Forge a location that contains all the expressions. *)
 let merge_descr_locs exprs =

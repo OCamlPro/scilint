@@ -106,14 +106,172 @@ module Shared = struct
     | Seq_or                          (** "||" *)
 end
 
-(** Build an AST module specialized according to its {!Parameters} *)
-module Make (Parameters : Parameters) = struct
+(** The type of specialized AST modules *)
+module type S = sig
+
+  (** Export parameters *)
+  include Parameters
 
   (** Node wrapper for location and meta-information *)
   type 'a descr = {
     mutable cstr : 'a ;                 (** The raw AST node *)
-    mutable loc : Parameters.loc ;      (** code location *)
-    mutable meta : Parameters.meta ;    (** Meta-information for the node *)
+    mutable loc : loc ;      (** code location *)
+    mutable meta : meta ;    (** Meta-information for the node *)
+    comment : string descr list ;       (** Attached comment, if any *)
+    id : UUID.t ;                       (** A unique int for identifying the node *)
+  }
+
+  (** Export UUID primitives *)
+  module UUID : module type of UUID
+
+  (** Wrap a node inside a ghost node descriptor *)
+  val ghost : 'a -> 'a descr
+
+  (** Export shared types *)
+
+  (** This flag is used to preserve the concrete syntax of the call *)
+  type call_kind = Shared.call_kind =
+    | Tuplified                        (** f (x, y) *)
+    | Field                            (** o.f (eq. o ('f') *)
+    | Shell                            (** o x y (eq. o ('x', 'y') *)
+    | Cell                             (** f {x, y} (Scilab 6 / MATLAB) *)
+      
+  (** Unary operators *)
+  and unop = Shared.unop =
+    | Unary_minus                     (** "-" *)
+    | Unary_plus                      (** "+" *)
+    | Not                             (** "~" *)
+    | Transpose_conjugate             (** exp' *)
+    | Transpose_non_conjugate         (** exp.' *)
+      
+  (** Binary operators *)
+  and op = Shared.op =
+    (** {4 Arithmetics} *)
+    | Plus                            (** "+" *)
+    | Minus                           (** "-" *)
+    | Times                           (** "*" *)
+    | Rdivide                         (** "/" *)
+    | Ldivide                         (** \   *)
+    | Power                           (** "**" or "^" *)
+      
+    (** {4 Element-wise operations} *)
+    | Dot_times                        (** ".*" *)
+    | Dot_rdivide                      (** "./" *)
+    | Dot_ldivide                      (** .\   *)
+    | Dot_power                        (** ".^" *)
+      
+    (** {4 Kroneckers} *)
+    | Kron_times                       (** ".*." *)
+    | Kron_rdivide                     (** "./." *)
+    | Kron_ldivide                     (** ".\." *)
+      
+    (** {4 Control} *)
+    | Control_times                    (** "*." *)
+    | Control_rdivide                  (** "/." *)
+    | Control_ldivide                  (** "\." *)
+      
+    (** {4 Comparison} *)
+    | Eq                              (** "==" *)
+    | Ne                              (** "<>" or "~=" *)
+    | Lt                              (** "<" *)
+    | Le                              (** "<=" *)
+    | Gt                              (** "<" *)
+    | Ge                              (** ">=" *)
+      
+    (** {4 Logical operators} *)
+    | And                             (** "&" *)
+    | Or                              (** "|" *)
+    | Seq_and                         (** "&&" *)
+    | Seq_or                          (** "||" *)
+
+  (** Main entry point: a list of statements *)
+  type ast = stmt list
+
+  (** Expression node wrapped with location and meta-information *)
+  and exp = exp_cstr descr
+
+  (** Statement node wrapped with location and meta-information *)
+  and stmt = stmt_cstr descr
+
+  (** Symbol wrapped with location and meta-information *)
+  and var = symbol descr
+
+  (** Raw statement node (<> means [,;\n] and sometimes "then") *)
+  and stmt_cstr =
+    (** {4 Basic statements} *)
+    | Assign of exp list * exp        (** lvalue(s) = rvalue <> *)
+    | Defun of defun_params           (** function ... endfunction *)
+    | Exp of exp                      (** Expression as instruction (exp <>) *)
+    | Comment of string               (** Oh yeah ! *)
+
+    (** {4 Control structures} *)
+    | Seq of stmt list                  (** stmt <> ... <> exp *)
+    | Break                             (** break <> *)
+    | Continue                          (** continue <> *)
+    | For of var * exp * stmt           (** for var = exp <> stmt, end *)
+    | If of exp * stmt * stmt option    (** if exp <> stmt [ else stmt ] end *)
+    | Return                            (** return <> (_ = return (_) is an Assign)*)
+    | Select of select_params           (** select exp <> case exp <> stmt ... end *)
+    | Try of stmt * stmt                (** try ... catch ... end *)
+    | While of exp * stmt * stmt option (** while exp <> stmt [ else stmt ] end *)
+
+  (** Function definition parameters *)
+  and defun_params =  {
+    name : var ;
+    args : var list ;
+    rets : var list ;
+    body : stmt ;
+  }
+
+  (** Select parameters *)
+  and select_params = {
+    cond : exp ;
+    cases : (exp * stmt) list ;
+    default : stmt option ;
+  }
+
+  (** Raw expression node *)
+  and exp_cstr =
+    (** {4 Composite expressions} *)
+    | Call of exp * arg list * call_kind  (** f (exp, ..., exp) ({!call_kind}) *)
+    | Identity of exp list                (** (exp, ..., exp) *)
+    | Range of exp * exp option * exp     (** exp : exp? : exp *)
+
+    (** {4 Simple expressions} *)
+    | Bool of bool                    (** %t, %T, %f, %F *)
+    | Num of float                    (** Any number (float, int) *)
+    | String of string                (** "..." '...' *)
+    | Var of var                      (** Symbols, including "$" *)
+    | Colon                           (** Special variable ":" *)
+    | Error                           (** Syntax error recovered by the parser *)
+
+    (** {4 Math expressions} *)
+    | Matrix of matrix_contents       (** Matrix litteral [ ... ] *)
+    | Cell_array of matrix_contents   (** Cell litteral { ... } (Scilab 6/MATLAB) *)
+    | Unop of unop * exp              (** Prefix or postfix unary op *)
+    | Op of op * exp * exp            (** Infix binary op *)
+
+  (** Optionally named function argument *)
+  and arg = var option * exp
+
+  (** Two dimensional matrix literrals _, _, _ ; _, _, _ *)
+  and matrix_contents = exp list descr list
+end
+
+(** Build an AST module specialized according to its {!Parameters} *)
+module Make (Parameters : Parameters)
+  : S with type loc = Parameters.loc
+       and type symbol = Parameters.symbol
+       and type meta = Parameters.meta = struct
+
+  (** Export parameters *)
+  include Parameters
+
+  (** Node wrapper for location and meta-information *)
+  type 'a descr = {
+    mutable cstr : 'a ;                 (** The raw AST node *)
+    mutable loc : loc ;      (** code location *)
+    mutable meta : meta ;    (** Meta-information for the node *)
     comment : string descr list ;       (** Attached comment, if any *)
     id : UUID.t ;                       (** A unique int for identifying the node *)
   }
@@ -125,8 +283,8 @@ module Make (Parameters : Parameters) = struct
   let ghost cstr =
     { cstr ;
       comment = [] ;
-      loc = Parameters.ghost_loc ;
-      meta = Parameters.ghost_meta ;
+      loc = ghost_loc ;
+      meta = ghost_meta ;
       id = UUID.make () }
 
   (** Export shared types *)
@@ -142,7 +300,7 @@ module Make (Parameters : Parameters) = struct
   and stmt = stmt_cstr descr
 
   (** Symbol wrapped with location and meta-information *)
-  and var = Parameters.symbol descr
+  and var = symbol descr
 
   (** Raw statement node (<> means [,;\n] and sometimes "then") *)
   and stmt_cstr =
