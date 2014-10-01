@@ -283,19 +283,19 @@ let serialize_ast =
          output_exps line)
       ctns
   in  
-let set_uint32 s pos n =
-  s.[pos] <- char_of_int (n land 0xff) ;
-  s.[pos+1] <- char_of_int ((n lsr 8) land 0xff) ;
-  s.[pos+2] <- char_of_int ((n lsr 16) land 0xff) ;
-  s.[pos+3] <- char_of_int ((n lsr 24) land 0xff)
-in
+  let set_uint32 s pos n =
+    Bytes.set s pos @@ char_of_int (n land 0xff) ;
+    Bytes.set s (pos + 1) @@ char_of_int ((n lsr 8) land 0xff) ;
+    Bytes.set s (pos + 2) @@ char_of_int ((n lsr 16) land 0xff) ;
+    Bytes.set s (pos + 3) @@ char_of_int ((n lsr 24) land 0xff)
+  in
   (* main output function *)
   fun ast ->
     Buffer.clear b ;
     Buffer.add_string b "SIZE";
     output_stmts ast;
-    let str = Buffer.contents b in
-    let size = String.length str in
+    let str = Buffer.to_bytes b in
+    let size = Bytes.length str in
     set_uint32 str 0 size ;
     (* let's not waste too much memory  *)
     if size >= 1_000_000 then Buffer.reset b ;

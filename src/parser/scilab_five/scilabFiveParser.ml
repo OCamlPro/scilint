@@ -56,7 +56,7 @@ module StreamReader : sig
   val extract_from : state -> position -> string
 end = struct
   type state = {
-    mutable buffer : string ;
+    mutable buffer : bytes ;
     mutable position : int ;
     mutable limit : int ;
     raw_read : unit -> string ;
@@ -64,7 +64,7 @@ end = struct
   and position = int
 
   let generic_reader raw_read =
-    { buffer = "" ; limit = 0 ; position = 0 ; raw_read }
+    { buffer = Bytes.empty ; limit = 0 ; position = 0 ; raw_read }
 
   let string_reader str =
     let already_read = ref false in
@@ -73,29 +73,29 @@ end = struct
     in generic_reader raw_read
 
   let channel_reader chan =
-    let buf = String.make 10_000 '\000' in
+    let buf = Bytes.make 10_000 '\000' in
     let raw_read () =
       let len = Pervasives.input chan buf 0 10_000 in
-      String.sub buf 0 len
+      Bytes.unsafe_to_string (Bytes.sub buf 0 len)
     in generic_reader raw_read
 
   let fill state bytes =
     let buffer_chunk_size = 10_000 in
-    let len = String.length state.buffer in
+    let len = Bytes.length state.buffer in
     let bytes_len = String.length bytes in
     let new_len = state.limit + bytes_len in
     if new_len >= len then begin
       let new_len = new_len + buffer_chunk_size in
-      let new_buffer = String.make new_len '\000' in
-      String.blit state.buffer 0 new_buffer 0 state.limit ;
+      let new_buffer = Bytes.make new_len '\000' in
+      Bytes.blit state.buffer 0 new_buffer 0 state.limit ;
       state.buffer <- new_buffer
     end ;
-    String.blit bytes 0 state.buffer state.limit bytes_len ;
+    Bytes.blit_string bytes 0 state.buffer state.limit bytes_len ;
     state.limit <- state.limit + bytes_len
 
   let rec read state =
     if state.position < state.limit then
-      let res = String.unsafe_get state.buffer state.position in
+      let res = Bytes.unsafe_get state.buffer state.position in
       state.position <- state.position + 1 ;
       res
     else
@@ -105,7 +105,7 @@ end = struct
 
   let rec write state char =
     if state.position < state.limit then begin
-      String.unsafe_set state.buffer state.position char ;
+      Bytes.unsafe_set state.buffer state.position char ;
       state.position <- state.position + 1
     end else
       let new_bytes = state.raw_read () in
@@ -114,7 +114,7 @@ end = struct
 
   let rec peek state =
     if state.position < state.limit then
-      String.unsafe_get state.buffer state.position
+      Bytes.unsafe_get state.buffer state.position
     else
       let new_bytes = state.raw_read () in
       if String.length new_bytes = 0 then '\000'
@@ -122,7 +122,7 @@ end = struct
 
   let rec poke state char =
     if state.position < state.limit then
-      String.unsafe_set state.buffer state.position char
+      Bytes.unsafe_set state.buffer state.position char
     else
       let new_bytes = state.raw_read () in
       if String.length new_bytes = 0 then invalid_arg "poke"
@@ -155,10 +155,10 @@ end = struct
     state.position <- pos
 
   let extract_from state pos =
-    String.sub state.buffer pos (state.position - pos)
+    Bytes.to_string @@ Bytes.sub state.buffer pos (state.position - pos)
 
   let extract_between state start_pos end_pos =
-    String.sub state.buffer start_pos (end_pos - start_pos + 1)
+    Bytes.to_string @@ Bytes.sub state.buffer start_pos (end_pos - start_pos + 1)
 end
 
 (** A character per character reader with Scilab specific hacks.  It
@@ -349,20 +349,20 @@ end = struct
 
   let correct s =
     (* See {!read} and {!eol_dots} for explanation. *)
-    let len = String.length s in
+    let len = Bytes.length s in
     let i = ref 0 and j = ref 0 in
     while !i < len do
-      match s.[!i] with
+      match Bytes.get s !i with
       | '\000' | '\001' | '\002' -> incr i
-      | '\003' -> s.[!j] <- '.' ; incr i ; incr j
-      | c -> s.[!j] <- c ; incr i ; incr j
+      | '\003' -> Bytes.set s !j '.' ; incr i ; incr j
+      | c -> Bytes.set s !j c ; incr i ; incr j
     done ;
-    String.sub s 0 !j
+    Bytes.sub s 0 !j
 
   let extract_from state (pos, loc) =
     let s = StreamReader.extract_from state.reader_state pos in
-    let s = correct s in
-    (s, (loc, point state))
+    let s = correct (Bytes.unsafe_of_string s) in
+    (Bytes.unsafe_to_string s, (loc, point state))
 
   let from state (pos, loc) =
     (loc, point state)
@@ -542,11 +542,11 @@ end = struct
 
   let (--) c1 c2 =
     let c1 = Char.code c1 and c2 = Char.code c2 in
-    let s = String.make (c2 - c1 + 1) '_' in
+    let s = Bytes.make (c2 - c1 + 1) '_' in
     for i = c1 to c2 do
-      s.[i - c1] <- Char.chr i
+      Bytes.set s (i - c1) (Char.chr i)
     done ;
-    s
+    Bytes.unsafe_to_string s
 
   type group = (string * (point * point)) option ref
 
@@ -719,13 +719,13 @@ end = struct
   let drop_spaces op bounds =
     (* clean spaces in element wise and kronecker operators *)
     let rec clean s i j =
-      if i = String.length s then
-        String.sub s 0 j
-      else if s.[i] = ' ' then
+      if i = Bytes.length s then
+        Bytes.sub s 0 j
+      else if Bytes.get s i = ' ' then
         clean s (succ i) j
-      else (s.[j] <- s.[i] ; clean s (succ i) (succ j))
+      else (Bytes.set s j (Bytes.get s i) ; clean s (succ i) (succ j))
     in
-    let nop = clean op 0 0 in
+    let nop = Bytes.(unsafe_to_string (clean (unsafe_of_string op) 0 0)) in
     if nop <> op then
       nop, [ bounds, Replace nop ;
              bounds, Warning (S Spaces_in_operator)]
@@ -936,9 +936,11 @@ end = struct
        it to OCaml's converter, meaning we convert any 'D' exponent prefix
        to an 'E' and put a '0' instead of an empty exponent *)
   let float_of_string str =
-    (try str.[String.index str 'd'] <- 'e' with Not_found -> ()) ;
-    (try str.[String.index str 'D'] <- 'e' with Not_found -> ()) ;
-    let last =  str.[String.length str - 1] in
+    let str = Bytes.of_string str in
+    (try Bytes.(set str (index str 'd') 'e') with Not_found -> ()) ;
+    (try Bytes.(set str (index str 'D') 'e') with Not_found -> ()) ;
+    let last =  Bytes.(get str (length str - 1)) in
+    let str = Bytes.unsafe_to_string str in
     let str = if last = 'e' || last = 'E' then str ^ "0" else str in
     float_of_string str
 
