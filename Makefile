@@ -1,6 +1,7 @@
 all: \
   scilint.asm scintax.asm scilint_doc_gen.asm \
-  scilint.byte scintax.byte scilint_doc_gen.byte
+  scilint.byte scintax.byte scilint_doc_gen.byte \
+  scilint.cmxa
 
 OCAMLOPT=ocamlfind ocamlopt
 OCAMLC=ocamlfind ocamlc
@@ -136,6 +137,9 @@ OPTFLAGS = -g -fPIC $(OCAML_INCL)
 scilint.asm : $(SCILINT_CMXS)
 	$(OCAMLOPT) -package 'unix,uutf,pprint' -linkpkg \
 	  -o $@ $(SCILINT_CMXS)
+
+scilint.cmxa : $(SCILINT_CMXS)
+	ocamlopt -a -o $@ $(SCILINT_CMXS)
 
 scintax.asm : $(SCINTAX_CMXS)
 	$(OCAMLOPT) $(OPTFLAGS) -package 'unix,uutf,pprint'  -linkpkg \

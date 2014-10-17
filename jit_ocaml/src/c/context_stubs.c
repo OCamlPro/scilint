@@ -606,7 +606,7 @@ caml_get_named_matrix_of_string(value ctx, value var_name)
       free(piLen);
       return 1;
     }
-  strData = (char**)malloc(sizeof(char*) * iRows * iCols);
+  strData = (char**)malloc(sizeof(char*) * iRows * iCols + 1);
   for(i = 0 ; i < iRows * iCols ; i++)
     {
       strData[i] = (char*)malloc(sizeof(char) * (piLen[i] + 1));
@@ -1119,3 +1119,201 @@ caml_create_named_complex_matrix_of_double(value ctx, value var_name, value dim,
     
   CAMLreturn(Val_int(0));
 }
+
+
+/* Boolean */
+
+CAMLprim value
+caml_is_boolean_type(value ctx, value piaddr)
+{
+  CAMLparam2( ctx, piaddr );
+  int bool;
+  bool = isBooleanType((void *) ctx, (int *) piaddr);
+  CAMLreturn( Val_bool(bool) );
+}
+
+CAMLprim value
+caml_is_named_boolean_type(value ctx, value var_name)
+{
+  CAMLparam2( ctx, var_name );
+  int bool;
+  bool = isNamedBooleanType((void *) ctx, String_val(var_name));
+  CAMLreturn( Val_bool(bool) );
+}
+
+
+CAMLprim value
+caml_get_scalar_boolean(value ctx, value piaddr)
+{
+  CAMLparam2( ctx, piaddr );
+  int bool;
+  int res;
+  res = getScalarDouble((void *) ctx, (int *) piaddr, &bool);
+  if (res) CAMLreturn( caml_copy_double(-1) );
+  CAMLreturn( Val_bool(bool) );
+}
+
+CAMLprim value
+caml_get_named_scalar_boolean(value ctx, value var_name)
+{
+  CAMLparam2( ctx, var_name );
+  int bool;
+  int res;
+  res = getNamedScalarDouble((void *) ctx, String_val(var_name), &bool);
+  if (res) CAMLreturn( caml_copy_double(-1) );
+  CAMLreturn( Val_bool(bool) );
+}
+
+CAMLprim value
+caml_create_scalar_boolean(value ctx, value pos, value bool)
+{
+  CAMLparam3( ctx, pos, bool );
+  int res;
+  res = createScalarBoolean((void *) ctx, Int_val(pos), Bool_val(bool));
+  CAMLreturn( Val_int(res) );
+}
+
+CAMLprim value
+caml_create_named_scalar_boolean(value ctx, value var_name, value bool)
+{
+  CAMLparam3( ctx, var_name, bool );
+  int res;
+  res = createNamedScalarBoolean((void *) ctx, String_val(var_name), Bool_val(bool));
+  CAMLreturn( Val_int(res) );
+}
+
+CAMLprim value
+caml_get_matrix_of_boolean(value ctx, value piaddr)
+{
+  CAMLparam2( ctx, piaddr );
+  CAMLlocal1( bool_arr );
+  SciErr sciErr;
+  
+  int i, iRows, iCols;
+  int* boolValMat;
+  
+  sciErr = getVarDimension((void *) ctx, (int *) piaddr, &iRows, &iCols);
+  
+  if(sciErr.iErr)
+    {
+      Scierror(999, "can't get dimensions.\n", 1);
+      return 1;
+    }
+  
+  bool_arr = caml_alloc((iRows * iCols), 0);
+  
+  sciErr = getMatrixOfBoolean((void *) ctx, 
+			      (int *) piaddr, 
+			      &iRows, 
+			      &iCols, 
+			      &boolValMat);
+
+  if(sciErr.iErr)
+    {
+      Scierror(999, "can't get matrix of double.\n", 1);
+      return 1;
+    }
+
+  for(i = 0; i < iRows * iCols; i++){
+    Store_double_field(bool_arr, i, boolValMat[i]);
+  }
+
+  CAMLreturn( bool_arr );
+}
+
+CAMLprim value
+caml_get_named_matrix_of_boolean(value ctx, value var_name)
+{
+  CAMLparam2( ctx, var_name );
+  CAMLlocal1( bool_arr );
+  SciErr sciErr;
+  
+  int i, iRows, iCols;
+  int* boolValMat;
+  sciErr = getNamedVarDimension((void *) ctx, String_val(var_name), &iRows, &iCols);
+  
+  if(sciErr.iErr)
+    {
+      Scierror(999, "can't get dimensions.\n", 1);
+      return 1;
+    }
+  bool_arr = caml_alloc((iRows * iCols), 0);
+
+  sciErr = readNamedMatrixOfBoolean((void *) ctx, 
+				    String_val(var_name), 
+				    &iRows, 
+				    &iCols, 
+				    &boolValMat);
+  if(sciErr.iErr)
+    {
+      Scierror(999, "can't get matrix of double.\n", 1);
+      return 1;
+    }
+
+  for(i = 0; i < iRows * iCols; i++){
+    Store_double_field(bool_arr, i, boolValMat[i]);
+  }
+  CAMLreturn( bool_arr );
+}
+
+CAMLprim value
+caml_create_matrix_of_boolean(value ctx, value pos, value rows, value cols, value bool_arr)
+{
+  CAMLparam5( ctx, pos, rows, cols, bool_arr );
+  SciErr sciErr;
+  int iRows = Int_val(rows);
+  int iCols = Int_val(cols);
+  int len = iRows * iCols;
+  int i;
+  int* boolValMat = (int *)malloc(sizeof(int) * len);
+
+  for (i=0; i < len; i++) boolValMat[i] = Int_val(Field(bool_arr, i));
+
+  sciErr = createMatrixOfBoolean((void *) ctx, 
+				 Int_val(pos), 
+				 iRows, 
+				 iCols, 	      
+				 boolValMat);
+  free(boolValMat);
+  
+  if(sciErr.iErr)
+    {
+      Scierror(999, "can't create matrix of string.\n", 1);
+      CAMLreturn(Val_int(1));
+    }
+    
+  CAMLreturn(Val_int(0));
+}
+
+CAMLprim value
+caml_create_named_matrix_of_boolean(value ctx, value var_name, value rows, value cols, value bool_arr)
+{
+  CAMLparam5( ctx, var_name, rows, cols, bool_arr );
+  SciErr sciErr;
+  int iRows = Int_val(rows);
+  int iCols = Int_val(cols);
+  int len = iRows * iCols;
+  int i;
+  int* boolValMat = (int *)malloc(sizeof(int) * len);
+
+  for (i=0; i < len; i++) boolValMat[i] = Int_val(Field(bool_arr, i));
+
+  sciErr = createNamedMatrixOfDouble((void *) ctx, 
+				     String_val(var_name), 
+				     iRows, 
+				     iCols, 	      
+				     boolValMat);
+
+  free(boolValMat);
+
+  if(sciErr.iErr)
+    {
+      Scierror(999, "can't create matrix of string.\n", 1);
+      CAMLreturn(Val_int(1));
+    }
+    
+  CAMLreturn(Val_int(0));
+}
+
+/* (U)INT8 (U)INT16, INT OCAML */
+/* (U)INT32, INT32 OCAML */
