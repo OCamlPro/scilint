@@ -74,6 +74,19 @@ external create_named_matrix_of_double: ctx -> string -> int -> int -> float arr
 external create_complex_matrix_of_double: ctx -> int * int -> int -> float array -> float array -> int = "caml_create_complex_matrix_of_double"
 external create_named_complex_matrix_of_double: ctx -> string -> int * int -> float array -> float array -> int = "caml_create_named_complex_matrix_of_double"
 
+(* Boolean *)
+(* external is_boolean_type: ctx -> nativeint -> bool = "caml_is_boolean_type" *)
+(* external is_named_boolean_type: ctx -> string -> bool = "caml_is_named_boolean_type" *)
+(* external get_scalar_boolean: ctx -> nativeint -> bool = "caml_get_scalar_boolean" *)
+(* external get_named_scalar_boolean: ctx -> nativeint -> bool = "caml_get_named_scalar_boolean" *)
+(* external create_scalar_boolean: ctx -> int -> bool -> int = "caml_create_scalar_boolean" *)
+(* external create_named_scalar_boolean: ctx -> string -> bool -> int = "caml_create_named_scalar_boolean" *)
+(* external get_matrix_of_boolean: ctx -> nativeint -> bool array = "caml_get_matrix_of_boolean" *)
+(* external get_named_matrix_of_boolean: ctx -> string -> bool array = "caml_get_named_matrix_of_boolean" *)
+(* external create_matrix_of_boolean: ctx -> int -> int -> int -> bool array -> int = "caml_create_matrix_of_boolean" *)
+(* external create_named_matrix_of_boolean: ctx -> string -> int -> int -> bool array -> int = "caml_create_named_matrix_of_boolean" *)
+
+
 let print_info_from_addr ctx addr =
   let typ = get_var_type ctx addr in
   Printf.printf "\n@%s --> type : %i%!" (Nativeint.to_string addr) typ;

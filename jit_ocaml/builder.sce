@@ -6,7 +6,7 @@
 mode(-1);
 lines(0);
 
-TOOLBOX_NAME  = "jit_ocaml";
+TOOLBOX_NAME  = "jit_ocaml4";
 TOOLBOX_TITLE = "JitOCaml";
 toolbox_dir   = get_absolute_file_path("builder.sce");
 

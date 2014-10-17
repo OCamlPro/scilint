@@ -237,6 +237,9 @@ scilint.asm : $(SCILINT_CMXS)
 	$(OCAMLOPT) $(OCAML_INCL) -linkpkg \
 	  -o $@ $(SCILINT_CMXS)
 
+scilint.cmxa : $(SCILINT_CMXS)
+	ocamlopt -a -o $@ $(SCILINT_CMXS)
+
 scintax.asm : $(SCINTAX_CMXS)
 	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCINTAX_CMXS)
