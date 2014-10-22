@@ -105,6 +105,28 @@ begin program "scilint"
   ]
 end
 
+begin program "scilob"
+  dirname += [ "src/interp" ]
+  files = [
+    "interpValues.mli"
+    "interpState.mli"
+    "interpDispatcher.ml"
+    "interpValuesPureOCaml.ml"
+    "interpStatePureOCaml.ml"
+    "interpCore.ml"
+    "interpMessages.ml"
+    "interpLib.ml"
+    "interp.ml"
+    "interpMain.ml"
+   ]
+
+  requires = [
+    "scilab_parser"
+    "unix"
+    "re.pcre"
+  ]
+end
+
 begin program "scilint_doc_gen"
   dirname += [ "src/docgen" ]
   files = [

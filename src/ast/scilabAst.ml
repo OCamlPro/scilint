@@ -104,6 +104,41 @@ module Shared = struct
     | Or                              (** "|" *)
     | Seq_and                         (** "&&" *)
     | Seq_or                          (** "||" *)
+
+  let string_of_unop = function
+    | Unary_minus -> "unary substraction"
+    | Unary_plus -> "unary addition"
+    | Not -> "unary negation"
+    | Transpose_conjugate -> "conjugate transposition"
+    | Transpose_non_conjugate -> "non conjugate transposition"
+      
+  let string_of_op = function
+    | Plus -> "addition"
+    | Minus -> "substraction"
+    | Times -> "multiplication"
+    | Rdivide -> "division"
+    | Ldivide -> "reversed division"
+    | Power -> "power"
+    | Dot_times -> "scalar-matrix multiplication"
+    | Dot_rdivide -> "scalar-matrix division"
+    | Dot_ldivide -> "scalar-matrix reversed division"
+    | Dot_power -> "scalar-matrix power"
+    | Kron_times -> "konecker multiplication"
+    | Kron_rdivide -> "konecker division"
+    | Kron_ldivide -> "konecker reversed division"
+    | Control_times -> "matrix-scalar multiplication"
+    | Control_rdivide -> "matrix-scalar division"
+    | Control_ldivide -> "matrix-scalar reversed division"
+    | Eq -> "equality"
+    | Ne -> "inequality"
+    | Lt -> "< inequality"
+    | Le -> "<= inequality"
+    | Gt -> "> inequality"
+    | Ge -> ">= inequality"
+    | And -> "logical and"
+    | Or -> "logical or"
+    | Seq_and -> "sequential and"
+    | Seq_or -> "sequential or"
 end
 
 (** The type of specialized AST modules *)
@@ -183,6 +218,12 @@ module type S = sig
     | Or                              (** "|" *)
     | Seq_and                         (** "&&" *)
     | Seq_or                          (** "||" *)
+
+  (** Human friendly unary operator name *)
+  val string_of_unop : unop -> string
+
+  (** Human friendly binary operator name *)
+  val string_of_op : op -> string
 
   (** Main entry point: a list of statements *)
   type ast = stmt list

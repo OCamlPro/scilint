@@ -16,17 +16,35 @@ type message = loc * message_contents
 
 (** Raw contents of a message *)
 and message_contents =
+  | Werror of warning
   | Warning of warning
+  | Unrecovered of string
   | Recovered of string
+  | Hint of string
   | Drop
   | Insert of string
   | Replace of string
+  | Generic of string * string option * (Format.formatter -> unit)
 
 (** Various kinds of warnings *)
 and warning =
   | L of local_warning
   | S of style_warning
+  | P of program_warning
   | W of string * string (** generic warning (kind, message) *)
+
+(** Inter-procedural warnings *)
+and program_warning =
+  | Variable_cleared of string
+  | Null_result
+  | Too_few_arguments of int
+  | Too_many_arguments of int
+  | Too_few_results of int
+  | Too_many_results of int
+  | Unused_results of int
+  | Unused_argument_label of string
+  | Duplicate_argument_label of string
+  | Unbound_argument_label of string
 
 (** Intra-procedural warnings *)
 and local_warning =
