@@ -4,8 +4,8 @@ all: \
   scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm \
   scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte
 
-OCAMLOPT=ocamlfind ocamlopt -safe-string
-OCAMLC=ocamlfind ocamlc -safe-string
+OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
+OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats
 OCAMLYACC=menhir
 OCAMLLEX=ocamllex
 OCAMLDEP=ocamlfind ocamldep
