@@ -255,7 +255,7 @@ caml_call_scilab_function(value ctx, value fname, value start, value nbret, valu
 }
 
 CAMLprim value
-caml_is_named_var_exist(value ctx, value var_name)
+caml_named_var_exist(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
