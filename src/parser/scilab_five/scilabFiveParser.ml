@@ -1345,8 +1345,9 @@ end = struct
         (* let dot, dot_bounds = extract_from ctx.st cp in *)
         blanks := !blanks || exec (plus space) ctx.st ;
         let eloc = point ctx.st in
+        let cpident = checkpoint ctx.st in
         if exec ident ctx.st then
-          let name, name_bounds = extract_from ctx.st cp in
+          let name, name_bounds = extract_from ctx.st cpident in
           let warns = if keyword name then [ name_bounds, Warning (S Misused_keyword) ] else [] in
           let rexpr = descr ~warns (String name) name_bounds ctx in
 	  let expr = Call (lexpr, [ None, rexpr], Field) in
