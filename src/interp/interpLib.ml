@@ -726,7 +726,7 @@ let stdlib state lib =
   (*----- constants -------------------------------------------------------*)
   register_function lib state "null" (void @-> null) (fun () -> ()) ;
   State.put state (State.var state ":") (inject (Eye (Number Real)) 1.) ;
-  let dol = let edol = poly_create Real "$" in poly_set edol 1 1. ; edol in
+  let dol = let edol = poly_create Real "$" in poly_set edol 2 1. ; edol in
   State.put state (State.var state "$") (inject (Single (Poly Real)) dol) ;
   State.put state (State.var state "%i") (inject (Single (Number Complex)) (0., 1.)) ;
   let pi = 3.141592653589793115997963468544185161590576171875_00 in

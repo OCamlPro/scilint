@@ -24,58 +24,74 @@ exception Interp_error of interp_message
 let print_value ppf value =
   let open Values in
   let print fmt = Format.fprintf ppf fmt in
-  let rec print_value = function
+  let print_poly
+    : type coeff. bool -> (?wrap:bool -> coeff -> unit) -> coeff -> coeff -> coeff poly -> unit
+    = fun wrap print_coeff nil one p ->
+      if poly_variable p = "$" then begin
+        let empty = ref true in
+        if poly_length p = 0 then
+          if wrap then print "($ * 0)" else print "$ * 0"
+        else
+          let v0 = poly_get p 1 in
+          if wrap then print "(" ;
+          if v0 <> nil then begin
+            print_coeff v0 ;
+            empty := false
+          end ;
+          for i = 2 to poly_length p do
+            let v = poly_get p i in
+            if v <> nil then begin
+              if not !empty then print " + " ;
+              if v <> one then (print_coeff ~wrap:true v ; print " * ") ;
+              print "$" ;
+              if i <> 2 then print " ** %d" (i - 1) ;
+              empty := false
+            end
+          done ;
+          if wrap then print ")"
+      end else begin
+        print "poly ([" ;
+        let s = poly_length p in
+        for i = 1 to s do
+          let v = poly_get p i in
+          print_coeff v ;
+          if i <> s then print ", "
+        done ;
+        print "], %S, \"coeff\")" (poly_variable p)
+      end in
+  let rec print_value ?(wrap = false) = function
     | V (Primitive, s) -> print "fptr (%S)" s
     | V (Macro, { Ast.name = { Ast.cstr }}) ->
       print "function (%S)" (State.name cstr)
     | V (Eye (Number Real), 1.) -> print "eye ()"
-    | V (Eye t, v) -> print "eye () * " ; print_value (V (Single t, v))
+    | V (Eye t, v) when wrap ->
+      print "(eye () * " ; print_value ~wrap:true (V (Single t, v)) ; print ")"
+    | V (Eye t, v) -> print "eye () * " ; print_value ~wrap:true (V (Single t, v))
     | V (Single String, s) -> print "%S" s
     | V (Single Bool, true) -> print "T"
     | V (Single Bool, false) -> print "F"
     | V (Atom, ()) -> print "[]"
     | V (Null, ()) -> print "null ()"
-    | V (Single Int8, v) -> print "int8(%i)" v
-    | V (Single Int16, v) -> print "int16(%i)" v
-    | V (Single Int32, v) -> print "int32(%i)" v
-    | V (Single Uint8, v) -> print "uint8(%i)" v
-    | V (Single Uint16, v) -> print "uint16(%i)" v
-    | V (Single Uint32, v) -> print "uint32(%i)" v
+    | V (Single Int8, v) -> print "int8 (%i)" v
+    | V (Single Int16, v) -> print "int16 (%i)" v
+    | V (Single Int32, v) -> print "int32 (%i)" v
+    | V (Single Uint8, v) -> print "uint8 (%i)" v
+    | V (Single Uint16, v) -> print "uint16 (%i)" v
+    | V (Single Uint32, v) -> print "uint32 (%i)" v
     | V (Single (Poly Real), p) ->
-      if poly_variable p = "$" then
-        let empty = ref true in
-        if poly_length p = 0 then
-          print "$ * 0"
-        else
-          let v0 = poly_get p 1 in
-          if v0 <> 0. then begin
-            print_value (V (Single (Number Real), v0)) ;
-            empty := false
-          end ;
-          for i = 2 to poly_length p do
-            let v = poly_get p i in
-            if v <> 0. then begin
-              if not !empty then print " + " ;
-              if v <> 1. then (print_value (V (Single (Number Real), v)) ; print " * ") ;
-              print "$" ;
-              if i <> 2 then print " ** %d" (i - 1) ;
-              empty := false
-            end
-          done
-      else begin
-        print "poly ([" ;
-        let s = poly_length p in
-        for i = 1 to s do
-          let v = poly_get p i in
-          print_value (V (Single (Number Real), v)) ;
-          if i <> s then print ", "
-        done ;
-        print "], %S, \"coeff\")" (poly_variable p)
-      end
+      print_poly wrap
+        (fun ?wrap v -> print_value ?wrap (V (Single (Number Real), v)))
+        0. 1. p
+    | V (Single (Poly Complex), p) ->
+      print_poly wrap
+        (fun ?wrap v -> print_value ?wrap (V (Single (Number Complex), v)))
+        (0., 0.) (1., 0.) p
     | V (Single (Number Real), v) -> print "%g" v
     | V (Single (Number Complex), (0., 1.)) -> print "%%i"
+    | V (Single (Number Complex), (0., im)) when wrap -> print "(%g * %%i)" im
     | V (Single (Number Complex), (0., im)) -> print "%g * %%i" im
     | V (Single (Number Complex), (re, 0.)) -> print "%g" re
+    | V (Single (Number Complex), (re, im)) when wrap -> print "(%g + %g * %%i)" re im
     | V (Single (Number Complex), (re, im)) -> print "%g + %g * %%i" re im
     | V (Vlist, l) ->
       print "list (" ;
@@ -128,7 +144,21 @@ let print_value ppf value =
         if y <> h then print " ;@ "
       done ;
       print "@] ]" ;
-    | _ -> raise (Interp_error (Generic "undisplayable value"))
+    | V (Sparse tag, m) ->
+      print "[ @[<v 0>" ;
+      let w, h = sparse_size m in
+      for y = 1 to h do
+        print "@[<hov 0>" ;
+        for x = 1 to w do
+          print_value (V (Single tag, sparse_get m x y)) ;
+          if x <> w then print ",@ "
+        done ;
+        print "@]" ;
+        if y <> h then print " ;@ "
+      done ;
+      print "@] ]" ;
+    | V (Handle, _) ->
+      print "handle"
   in
   print_value (view value)
 
