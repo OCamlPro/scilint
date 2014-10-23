@@ -1,4 +1,4 @@
-#include <stdio.h>
+cv#include <stdio.h>
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 #include <caml/alloc.h>
@@ -7,7 +7,7 @@
 /* Common */
 
 CAMLprim value
-caml_get_var_address_from_name(value ctx, value var_name)
+caml_scilab_get_var_address_from_name(value ctx, value var_name)
 {
   SciErr sciErr;
   CAMLparam2( ctx, var_name );
@@ -24,7 +24,7 @@ caml_get_var_address_from_name(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_get_var_address_from_position(value ctx, value pos)
+caml_scilab_get_var_address_from_position(value ctx, value pos)
 {
   SciErr sciErr;
   CAMLparam2( ctx, pos );
@@ -41,7 +41,7 @@ caml_get_var_address_from_position(value ctx, value pos)
 }
 
 CAMLprim value
-caml_get_var_name_from_position(value ctx, value pos)
+caml_scilab_get_var_name_from_position(value ctx, value pos)
 {
   SciErr sciErr;
   CAMLparam2( ctx, pos );
@@ -57,7 +57,7 @@ caml_get_var_name_from_position(value ctx, value pos)
 }
 
 CAMLprim value
-caml_get_var_type(value ctx, value piaddr)
+caml_scilab_get_var_type(value ctx, value piaddr)
 {
   SciErr sciErr;
   int iType;
@@ -74,7 +74,7 @@ caml_get_var_type(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_var_type(value ctx, value var_name)
+caml_scilab_get_named_var_type(value ctx, value var_name)
 {
   SciErr sciErr;
   int iType;
@@ -91,7 +91,7 @@ caml_get_named_var_type(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_get_var_dimension(value ctx, value piaddr)
+caml_scilab_get_var_dimension(value ctx, value piaddr)
 {
   SciErr sciErr;
   int rows, cols;
@@ -114,7 +114,7 @@ caml_get_var_dimension(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_var_dimension(value ctx, value var_name)
+caml_scilab_get_named_var_dimension(value ctx, value var_name)
 {
   SciErr sciErr;
   int rows, cols;
@@ -138,7 +138,7 @@ caml_get_named_var_dimension(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_increase_val_ref(value ctx, value piaddr)
+caml_scilab_increase_val_ref(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int ret;
@@ -147,7 +147,7 @@ caml_increase_val_ref(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_decrease_val_ref(value ctx, value piaddr)
+caml_scilab_decrease_val_ref(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int ret;
@@ -156,7 +156,7 @@ caml_decrease_val_ref(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_check_input_argument(value ctx, value min, value max)
+caml_scilab_check_input_argument(value ctx, value min, value max)
 {
   CAMLparam3( ctx, min, max );
   int bool;
@@ -165,7 +165,7 @@ caml_check_input_argument(value ctx, value min, value max)
 }
 
 CAMLprim value
-caml_check_input_argument_at_least(value ctx, value min)
+caml_scilab_check_input_argument_at_least(value ctx, value min)
 {
   CAMLparam2( ctx, min );
   int bool;
@@ -174,7 +174,7 @@ caml_check_input_argument_at_least(value ctx, value min)
 }
 
 CAMLprim value
-caml_check_input_argument_at_most(value ctx, value max)
+caml_scilab_check_input_argument_at_most(value ctx, value max)
 {
   CAMLparam2( ctx, max );
   int bool;
@@ -183,7 +183,7 @@ caml_check_input_argument_at_most(value ctx, value max)
 }
 
 CAMLprim value
-caml_check_output_argument(value ctx, value min, value max)
+caml_scilab_check_output_argument(value ctx, value min, value max)
 {
   CAMLparam3( ctx, min, max );
   int bool;
@@ -192,7 +192,7 @@ caml_check_output_argument(value ctx, value min, value max)
 }
 
 CAMLprim value
-caml_check_output_argument_at_least(value ctx, value min)
+caml_scilab_check_output_argument_at_least(value ctx, value min)
 {
   CAMLparam2( ctx, min );
   int bool;
@@ -201,7 +201,7 @@ caml_check_output_argument_at_least(value ctx, value min)
 }
 
 CAMLprim value
-caml_check_output_argument_at_most(value ctx, value max)
+caml_scilab_check_output_argument_at_most(value ctx, value max)
 {
   CAMLparam2( ctx, max );
   int bool;
@@ -210,7 +210,7 @@ caml_check_output_argument_at_most(value ctx, value max)
 }
 
 CAMLprim value
-caml_get_nb_input_argument(value ctx)
+caml_scilab_get_nb_input_argument(value ctx)
 {
   CAMLparam1( ctx );
   int nb;
@@ -219,7 +219,7 @@ caml_get_nb_input_argument(value ctx)
 }
 
 CAMLprim value
-caml_get_nb_output_argument(value ctx)
+caml_scilab_get_nb_output_argument(value ctx)
 {
   CAMLparam1( ctx );
   int nb;
@@ -228,7 +228,7 @@ caml_get_nb_output_argument(value ctx)
 }
 
 CAMLprim value
-caml_return_arguments(value ctx)
+caml_scilab_return_arguments(value ctx)
 {
   CAMLparam1( ctx );
   int nb;
@@ -237,7 +237,7 @@ caml_return_arguments(value ctx)
 }
 
 CAMLprim value
-caml_call_overload_function(value ctx, value ivar, value fname, value length)
+caml_scilab_call_overload_function(value ctx, value ivar, value fname, value length)
 {
   CAMLparam4( ctx, ivar, fname, length );
   int res;
@@ -246,7 +246,7 @@ caml_call_overload_function(value ctx, value ivar, value fname, value length)
 }
 
 CAMLprim value
-caml_call_scilab_function(value ctx, value fname, value start, value nbret, value nbargs)
+caml_scilab_call_scilab_function(value ctx, value fname, value start, value nbret, value nbargs)
 {
   CAMLparam5( ctx, fname, start, nbret, nbargs );
   int res;
@@ -255,7 +255,7 @@ caml_call_scilab_function(value ctx, value fname, value start, value nbret, valu
 }
 
 CAMLprim value
-caml_named_var_exist(value ctx, value var_name)
+caml_scilab_named_var_exist(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -264,7 +264,7 @@ caml_named_var_exist(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_delete_named_variable(value ctx, value var_name)
+caml_scilab_delete_named_var(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int del;
@@ -273,7 +273,7 @@ caml_delete_named_variable(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_is_var_complex(value ctx, value piaddr)
+caml_scilab_is_var_complex(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -282,7 +282,7 @@ caml_is_var_complex(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_var_complex(value ctx, value var_name)
+caml_scilab_is_named_var_complex(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -291,7 +291,7 @@ caml_is_named_var_complex(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_is_var_matrix_type(value ctx, value piaddr)
+caml_scilab_is_var_matrix_type(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -300,7 +300,7 @@ caml_is_var_matrix_type(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_var_matrix_type(value ctx, value var_name)
+caml_scilab_is_named_var_matrix_type(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -309,7 +309,7 @@ caml_is_named_var_matrix_type(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_is_row_vector(value ctx, value piaddr)
+caml_scilab_is_row_vector(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -318,7 +318,7 @@ caml_is_row_vector(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_row_vector(value ctx, value var_name)
+caml_scilab_is_named_row_vector(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -328,7 +328,7 @@ caml_is_named_row_vector(value ctx, value var_name)
 
 
 CAMLprim value
-caml_is_column_vector(value ctx, value piaddr)
+caml_scilab_is_column_vector(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -337,7 +337,7 @@ caml_is_column_vector(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_column_vector(value ctx, value var_name)
+caml_scilab_is_named_column_vector(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -346,7 +346,7 @@ caml_is_named_column_vector(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_is_vector(value ctx, value piaddr)
+caml_scilab_is_vector(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -355,7 +355,7 @@ caml_is_vector(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_vector(value ctx, value var_name)
+caml_scilab_is_named_vector(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -364,7 +364,7 @@ caml_is_named_vector(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_is_scalar(value ctx, value piaddr)
+caml_scilab_is_scalar(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -373,7 +373,7 @@ caml_is_scalar(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_scalar(value ctx, value var_name)
+caml_scilab_is_named_scalar(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -382,7 +382,7 @@ caml_is_named_scalar(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_is_square_matrix(value ctx, value piaddr)
+caml_scilab_is_square_matrix(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -391,7 +391,7 @@ caml_is_square_matrix(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_square_matrix(value ctx, value var_name)
+caml_scilab_is_named_square_matrix(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -401,7 +401,7 @@ caml_is_named_square_matrix(value ctx, value var_name)
 
 
 CAMLprim value
-caml_is_empty_matrix(value ctx, value piaddr)
+caml_scilab_is_empty_matrix(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -410,7 +410,7 @@ caml_is_empty_matrix(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_empty_matrix(value ctx, value var_name)
+caml_scilab_is_named_empty_matrix(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -419,7 +419,7 @@ caml_is_named_empty_matrix(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_create_empty_matrix(value ctx, value pos)
+caml_scilab_create_empty_matrix(value ctx, value pos)
 {
   CAMLparam2( ctx, pos );
   int bool;
@@ -428,7 +428,7 @@ caml_create_empty_matrix(value ctx, value pos)
 }
 
 CAMLprim value
-caml_create_named_empty_matrix(value ctx, value var_name)
+caml_scilab_create_named_empty_matrix(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -439,7 +439,7 @@ caml_create_named_empty_matrix(value ctx, value var_name)
 /* String */
 
 CAMLprim value
-caml_is_string_type(value ctx, value piaddr)
+caml_scilab_is_string_type(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -448,7 +448,7 @@ caml_is_string_type(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_string_type(value ctx, value var_name)
+caml_scilab_is_named_string_type(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -457,17 +457,17 @@ caml_is_named_string_type(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_get_allocated_single_string(value ctx, value piaddr)
+caml_scilab_get_allocated_single_string(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int res;
   char *psData;
   res = getAllocatedSingleString((void *) ctx, (int *) piaddr, &psData);
-  CAMLreturn( caml_copy_string(psData) );
+  CAMLreturn( caml_scilab_string(psData) );
 }
 
 CAMLprim value
-caml_get_allocated_named_single_string(value ctx, value var_name)
+caml_scilab_get_allocated_named_single_string(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int res;
@@ -477,7 +477,7 @@ caml_get_allocated_named_single_string(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_create_single_string(value ctx, value pos, value str)
+caml_scilab_create_single_string(value ctx, value pos, value str)
 {
   CAMLparam3( ctx, pos, str);
   int res;
@@ -486,7 +486,7 @@ caml_create_single_string(value ctx, value pos, value str)
 }
 
 CAMLprim value
-caml_create_named_single_string(value ctx, value var_name, value str)
+caml_scilab_create_named_single_string(value ctx, value var_name, value str)
 {
   CAMLparam3( ctx, var_name, str);
   int res;
@@ -495,7 +495,7 @@ caml_create_named_single_string(value ctx, value var_name, value str)
 }
 
 CAMLprim value
-caml_get_matrix_of_string(value ctx, value piaddr)
+caml_scilab_get_matrix_of_string(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   CAMLlocal1( str_array );
@@ -572,7 +572,7 @@ caml_get_matrix_of_string(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_matrix_of_string(value ctx, value var_name)
+caml_scilab_get_named_matrix_of_string(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   CAMLlocal1( str_array );
@@ -649,7 +649,7 @@ caml_get_named_matrix_of_string(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_create_matrix_of_string(value ctx, value pos, value rows, value cols, value str_arr)
+caml_scilab_create_matrix_of_string(value ctx, value pos, value rows, value cols, value str_arr)
 {
   CAMLparam5( ctx, pos, rows, cols, str_arr );
   SciErr sciErr;
@@ -679,7 +679,7 @@ caml_create_matrix_of_string(value ctx, value pos, value rows, value cols, value
 }
 
 CAMLprim value
-caml_create_named_matrix_of_string(value ctx, value var_name, value rows, value cols, value str_arr)
+caml_scilab_create_named_matrix_of_string(value ctx, value var_name, value rows, value cols, value str_arr)
 {
   CAMLparam5( ctx, var_name, rows, cols, str_arr );
   SciErr sciErr;
@@ -712,7 +712,7 @@ caml_create_named_matrix_of_string(value ctx, value var_name, value rows, value 
 /* Double */
 
 CAMLprim value
-caml_is_double_type(value ctx, value piaddr)
+caml_scilab_is_double_type(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -721,7 +721,7 @@ caml_is_double_type(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_double_type(value ctx, value var_name)
+caml_scilab_is_named_double_type(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -730,7 +730,7 @@ caml_is_named_double_type(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_get_scalar_double(value ctx, value piaddr)
+caml_scilab_get_scalar_double(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   double dbl;
@@ -741,7 +741,7 @@ caml_get_scalar_double(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_scalar_double(value ctx, value var_name)
+caml_scilab_get_named_scalar_double(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   double dbl;
@@ -752,7 +752,7 @@ caml_get_named_scalar_double(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_get_scalar_complex_double(value ctx, value piaddr)
+caml_scilab_get_scalar_complex_double(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   CAMLlocal1( val_ret );
@@ -771,7 +771,7 @@ caml_get_scalar_complex_double(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_scalar_complex_double(value ctx, value var_name)
+caml_scilab_get_named_scalar_complex_double(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   CAMLlocal1( val_ret );
@@ -790,7 +790,7 @@ caml_get_named_scalar_complex_double(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_create_scalar_double(value ctx, value pos, value dbl)
+caml_scilab_create_scalar_double(value ctx, value pos, value dbl)
 {
   CAMLparam3( ctx, pos, dbl );
   int res;
@@ -799,7 +799,7 @@ caml_create_scalar_double(value ctx, value pos, value dbl)
 }
 
 CAMLprim value
-caml_create_named_scalar_double(value ctx, value var_name, value dbl)
+caml_scilab_create_named_scalar_double(value ctx, value var_name, value dbl)
 {
   CAMLparam3( ctx, var_name, dbl );
   int res;
@@ -808,7 +808,7 @@ caml_create_named_scalar_double(value ctx, value var_name, value dbl)
 }
 
 CAMLprim value
-caml_create_scalar_complex_double(value ctx, value pos, value real, value complex)
+caml_scilab_create_scalar_complex_double(value ctx, value pos, value real, value complex)
 {
   CAMLparam4( ctx, pos, real, complex );
   int res;
@@ -817,7 +817,7 @@ caml_create_scalar_complex_double(value ctx, value pos, value real, value comple
 }
 
 CAMLprim value
-caml_create_named_scalar_complex_double(value ctx, value var_name, value real, value complex)
+caml_scilab_create_named_scalar_complex_double(value ctx, value var_name, value real, value complex)
 {
   CAMLparam4( ctx, var_name, real, complex );
   int res;
@@ -826,7 +826,7 @@ caml_create_named_scalar_complex_double(value ctx, value var_name, value real, v
 }
 
 CAMLprim value
-caml_get_matrix_of_double(value ctx, value piaddr)
+caml_scilab_get_matrix_of_double(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   CAMLlocal1( float_arr );
@@ -865,7 +865,7 @@ caml_get_matrix_of_double(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_matrix_of_double(value ctx, value var_name)
+caml_scilab_get_named_matrix_of_double(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   CAMLlocal1( float_arr );
@@ -900,7 +900,7 @@ caml_get_named_matrix_of_double(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_get_complex_matrix_of_double(value ctx, value piaddr)
+caml_scilab_get_complex_matrix_of_double(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   CAMLlocal3( real_arr, complex_arr, res_arr );
@@ -948,7 +948,7 @@ caml_get_complex_matrix_of_double(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_complex_matrix_of_double(value ctx, value var_name)
+caml_scilab_get_named_complex_matrix_of_double(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   CAMLlocal3( real_arr, complex_arr, res_arr );
@@ -996,7 +996,7 @@ caml_get_named_complex_matrix_of_double(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_create_matrix_of_double(value ctx, value pos, value rows, value cols, value dbl_arr)
+caml_scilab_create_matrix_of_double(value ctx, value pos, value rows, value cols, value dbl_arr)
 {
   CAMLparam5( ctx, pos, rows, cols, dbl_arr );
   SciErr sciErr;
@@ -1025,7 +1025,7 @@ caml_create_matrix_of_double(value ctx, value pos, value rows, value cols, value
 }
 
 CAMLprim value
-caml_create_named_matrix_of_double(value ctx, value var_name, value rows, value cols, value dbl_arr)
+caml_scilab_create_named_matrix_of_double(value ctx, value var_name, value rows, value cols, value dbl_arr)
 {
   CAMLparam5( ctx, var_name, rows, cols, dbl_arr );
   SciErr sciErr;
@@ -1053,7 +1053,7 @@ caml_create_named_matrix_of_double(value ctx, value var_name, value rows, value 
 }
 
 CAMLprim value
-caml_create_complex_matrix_of_double(value ctx, value pos, value dim, value real_arr, value compl_arr)
+caml_scilab_create_complex_matrix_of_double(value ctx, value pos, value dim, value real_arr, value compl_arr)
 {
   CAMLparam5( ctx, pos, dim, real_arr, compl_arr );
   SciErr sciErr;
@@ -1087,7 +1087,7 @@ caml_create_complex_matrix_of_double(value ctx, value pos, value dim, value real
 }
 
 CAMLprim value
-caml_create_named_complex_matrix_of_double(value ctx, value var_name, value dim, value real_arr, value compl_arr)
+caml_scilab_create_named_complex_matrix_of_double(value ctx, value var_name, value dim, value real_arr, value compl_arr)
 {
   CAMLparam5( ctx, var_name, dim, real_arr, compl_arr);
   SciErr sciErr;
@@ -1124,7 +1124,7 @@ caml_create_named_complex_matrix_of_double(value ctx, value var_name, value dim,
 /* Boolean */
 
 CAMLprim value
-caml_is_boolean_type(value ctx, value piaddr)
+caml_scilab_is_boolean_type(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -1133,7 +1133,7 @@ caml_is_boolean_type(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_is_named_boolean_type(value ctx, value var_name)
+caml_scilab_is_named_boolean_type(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -1143,7 +1143,7 @@ caml_is_named_boolean_type(value ctx, value var_name)
 
 
 CAMLprim value
-caml_get_scalar_boolean(value ctx, value piaddr)
+caml_scilab_get_scalar_boolean(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   int bool;
@@ -1154,7 +1154,7 @@ caml_get_scalar_boolean(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_scalar_boolean(value ctx, value var_name)
+caml_scilab_get_named_scalar_boolean(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   int bool;
@@ -1165,7 +1165,7 @@ caml_get_named_scalar_boolean(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_create_scalar_boolean(value ctx, value pos, value bool)
+caml_scilab_create_scalar_boolean(value ctx, value pos, value bool)
 {
   CAMLparam3( ctx, pos, bool );
   int res;
@@ -1174,7 +1174,7 @@ caml_create_scalar_boolean(value ctx, value pos, value bool)
 }
 
 CAMLprim value
-caml_create_named_scalar_boolean(value ctx, value var_name, value bool)
+caml_scilab_create_named_scalar_boolean(value ctx, value var_name, value bool)
 {
   CAMLparam3( ctx, var_name, bool );
   int res;
@@ -1183,7 +1183,7 @@ caml_create_named_scalar_boolean(value ctx, value var_name, value bool)
 }
 
 CAMLprim value
-caml_get_matrix_of_boolean(value ctx, value piaddr)
+caml_scilab_get_matrix_of_boolean(value ctx, value piaddr)
 {
   CAMLparam2( ctx, piaddr );
   CAMLlocal1( bool_arr );
@@ -1222,7 +1222,7 @@ caml_get_matrix_of_boolean(value ctx, value piaddr)
 }
 
 CAMLprim value
-caml_get_named_matrix_of_boolean(value ctx, value var_name)
+caml_scilab_get_named_matrix_of_boolean(value ctx, value var_name)
 {
   CAMLparam2( ctx, var_name );
   CAMLlocal1( bool_arr );
@@ -1257,7 +1257,7 @@ caml_get_named_matrix_of_boolean(value ctx, value var_name)
 }
 
 CAMLprim value
-caml_create_matrix_of_boolean(value ctx, value pos, value rows, value cols, value bool_arr)
+caml_scilab_create_matrix_of_boolean(value ctx, value pos, value rows, value cols, value bool_arr)
 {
   CAMLparam5( ctx, pos, rows, cols, bool_arr );
   SciErr sciErr;
@@ -1286,7 +1286,7 @@ caml_create_matrix_of_boolean(value ctx, value pos, value rows, value cols, valu
 }
 
 CAMLprim value
-caml_create_named_matrix_of_boolean(value ctx, value var_name, value rows, value cols, value bool_arr)
+caml_scilab_create_named_matrix_of_boolean(value ctx, value var_name, value rows, value cols, value bool_arr)
 {
   CAMLparam5( ctx, var_name, rows, cols, bool_arr );
   SciErr sciErr;
