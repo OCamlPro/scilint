@@ -90,6 +90,15 @@ module type S = sig
   (** Representation of 'matrix oriented' lists *)
   type mlist
 
+  val mlist_create : string -> string list -> value list -> mlist
+  val mlist_length : mlist -> int
+  val mlist_label : mlist -> string
+  val mlist_fields : mlist -> string list
+  val mlist_get : mlist -> string -> value
+  val mlist_set : mlist -> string -> value -> unit
+  val mlist_get_by_index : mlist -> int -> value
+  val mlist_set_by_index : mlist -> int -> value -> unit
+
   (** Representation of 'typed' lists *)
   type tlist
 

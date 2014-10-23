@@ -70,6 +70,7 @@ let null = Arg Null
 let void = Fake ()
 let vlist = Arg Vlist
 let tlist n = Arg (Tlist n)
+let mlist n = Arg (Mlist n)
 let any = Any
 let matrix = function
   | Arg (Single k) -> Arg (Matrix k)
@@ -506,6 +507,25 @@ let stdlib state lib =
   register_function lib state "tlist"
     (string @* seq any @-> any)
     (fun name contents -> inject (Tlist name) (Values.tlist_create name [] contents)) ;
+  register_function lib state "mlist"
+    (matrix string @* seq any @-> any)
+    (fun t contents ->
+       let name, fields = match matrix_size t with
+         | (1, h) ->
+           let rec collect i =
+             if i > h then []
+             else matrix_get t 1 i :: collect (i + 1) in
+           matrix_get t 1 1, collect 2
+         | (w, 1) ->
+           let rec collect i =
+             if i > w then []
+             else matrix_get t i 1 :: collect (i + 1) in
+           matrix_get t 1 1, collect 2
+         | _ -> raise Bad_type
+       in inject (Mlist name) (Values.mlist_create name fields contents)) ;
+  register_function lib state "mlist"
+    (string @* seq any @-> any)
+    (fun name contents -> inject (Mlist name) (Values.mlist_create name [] contents)) ;
   (*----- misc operations -------------------------------------------------*)
   register_function lib state "quit" (void @-> null) (fun () -> raise Exit) ;
   let disp l =

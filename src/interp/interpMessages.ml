@@ -100,6 +100,21 @@ let print_value ppf value =
         print_value (view (tlist_get_by_index l i)) ;
       done ;
       print "@])"
+    | V (Mlist n, l) ->
+      print "mlist (@[" ;
+      begin match mlist_fields l with
+        | [] -> print "'%s'" n
+        | fs ->
+          print "[ '%s'" n ;
+          List.iter (print ", '%s'") fs ;
+          print " ]"
+      end ;
+      let s = mlist_length l in
+      for i = 1 to s do
+        print ",@ " ;
+        print_value (view (mlist_get_by_index l i)) ;
+      done ;
+      print "@])"
     | V (Matrix tag, m) ->
       print "[ @[<v 0>" ;
       let w, h = matrix_size m in

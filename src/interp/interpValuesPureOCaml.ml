@@ -420,8 +420,28 @@ module Make (Parameters : Parameters) = struct
   let tlist_set (_, fields, ar) field v =
     vlist_set ar (tlist_idx field 1 fields) v
   let tlist_get_by_index (_, fields, ar) idx =
-    vlist_get ar idx
+      vlist_get ar idx
   let tlist_set_by_index (_, fields, ar) idx v=
+    vlist_set ar idx v
+
+  let mlist_create label fields values =
+    label, fields, vlist_create values
+  let mlist_length (_, _, ar) =
+    vlist_length ar
+  let mlist_label (label, _, _) =
+    label
+  let mlist_fields (_, fields, _) =
+    fields
+  let rec mlist_idx field n = function
+    | [] -> raise Bad_index
+    | h :: t -> if h = field then n else mlist_idx field (n + 1) t
+  let mlist_get (_, fields, ar) field =
+    vlist_get ar (mlist_idx field 1 fields)
+  let mlist_set (_, fields, ar) field v =
+    vlist_set ar (mlist_idx field 1 fields) v
+  let mlist_get_by_index (_, fields, ar) idx =
+      vlist_get ar idx
+  let mlist_set_by_index (_, fields, ar) idx v=
     vlist_set ar idx v
 
   let typeof (V (tag, _)) =
