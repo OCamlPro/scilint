@@ -1,7 +1,7 @@
 #include "api_scilab.h"
 
 /* ==================================================================== */
-extern int cjit(double node_nbr);
+extern int cjit_call_function(int function_id);
 /* ==================================================================== */
 
 int sci_cjit(char *fname, void *pvApiCtx)
@@ -48,7 +48,7 @@ int sci_cjit(char *fname, void *pvApiCtx)
        return 1;
      }
      res = getScalarDouble(pvApiCtx, piAddr, &dbl);
-     res = cjit(dbl);
+     res = cjit_call_function((int)dbl);
 
      res = createScalarDouble(pvApiCtx, nbInputArgument(pvApiCtx) + 1, res);
      
@@ -56,19 +56,3 @@ int sci_cjit(char *fname, void *pvApiCtx)
      ReturnArguments(pvApiCtx);  
 }
 
-int get_camlint_from_scitype(int scitype) {
-  switch(scitype)
-    {
-    case sci_matrix : return 0;
-    case sci_poly : return 1;
-    case sci_boolean : return 2;
-    case sci_sparse : return 3;
-    case sci_boolean_sparse : return 4;
-    case sci_ints : return 5;
-    case sci_strings : return 6;
-    case sci_list : return 7;
-    case sci_tlist : return 8;
-    case sci_mlist : return 9;
-    default : return -1;
-    }
-}
