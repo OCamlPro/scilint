@@ -2,10 +2,6 @@ open ScilabParserAst
 open Ollvm
 open Llvm
 
-let _ = print_endline "OCaml running"
-
-let table = ref (Hashtbl.create 5)
-
 type sci_type = 
   | Double 
   | Poly 
@@ -20,7 +16,11 @@ type sci_type =
   | Not_supported
   | NotFoundType
 
-let cpt = ref (-1)
+
+let table = Hashtbl.create 5
+
+let index = ref (-1)
+
 
 let string_of_type = function 
   | Double -> "double"
@@ -73,18 +73,17 @@ let is_jit_exp exp = match exp.cstr with
     end
 
 let ast_to_jit_ast ast = 
-  cpt := -1;
-  let accu = !table in
+  let accu = table in
   List.fold_left (fun accu stmt -> match stmt.cstr with
     | Assign (exp_list, exp) -> 
       if is_jit_exp exp
       then
         begin
-          incr cpt;
-          let jit_node = make_jit_node stmt !cpt in
+          incr index;
+          let jit_node = make_jit_node stmt !index in
           stmt.cstr <- jit_node;
           (* TODO : Copy Node before Adding *)
-          Hashtbl.add accu !cpt (ghost (Assign (exp_list, exp)));
+          Hashtbl.add accu !index (ghost (Assign (exp_list, exp)));
           accu
         end
       else accu
@@ -103,40 +102,38 @@ let ast_to_jit_ast ast =
   ) accu ast
 
 let jit_load ctx filename = 
-  Printf.printf "OCamlJIT : loading '%s' \n%!" filename;
+  Printf.printf "OCamlJIT : loading %S\n%!" filename;
   try 
     let ast = ScilabSixParser.parse_file filename in
-    table := ast_to_jit_ast ast;
+    ast_to_jit_ast ast;
     let ch = open_out (filename ^ ".jit") in
     Pretty.pretty_output ch ast;
     close_out ch;
     Printf.printf "\n%!";
-  with _ -> print_endline ("OCamlJIT : an error occured while parsing '" ^ filename ^ "'")
+  with _ -> Printf.printf "OCamlJIT : an error occured while parsing %S\n%!" filename
   
-let jit_node nbr = 
-  Printf.printf "OCamlJIT : jitting node '%f' \n%!" nbr;
-  let node = Hashtbl.find !table (int_of_float nbr) in
+let jit_node function_id = 
+  Printf.printf "OCamlJIT : jitting node '%f' \n%!" function_id;
+  let node = Hashtbl.find table (int_of_float function_id) in
   Pretty.pretty_output stdout [node];
-  Printf.fprintf stdout "\n%!"
+  Printf.printf "\n%!"
 
 let jit_test ctx = 
   Context.test ctx
 
 let jit_expr expr vars types complex dims =
-  print_endline ("OCamlJIT expr: " ^ expr);
+  Printf.printf "OCamlJIT expr: %s" expr;
   Array.iteri (fun i var -> 
-      print_string "  ";
-      print_string var; 
-      print_string " : "; 
-      print_string (string_of_type (type_of_int (Array.get types i)));
-      print_string "(";
-      print_string (string_of_int (Array.get dims (i * 2)));
-      print_string "x";
-      print_string (string_of_int (Array.get dims ((i * 2) + 1)));
-      print_string "); isComplex : ";
-      print_endline (string_of_int (Array.get complex i))) vars
+      Printf.printf " %s : %s(%ix%i); isComplex : %i\n%!" 
+        var 
+        (string_of_type (type_of_int (Array.get types i))) 
+        (Array.get dims (i * 2)) 
+        (Array.get dims ((i * 2) + 1)) 
+        (Array.get complex i)) vars
 
-let _ = Callback.register "jit" jit_node
-let _ = Callback.register "jit_expr" jit_expr
-let _ = Callback.register "jit_test" jit_test
-let _ = Callback.register "jit_load" jit_load
+let _ = 
+  Printf.printf "OCaml running";
+  Callback.register "jit" jit_node;
+  Callback.register "jit_expr" jit_expr;
+  Callback.register "jit_test" jit_test;
+  Callback.register "jit_load" jit_load
