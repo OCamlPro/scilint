@@ -31,7 +31,7 @@ typedef void piaddr_type;
 
 #define CHECK_IF_VAR_EXISTS(res) if (res != 0) caml_raise_not_found()
 
-#define CHECK_IF_SUCCESS(name, res) if (res != 0) caml_raise_invalid_argument(name) 
+#define CHECK_IF_SUCCESS(name, res) if (res != 0) caml_invalid_argument(name) 
   
 
 /* Common */
@@ -46,7 +46,7 @@ caml_scilab_get_var_address_from_name(value ctx_v, value var_name_v)
   SciErr sciErr;
   int* piaddr = NULL;
   sciErr = getVarAddressFromName(ctx, var_name, &piaddr);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   CAMLreturn( Val_abstract(piaddr) );
 }
 
@@ -59,7 +59,7 @@ caml_scilab_get_var_address_from_position(value ctx_v, value position_v)
   SciErr sciErr;
   int* piaddr = NULL;
   sciErr = getVarAddressFromPosition(ctx, position, &piaddr);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   CAMLreturn( Val_abstract(piaddr) );
 }
 
@@ -72,7 +72,7 @@ caml_scilab_get_var_name_from_position(value ctx_v, value position_v)
   SciErr sciErr;
   char *psData;
   sciErr = getVarNameFromPosition(ctx, position, psData);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   CAMLreturn( caml_copy_string(psData) );
 }
 
@@ -85,7 +85,7 @@ caml_scilab_get_var_type(value ctx_v, value piaddr_v)
   SciErr sciErr;
   int typ;
   sciErr = getVarType(ctx, (int *) piaddr, &typ);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   CAMLreturn( Val_int(typ) );
 }
 
@@ -98,7 +98,7 @@ caml_scilab_get_named_var_type(value ctx_v, value var_name_v)
   SciErr sciErr;
   int typ;
   sciErr = getNamedVarType(ctx, var_name, &typ);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   CAMLreturn( Val_int(typ) );
 }
 
@@ -112,7 +112,7 @@ caml_scilab_get_var_dimension(value ctx_v, value piaddr_v)
   SciErr sciErr;
   int rows, cols;
   sciErr = getVarDimension(ctx, (int *) piaddr, (int *) &rows, (int *) &cols);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   dim_v = caml_alloc(2, 0);
   Field(dim_v, 0) = Val_int(rows);
   Field(dim_v, 1) = Val_int(cols);
@@ -129,7 +129,7 @@ caml_scilab_get_named_var_dimension(value ctx_v, value var_name_v)
   SciErr sciErr;
   int rows, cols;
   sciErr = getNamedVarDimension(ctx, var_name, (int *) &rows, (int *) &cols);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   dim_v = caml_alloc(2, 0);
   Field(dim_v, 0) = Val_int(rows);
   Field(dim_v, 1) = Val_int(cols);
@@ -254,8 +254,8 @@ caml_scilab_call_scilab_function(value ctx_v, value fun_name_v, value start_v, v
   void *ctx = Abstract_val(ctx_v);
   char* fun_name = String_val(fun_name_v);
   int start = Int_val(start_v);
-  int nb_ret = Int_val(nbret_v);
-  int nb_args = Int_val(nbargs_v);
+  int nb_ret = Int_val(nb_ret_v);
+  int nb_args = Int_val(nb_args_v);
   int res = callScilabFunction(ctx, fun_name, start, nb_ret, nb_args);
   CAMLreturn( Val_int(res) );
 }
@@ -423,7 +423,7 @@ caml_scilab_create_single_string(value ctx_v, value position_v, value str_v)
   void *ctx = Abstract_val(ctx_v);
   int position = Int_val(position_v);
   char* str = String_val(str_v);
-  int res = createSingleString(ctx, position, str_v);
+  int res = createSingleString(ctx, position, str);
   CHECK_IF_SUCCESS(__FUNCTION__, res);
   CAMLreturn( Val_int(res) );
 }
@@ -455,11 +455,11 @@ caml_scilab_get_matrix_of_string(value ctx_v, value piaddr_v)
   int* piLen		= NULL;
   char** strData	= NULL;
   sciErr = getVarDimension(ctx, (int *) piaddr, &rows, &cols);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   piLen = (int*)malloc(sizeof(int) * rows * cols);
   //second call to retrieve length of each string
   sciErr = getMatrixOfString(ctx, (int *) piaddr, &rows, &cols, piLen, NULL);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   strData = (char**)malloc(sizeof(char*) * rows * cols + 1);
   for(i = 0 ; i < rows * cols ; i++) {
     strData[i] = (char*)malloc(sizeof(char) * (piLen[i] + 1));
@@ -503,18 +503,18 @@ caml_scilab_get_named_matrix_of_string(value ctx_v, value var_name_v)
   int* piLen		= NULL;
   char** strData	= NULL;
   sciErr = getNamedVarDimension(ctx, var_name, &rows, &cols);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   piLen = (int*)malloc(sizeof(int) * rows * cols);
   //second call to retrieve length of each string
-  sciErr = getNamedMatrixOfString(ctx, var_name, &rows, &cols, piLen, NULL);
-  CHECK_IF_VAR_EXISTS(sciErr.err);
+  sciErr = readNamedMatrixOfString(ctx, var_name, &rows, &cols, piLen, NULL);
+  CHECK_IF_VAR_EXISTS(sciErr.iErr);
   strData = (char**)malloc(sizeof(char*) * rows * cols + 1);
   for(i = 0 ; i < rows * cols ; i++) {
     strData[i] = (char*)malloc(sizeof(char) * (piLen[i] + 1));
   }
   strData[rows * cols] = (char*)malloc(sizeof(char));
   //third call to retrieve data
-  sciErr = getNamedMatrixOfString(ctx, var_name, &rows, &cols, piLen, strData);
+  sciErr = readNamedMatrixOfString(ctx, var_name, &rows, &cols, piLen, strData);
   strData[rows * cols] = NULL;
   if(sciErr.iErr)
     {
@@ -555,7 +555,7 @@ caml_scilab_create_matrix_of_string(value ctx_v, value position_v, value rows_v,
       strData[i] = String_val(Field(str_arr_v, i));
     }
   sciErr = createMatrixOfString(ctx, position, rows, cols,(const char * const*) strData);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   CAMLreturn( Val_int(0) );
 }
 
@@ -578,7 +578,7 @@ caml_scilab_create_named_matrix_of_string(value ctx_v, value var_name_v, value r
       strData[i] = String_val(Field(str_arr_v, i));
     }
   sciErr = createNamedMatrixOfString(ctx, var_name, rows, cols,(const char * const*) strData);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   CAMLreturn( Val_int(0) );
 }
 
@@ -665,7 +665,7 @@ caml_scilab_create_scalar_double(value ctx_v, value position_v, value dbl_v)
 CAMLprim value
 caml_scilab_create_named_scalar_double(value ctx_v, value var_name_v, value dbl_v)
 {
-  CAMLparam3( ctx_v, var_name_v, dbl );
+  CAMLparam3( ctx_v, var_name_v, dbl_v );
   void *ctx = Abstract_val(ctx_v);
   char* var_name = String_val(var_name_v);
   double dbl = Double_val(dbl_v);
@@ -711,10 +711,10 @@ caml_scilab_get_matrix_of_double(value ctx_v, value piaddr_v)
   int i, rows, cols;
   double* dblValMat;
   sciErr = getVarDimension(ctx, (int *) piaddr, &rows, &cols);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   float_arr_v = caml_alloc((rows * cols) * Double_wosize, Double_array_tag);  
-  sciErr = getMatrixOfDouble(ctx, (int *) piaddr, &rows, &cols, dblValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  sciErr = getMatrixOfDouble(ctx, (int *) piaddr, &rows, &cols, &dblValMat);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   for(i = 0; i < rows * cols; i++){
     Store_double_field(float_arr_v, i, dblValMat[i]);
   }
@@ -732,10 +732,10 @@ caml_scilab_get_named_matrix_of_double(value ctx_v, value var_name_v)
   int i, rows, cols;
   double* dblValMat;
   sciErr = getNamedVarDimension(ctx, var_name, &rows, &cols);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   float_arr_v = caml_alloc((rows * cols) * Double_wosize, Double_array_tag);  
-  sciErr = getNamedMatrixOfDouble(ctx, var_name, &rows, &cols, dblValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  sciErr = readNamedMatrixOfDouble(ctx, var_name, &rows, &cols, dblValMat);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   for(i = 0; i < rows * cols; i++){
     Store_double_field(float_arr_v, i, dblValMat[i]);
   }
@@ -754,14 +754,14 @@ caml_scilab_get_complex_matrix_of_double(value ctx_v, value piaddr_v)
   double* realValMat;
   double* complValMat;
   sciErr = getVarDimension(ctx, (int *) piaddr, &rows, &cols);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   real_arr_v = caml_alloc((rows * cols) * Double_wosize, Double_array_tag);
   complex_arr_v = caml_alloc((rows * cols) * Double_wosize, Double_array_tag);
   res_arr_v = caml_alloc(2, 0);
   realValMat = (double *)malloc(sizeof(double) * (rows * cols));
   complValMat = (double *)malloc(sizeof(double) * (rows * cols));
-  sciErr = getComplexMatrixOfDouble(ctx, (int *) piaddr, &rows, &cols, realValMat, complValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  sciErr = getComplexMatrixOfDouble(ctx, (int *) piaddr, &rows, &cols, &realValMat, &complValMat);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   for(i = 0; i < rows * cols; i++){
     Store_double_field(real_arr_v, i, realValMat[i]);
     Store_double_field(complex_arr_v, i, complValMat[i]);
@@ -783,14 +783,14 @@ caml_scilab_get_named_complex_matrix_of_double(value ctx_v, value var_name_v)
   double* realValMat;
   double* complValMat;
   sciErr = getNamedVarDimension(ctx, var_name, &rows, &cols);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   real_arr_v = caml_alloc((rows * cols) * Double_wosize, Double_array_tag);
   complex_arr_v = caml_alloc((rows * cols) * Double_wosize, Double_array_tag);
   res_arr_v = caml_alloc(2, 0);
   realValMat = (double *)malloc(sizeof(double) * (rows * cols));
   complValMat = (double *)malloc(sizeof(double) * (rows * cols));
-  sciErr = getNamedComplexMatrixOfDouble(ctx, var_name, &rows, &cols, realValMat, complValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  sciErr = readNamedComplexMatrixOfDouble(ctx, var_name, &rows, &cols, realValMat, complValMat);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   for(i = 0; i < rows * cols; i++){
     Store_double_field(real_arr_v, i, realValMat[i]);
     Store_double_field(complex_arr_v, i, complValMat[i]);
@@ -808,14 +808,14 @@ caml_scilab_create_matrix_of_double(value ctx_v, value position_v, value rows_v,
   int position = Int_val(position_v);
   SciErr sciErr;
   int rows = Int_val(rows_v);
-  int cols = Int_val(cols_V);
+  int cols = Int_val(cols_v);
   int len = rows * cols;
   int i;
   double* dblValMat = (double *)malloc(sizeof(double) * len);
   for (i=0; i < len; i++) dblValMat[i] = Double_field(dbl_arr_v, i);
   sciErr = createMatrixOfDouble(ctx, position, rows, cols, dblValMat);
   free(dblValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   CAMLreturn(Val_int(0));
 }
 
@@ -833,7 +833,7 @@ caml_scilab_create_named_matrix_of_double(value ctx_v, value var_name_v, value r
   double* dblValMat = (double *)malloc(sizeof(double) * len);
   for (i=0; i < len; i++) dblValMat[i] = Double_field(dbl_arr_v, i);
   sciErr = createNamedMatrixOfDouble(ctx, var_name, rows, cols, dblValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   CAMLreturn(Val_int(0));
 }
 
@@ -857,7 +857,7 @@ caml_scilab_create_complex_matrix_of_double(value ctx_v, value position_v, value
   sciErr = createComplexMatrixOfDouble(ctx, position, rows,cols, realValMat,complValMat);
   free(realValMat);
   free(complValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   CAMLreturn(Val_int(0));
 }
 
@@ -886,7 +886,7 @@ caml_scilab_create_named_complex_matrix_of_double(value ctx_v, value var_name_v,
 					    complValMat);
   free(realValMat);
   free(complValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   CAMLreturn(Val_int(0));
 }
 
@@ -899,7 +899,7 @@ int bool = isBooleanType( ctx, (int *) piaddr );
 ret_v = Val_bool(bool);
 END_SCILAB_STUB;
 
-BEGIN_SCILAB_STUB(caml_scilab_is_named_boolean_type);
+BEGIN_SCILAB_STUB(caml_scilab_is_named_boolean_type, ctx, var_name);
 int bool = isNamedBooleanType( ctx, var_name );
 ret_v = Val_bool(bool);
 END_SCILAB_STUB;
@@ -963,9 +963,9 @@ caml_scilab_get_matrix_of_boolean(value ctx_v, value piaddr_v)
   int i, rows, cols;
   int* boolValMat;
   sciErr = getVarDimension(ctx, (int *) piaddr, &rows, &cols);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   sciErr = getMatrixOfBoolean(ctx, (int *) piaddr, &rows, &cols, &boolValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   bool_arr_v = caml_alloc((rows * cols), 0);
   for(i = 0; i < rows * cols; i++){
     Store_double_field(bool_arr_v, i, boolValMat[i]);
@@ -984,9 +984,9 @@ caml_scilab_get_named_matrix_of_boolean(value ctx_v, value var_name_v)
   int i, rows, cols;
   int* boolValMat;
   sciErr = getNamedVarDimension(ctx, var_name, &rows, &cols);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   sciErr = readNamedMatrixOfBoolean(ctx, var_name, &rows, &cols, &boolValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);
   bool_arr_v = caml_alloc((rows * cols), 0);
   for(i = 0; i < rows * cols; i++){
     Store_double_field(bool_arr_v, i, boolValMat[i]);
@@ -1009,7 +1009,7 @@ caml_scilab_create_matrix_of_boolean(value ctx_v, value position_v, value rows_v
   for (i=0; i < len; i++) boolValMat[i] = Int_val(Field(bool_arr_v, i));
   sciErr = createMatrixOfBoolean(ctx, position, rows, cols, boolValMat);
   free(boolValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);    
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);    
   CAMLreturn(Val_int(0));
 }
 
@@ -1028,7 +1028,7 @@ caml_scilab_create_named_matrix_of_boolean(value ctx_v, value var_name_v, value 
   for (i=0; i < len; i++) boolValMat[i] = Int_val(Field(bool_arr_v, i));
   sciErr = createNamedMatrixOfDouble(ctx, var_name, rows, cols, boolValMat);
   free(boolValMat);
-  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.err);    
+  CHECK_IF_SUCCESS(__FUNCTION__, sciErr.iErr);    
   CAMLreturn(Val_int(0));
 }
 
