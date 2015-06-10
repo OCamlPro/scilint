@@ -227,7 +227,7 @@ let rec format loc msg =
     @ hint overloading [ rtt ]
   | Unbound_overloading (overloading, [ rtt1 ; rtt2 ]) ->
     [ loc, Unrecovered (overloading_name overloading
-                        ^ " does not work on between values of types "
+                        ^ " does not work between values of types "
                         ^ string_of_type rtt1
                         ^ " and "
                         ^ string_of_type rtt2) ]

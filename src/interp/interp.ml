@@ -20,6 +20,13 @@ exception Exit_program
 exception Break
 exception Continue
 
+(** typed representation of the output context *)
+type _ dest =
+  | Zero : unit dest
+  | One : value dest
+  | Min : int -> value list dest
+  | Strictly : 'res dest -> 'res dest
+
 (** Main interpreting function *)
 let rec interpret (state : state) (lib : lib) ast =
   let lib = ref lib in
@@ -50,7 +57,7 @@ let rec interpret (state : state) (lib : lib) ast =
         let forged = { stmt with cstr = Exp forged_call } in
         interpret_stmt forged
       | Exp exp ->
-        let res = interpret_exp one_result exp in
+        let res = interpret_exp One exp in
         if typeof res <> T Null then begin
           State.put state ans res ;
           message (Result ("ans", res)) ;
@@ -63,7 +70,7 @@ let rec interpret (state : state) (lib : lib) ast =
         end
       | Assign (lexps, exp) -> (* TODO: argn, resume, etc. *)
         let lhs = List.length lexps in
-        let res = interpret_exp (min_results lhs) exp in
+        let res = interpret_exp (Min lhs) exp in
         List.iter2 interpret_assignment (List.rev lexps) (List.rev res)
       | Defun ({ name } as defun) ->
         let res = inject Macro defun in
@@ -74,19 +81,19 @@ let rec interpret (state : state) (lib : lib) ast =
       | Seq stmts ->
         List.iter interpret_stmt stmts
       | If (cond, bthen, belse) ->
-        let vcond = interpret_exp one_result cond in
+        let vcond = interpret_exp One cond in
         let vcond = extract (Single Bool) (cast vcond (T (Single Bool))) in
         if vcond then interpret_stmt bthen
         else interpret_else belse
       | Select { cond ; cases ; default } ->
-        let vcond = interpret_exp one_result cond in
+        let vcond = interpret_exp One cond in
         let rec loop = function
           | (case, body) :: rest ->
-            let vcase = interpret_exp one_result case in
+            let vcase = interpret_exp One case in
             let vargs = [ None, vcase ; None, vcond ] in
             let rtts = [ typeof vcase ; typeof vcond ] in
             let overloading = Binary Ast.Eq, rtts in
-            let vres = interpret_overloading one_result case.loc overloading vargs in
+            let vres = interpret_overloading One case.loc overloading vargs in
             (*  TODO: checkcast *)
             if extract (Single Bool) (cast vres (T (Single Bool))) then
               interpret_stmt body
@@ -96,7 +103,7 @@ let rec interpret (state : state) (lib : lib) ast =
         loop cases
       | While (cond, body, belse) ->
         let rec loop () =
-          let vcond = interpret_exp one_result cond in
+          let vcond = interpret_exp One cond in
           if extract (Single Bool) (cast vcond (T (Single Bool))) then
             match interpret_stmt body with
             | () -> loop ()
@@ -135,7 +142,7 @@ let rec interpret (state : state) (lib : lib) ast =
       error (Located (loc, Generic "uncaught out of range access"))
 
   and interpret_range_iterator range =
-    let vrange = interpret_exp one_result range in
+    let vrange = interpret_exp One range in
     let cpt = ref (-1) in
     let current () = incr cpt ; !cpt in
     match typeof vrange with
@@ -158,7 +165,7 @@ let rec interpret (state : state) (lib : lib) ast =
          let i = current () + 1 in
          if i > size then None
          else Some (vlist_get l i))
-    | _ -> 
+    | _ ->
       error (Located (range.loc, Generic "unimplemented iterator"))
 
   and overload name res loc =
@@ -173,27 +180,26 @@ let rec interpret (state : state) (lib : lib) ast =
              since our implementation differs *)
           match overloading  with
           | Extraction | Recursive_extraction ->
-            (function
-              | v :: rest -> callback (rest @ [ v ])
-              | _ -> raise Bad_type)
+            (fun lhs -> function
+               | v :: rest -> callback (rest @ [ v ])
+               | _ -> raise Bad_type)
           | Injection ->
-            (function
-              | v :: r :: rest -> callback (rest @ [ r ; v ])
-              | _ -> raise Bad_type)
-          | _ -> callback
+            (fun lhs -> function
+               | v :: r :: rest -> callback (rest @ [ r ; v ])
+               | _ -> raise Bad_type)
+          | _ -> (fun lhs args -> callback args)
         in
         List.iter (fun rtts ->
             register
-              ~policy:(Replace (ref [])) ~force:false
               ~frozen:false ~more:true
-              (overloading, rtts)
+              overloading rtts 1
               { name = name ; call ;
-                takes = [] ; returns = [] } !lib)
+                takes = ([], true) ; returns = ([], true) } !lib |> ignore (* FIXME: warn *) )
           rttss
       | _ ->
         let msg = "overloading is only possible with a user function" in
         message (Located (loc, Hint msg))
-          
+
   and interpret_assignment exp res =
     let rec injection exp res =
       match exp.cstr with
@@ -217,7 +223,7 @@ let rec interpret (state : state) (lib : lib) ast =
         let vargs = (None, vf) :: (None, res) :: vargs in
         let rtts = typeof vf :: typeof res :: rtts in
         let overloading = Injection, rtts in
-        let vres = interpret_overloading one_result exp.loc overloading vargs in
+        let vres = interpret_overloading One exp.loc overloading vargs in
         injection vexp vres
       | _ ->
         let msg = "this kind of expression is not a valid assignment destination" in
@@ -236,21 +242,22 @@ let rec interpret (state : state) (lib : lib) ast =
         let vargs = (None, f) :: vargs in
         let rtts = typeof f :: rtts in
         let overloading = Recursive_extraction, rtts in
-        interpret_overloading one_result exp.loc overloading vargs
+        interpret_overloading One exp.loc overloading vargs
       | _ ->
         let msg = "this kind of expression is not a valid assignment destination" in
         error (Located (exp.loc, Generic msg))
     in injection exp res
 
   and interpret_overloading
-    : type res. (loc -> ?strict:bool -> value list -> res) -> loc ->
+    : type res. res dest -> loc ->
       (overloading * rtt list) -> (var option * value) list -> res
-    = fun filter loc (overloading, rtts) vargs ->
+    = fun dest loc (overloading, rtts) vargs ->
       let default () =
-        let res = try (lookup (overloading, rtts) !lib).call vargs with
+        let lhs = expected dest in
+        let res = try (lookup overloading rtts lhs !lib).call lhs vargs with
           | Not_found ->
             error (Located (loc, Unbound_overloading (overloading, rtts)))
-          | Interp_error err -> 
+          | Interp_error err ->
             error (Located (loc, err)) in
         res
       in
@@ -299,7 +306,7 @@ let rec interpret (state : state) (lib : lib) ast =
             matrix_set_linear m 1 t ;
             List.iteri (fun i f -> matrix_set_linear m (i + 2) f) fields ;
             [ inject (Matrix String) m ]
-          else 
+          else
             let f = f - 1 in
             [ tlist_get_by_index l f ]
         | _ -> raise Bad_index
@@ -315,7 +322,7 @@ let rec interpret (state : state) (lib : lib) ast =
               if n > length then []
               else tlist_get_by_index l n :: values (n + 1) in
             [ inject Vlist (vlist_create (v :: values 1)) ]
-          else 
+          else
             let f = f - 1 in
             tlist_set_by_index l f v ;
             [ inject (Tlist t) l ]
@@ -342,29 +349,29 @@ let rec interpret (state : state) (lib : lib) ast =
           inject_tlist_index t tl f v
         | _ -> default ()
       in
-      filter loc (predef ())
+      filter dest loc (predef ())
 
   and interpret_args = function
     | (n, e) :: args ->
       let vargs, rtts = interpret_args args in
-      let v = interpret_exp one_result e in
+      let v = interpret_exp One e in
       (n, v) :: vargs, typeof v :: rtts
     | [] -> [], []
 
   and interpret_exp
-    : type res. (loc -> ?strict:bool -> value list -> res) -> exp -> res
-    = fun filter { cstr = exp ; loc } ->
+    : type res. res dest -> exp -> res
+    = fun dest { cstr = exp ; loc } ->
       match exp with
       | Error ->
         error (Located (loc, Generic "syntax error"))
       | Num f ->
-        filter loc [ Values.(inject (Single (Number Real)) f) ]
+        filter dest loc [ Values.(inject (Single (Number Real)) f) ]
       | Bool b ->
-        filter loc [ Values.(inject (Single Bool) b) ]
+        filter dest loc [ Values.(inject (Single Bool) b) ]
       | String s ->
-        filter loc [ Values.(inject (Single String) s) ]
+        filter dest loc [ Values.(inject (Single String) s) ]
       | Matrix [] ->
-        filter loc [ Values.(inject Atom ()) ]
+        filter dest loc [ Values.(inject Atom ()) ]
       | Cell_array rows (* TODO: what *)
       | Matrix rows ->
         let rec collate_rows : Values.value list list -> Values.value = function
@@ -374,49 +381,49 @@ let rec interpret (state : state) (lib : lib) ast =
             let v1 = collate_cols row1 in
             let v2 = collate_cols row2 in
             let overloading = Matrix_vertical_collation, [ typeof v1 ; typeof v2 ] in
-            let v = interpret_overloading one_result loc overloading [ None, v1 ; None, v2 ] in
+            let v = interpret_overloading One loc overloading [ None, v1 ; None, v2 ] in
             collate_rows ([ v ] :: rows)
         and collate_cols : Values.value list -> Values.value = function
           | [] -> Values.(inject Atom ())
           | [ v ] -> v
           | v1 :: v2 :: vs ->
             let overloading = Matrix_horizontal_collation, [ typeof v1 ; typeof v2 ] in
-            let v = interpret_overloading one_result loc overloading [ None, v1 ; None, v2 ] in
+            let v = interpret_overloading One loc overloading [ None, v1 ; None, v2 ] in
             collate_cols (v :: vs)
         in
-        let rows = List.map (fun { cstr } -> List.map (interpret_exp one_result) cstr) rows in
-        filter loc [ collate_rows rows ]
+        let rows = List.map (fun { cstr } -> List.map (interpret_exp One) cstr) rows in
+        filter dest loc [ collate_rows rows ]
       | Unop (unop, subexp) ->
-        let subv = interpret_exp one_result subexp in
+        let subv = interpret_exp One subexp in
         let subt = Values.typeof subv in
         let overloading = Unary unop, [ subt ] in
-        interpret_overloading filter loc overloading [ None, subv ]
+        interpret_overloading dest loc overloading [ None, subv ]
       | Op (op, lexp, rexp) ->
-        let lv = interpret_exp one_result lexp in
-        let rv = interpret_exp one_result rexp in
+        let lv = interpret_exp One lexp in
+        let rv = interpret_exp One rexp in
         let lt = Values.typeof lv in
         let rt = Values.typeof rv in
         let overloading = Binary op, [ lt ; rt ] in
-        interpret_overloading filter loc overloading [ None, lv ; None, rv ]
+        interpret_overloading dest loc overloading [ None, lv ; None, rv ]
       | Var { cstr = var ; loc } ->
         begin try
-            filter loc [ State.get state var ]
+            filter dest loc [ State.get state var ]
           with Not_found ->
             error (Located (loc, Werror (L (Uninitialized_var (State.name var)))))
         end
       | Colon ->
         begin try
-            filter loc [ State.get state colon ]
+            filter dest loc [ State.get state colon ]
           with Not_found ->
             error (Located (loc, Werror (L (Uninitialized_var ":"))))
         end
       | Call (fexp, args, _) -> (* TODO: isglobal, mlists, etc. *)
-        let f = interpret_exp one_result fexp in
+        let f = interpret_exp One fexp in
         let vargs, rtts = interpret_args args in
         begin match typeof f with
           | T Macro ->
             let defun = Values.extract Macro f in
-            filter loc (interpret_macro_call loc (defun : Ast.defun_params) vargs)
+            filter dest loc (interpret_macro_call loc (defun : Ast.defun_params) vargs)
           | T Primitive ->
             let name = Values.extract Primitive f in
             let rtts = match vargs with
@@ -424,61 +431,85 @@ let rec interpret (state : state) (lib : lib) ast =
               | [] -> []
             in
             let overloading = Function name, rtts in
-            interpret_overloading filter loc overloading vargs
+            interpret_overloading dest loc overloading vargs
           | t ->
             let vargs = (None, f) :: vargs in
             let rtts = typeof f :: rtts in
             let overloading = Extraction, rtts in
-            interpret_overloading filter loc overloading vargs
+            interpret_overloading dest loc overloading vargs
         end
       | Identity exps ->
-        let res = List.map (interpret_exp one_result) exps in
-        filter loc ~strict:true res
+        let res = List.map (interpret_exp One) exps in
+        filter (Strictly dest) loc res
       | Range (lexp, sexp, rexp) ->
-        let lv = interpret_exp one_result lexp in
-        let rv = interpret_exp one_result rexp in
+        let lv = interpret_exp One lexp in
+        let rv = interpret_exp One rexp in
         let lt = Values.typeof lv in
         let rt = Values.typeof rv in
         let rtts, vargs = match sexp with
           | None -> [ lt ; rt ],  [ None, lv ; None, rv ]
-          | Some sexp -> 
-            let sv = interpret_exp one_result sexp in
+          | Some sexp ->
+            let sv = interpret_exp One sexp in
             let st = Values.typeof sv in
             [ lt ; st ; rt ], [ None, lv ; None, sv ; None, rv ]
         in
         let overloading = Colon, rtts in
-        interpret_overloading filter loc overloading vargs
+        interpret_overloading dest loc overloading vargs
 
   and interpret_else = function
     | Some belse -> interpret_stmt belse
     | None -> ()
 
-  and min_results lhs loc ?(strict = false) = function
-    | res :: rest when lhs >= 1 ->
-      res :: min_results ~strict (lhs - 1) loc rest
-    | [] when lhs >= 1 ->
-      error (Located (loc, Werror (P (Too_few_results lhs))))
-    | [] -> []
-    | over ->
-      let nover = List.length over in
-      if strict then
-        error (Located (loc, Werror (P (Too_many_results nover))))
-      else 
-        message (Located (loc, Warning (P (Unused_results nover)))) ;
-      []
+  and filter
+    : type res. res dest -> loc -> ?strict:bool -> value list -> res
+    = fun result loc ?(strict = false) res ->
+      match result with
+      | Strictly result ->
+        filter result loc ~strict:true res
+      | Zero ->
+        begin match res with
+          | [] -> ()
+          | over ->
+            let nover = List.length over in
+            if strict then
+              error (Located (loc, Werror (P (Too_many_results nover))))
+            else
+              message (Located (loc, Warning (P (Unused_results nover))))
+        end
+      | Min lhs ->
+        let rec min_results lhs = function
+          | res :: rest when lhs >= 1 ->
+            res :: min_results (lhs - 1) rest
+          | [] when lhs >= 1 ->
+            error (Located (loc, Werror (P (Too_few_results lhs))))
+          | [] -> []
+          | over ->
+            let nover = List.length over in
+            if strict then
+              error (Located (loc, Werror (P (Too_many_results nover))))
+            else
+              message (Located (loc, Warning (P (Unused_results nover)))) ;
+            []
+        in min_results lhs res
+      | One ->
+        begin match res with
+          | [ res ] -> res
+          | res :: over ->
+            let nover = List.length over in
+            if strict then
+              error (Located (loc, Werror (P (Too_many_results nover))))
+            else
+              message (Located (loc, Warning (P (Unused_results nover)))) ;
+            res
+          | [] ->
+            error (Located (loc, Werror (P (Too_few_results 1))))
+        end
 
-  and one_result loc ?(strict = false) = function
-    | [ res ] -> res
-    | res :: over ->
-      let nover = List.length over in
-      if strict then
-        error (Located (loc, Werror (P (Too_many_results nover))))
-      else 
-        message (Located (loc, Warning (P (Unused_results nover)))) ;
-      res
-    | [] ->
-      error (Located (loc, Werror (P (Too_few_results 1))))
-
+  and expected : type res. res dest -> int = function
+    | Strictly result -> expected result
+    | Zero -> 0
+    | One -> 1
+    | Min lhs -> lhs
 
   and interpret_macro_call loc defun vargs =
     (* right to left name assignment *)
@@ -516,7 +547,7 @@ let rec interpret (state : state) (lib : lib) ast =
     in
     let rec assign_rets acc rets =
       match rets with
-      | [ { cstr = var } ] when var == varargout -> 
+      | [ { cstr = var } ] when var == varargout ->
         begin match Values.(extract Vlist (State.get state var)) with
           | l ->
             let rec unroll acc i =
@@ -557,4 +588,3 @@ let rec interpret (state : state) (lib : lib) ast =
       | err -> raise err
   in
   List.iter interpret_stmt_toplevel (from_parser state ast)
-    

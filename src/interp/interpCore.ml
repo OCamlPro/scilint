@@ -60,9 +60,9 @@ module AstUtils = struct
 end
 
 type primitive =
-  { call : (Ast.var option * Values.value) list -> Values.value list ;
-    takes : Dispatcher.matcher list ;
-    returns : Dispatcher.matcher list ;
+  { call : int -> (Ast.var option * Values.value) list -> Values.value list ;
+    takes : Dispatcher.matcher list * bool ;
+    returns : Dispatcher.matcher list * bool ;
     name : string }
 
 type lib =

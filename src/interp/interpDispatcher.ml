@@ -67,38 +67,24 @@ module type S = sig
   (** Duplicates a dispatching tree *)
   val dup : 'a table -> 'a table
 
-  (** Defines how duplicate insertions are handler by
-      {!register}. [Replace] will perform a replacement and collect
-      the previous implementation in its parameter. [Ignore] will
-      leave the tree unchanged. Error will leave the tree unchanged
-      and raise the provided exception. *)
-  type 'a policy =
-    | Replace of 'a list ref
-    | Ignore
-    | Error of exn
-
-  (** Insterts an implementation of a given operation with for a given
-      dispatching type route. If the route exists, the [policy] is
-      applied. Anyway, if [frozen] is set, this (exact) route cannot
-      be overwritten later on, unless [force] is set. By default,
-      [policy] is set to [Error (Failure "register")]. *)
+  (** Inserts the implementation of a given operation for a given
+      dispatching type route. If the route already exists, it is
+      overwritten and the function returns [true], unless it has been
+      frozen, in which case [Error (Failure "register")] is raised. If
+      the route does not exist yet, the function returns [false]. *)
   val register
-    : ?policy:'a policy -> ?force:bool -> ?frozen:bool -> ?more:bool ->
-    (overloading * matcher list) -> 'a -> 'a table -> unit
+    : ?frozen:bool -> ?more:bool ->
+    overloading -> matcher list -> int -> 'a -> 'a table -> bool
 
   (** Finds an appropirate implementation for the given overloading
-      and types of parameters, using the following order.
+      types of parameters, and return arity, using the following order.
       - exact length with exact types
       - exact length with some parameters matched by Any
       - prefix length with exact types
       - prefix length with some parameters matched by Any
       The last two are only selected when the registration was done
       with [~more:true] *)
-  val lookup : (overloading * rtt list) -> 'a table -> 'a
-
-  (** Returns the flattened dispatch tree for a given operation,
-      i.e. the list of all its possible types *)
-  val lookup_all : overloading -> 'a table -> 'a list
+  val lookup : overloading -> rtt list -> int -> 'a table -> 'a
 end
 
 module Make (Values : InterpValues.S)
@@ -352,18 +338,24 @@ module Make (Values : InterpValues.S)
   module RttMap =
     Map.Make (struct type t = rtt let compare = compare end)
 
-  type 'a level =
-    { leaf : 'a option ;
-      typed : 'a level RttMap.t ;
-      any : 'a level option }
+  module IntMap =
+    Map.Make (struct type t = int let compare = (-) end)
 
-  type 'a table =
-    'a item level OverloadingMap.t ref
+  type 'a arg =
+    { leaf : 'a ret ;
+      typed : 'a arg RttMap.t ;
+      any : 'a arg option }
+
+  and 'a table =
+    'a arg OverloadingMap.t ref
+
+  and 'a ret =
+    { accepts_more : 'a item IntMap.t ;
+      exact_arity : 'a item IntMap.t }
 
   and 'a item =
-    { bucket : 'a ;
-      frozen : bool ;
-      more : bool }
+    { frozen : bool ;
+      bucket : 'a }
 
   let create () =
     ref OverloadingMap.empty
@@ -371,61 +363,66 @@ module Make (Values : InterpValues.S)
   let dup { contents = table } =
     ref table
 
-  type 'a policy =
-    | Replace of 'a list ref
-    | Ignore
-    | Error of exn
+  let empty_ret =
+    { accepts_more = IntMap.empty ;
+      exact_arity =  IntMap.empty }
+
+  let empty_arg =
+    { leaf = empty_ret ; typed = RttMap.empty ; any = None }
 
   let register
-      ?(policy = Error (Failure "register")) ?(force = false) ?(frozen = false) ?(more = false)
-      (overloading, matchers) bucket table =
-    let empty_level = { leaf = None ; typed = RttMap.empty ; any = None } in
-    let rec insert_in_level ({ leaf ; typed ; any } as unchanged) matchers =
-      match leaf, any, matchers, policy, force with
-      | Some _, _, [], Error exn, _ ->
-        raise exn
-      | Some { bucket ; frozen = true }, _, [], Ignore, false ->
-        unchanged
-      | Some { bucket ; frozen = true }, _, [], Replace _, false ->
-        unchanged
-      | Some { bucket }, _, [], Replace col, _ ->
-        col := bucket :: !col ;
-        { leaf = Some { bucket ; frozen ; more } ; typed ; any }
-      | _, _, [], _, _ ->
-        { leaf = Some { bucket ; frozen ; more } ; typed ; any }
-      | leaf, _, Typed rtt :: rest, _ ,_ ->
+      ?(frozen = false) ?(more = false)
+      overloading matchers lhs bucket table =
+    let res = ref false in
+    let rec insert_in_ret ret =
+      if more then
+        { ret with accepts_more = insert_in_map ret.accepts_more }
+      else
+        { ret with exact_arity = insert_in_map ret.exact_arity }
+    and insert_in_map map =
+      match IntMap.find lhs map with
+      | { frozen = true } ->
+        raise (Failure "register")
+      | exception Not_found ->
+        IntMap.add lhs { bucket ; frozen } map
+      | _ ->
+        res := true ;
+        IntMap.add lhs { bucket ; frozen } map
+
+    and insert_in_arg ({ leaf ; typed ; any } as unchanged) matchers =
+      match leaf, any, matchers with
+      | _, _, []->
+        { leaf = insert_in_ret leaf ; typed ; any }
+      | leaf, _, Typed rtt :: rest ->
         { leaf ; typed = insert_in_typed typed rtt rest ; any }
-      | leaf, None, Any :: rest, _ ,_ ->
-        { leaf ; typed ; any = Some (insert_in_level empty_level rest) }
-      | leaf, Some level, Any :: rest, _ ,_ ->
-        { leaf ; typed ; any = Some (insert_in_level level rest) }
+      | leaf, None, Any :: rest ->
+        { leaf ; typed ; any = Some (insert_in_arg (empty_arg) rest) }
+      | leaf, Some arg, Any :: rest ->
+        { leaf ; typed ; any = Some (insert_in_arg arg rest) }
     and insert_in_typed typed t rest =
-      let level = try RttMap.find t typed with Not_found -> empty_level in
-      RttMap.add t (insert_in_level level rest) typed
+      let arg = try RttMap.find t typed with Not_found -> empty_arg in
+      RttMap.add t (insert_in_arg arg rest) typed
     in
-    let toplevel = try OverloadingMap.find overloading !table with Not_found -> empty_level in
-    table := OverloadingMap.add overloading (insert_in_level toplevel matchers) !table
+    let first_arg = try OverloadingMap.find overloading !table with Not_found -> empty_arg in
+    table := OverloadingMap.add overloading (insert_in_arg first_arg matchers) !table ;
+    !res
 
-  let lookup (overloading, rtts) table =
-    let rec find_in_level { leaf ; typed ; any } rtts = match rtts, leaf, any with
-      | [], None, _ -> raise Not_found
-      | [], Some { bucket }, _ -> bucket
-      | rtt :: rtts, Some { bucket ; more = true }, None ->
-        begin try find_in_level (RttMap.find rtt typed) rtts
-          with Not_found -> bucket end
-      | rtt :: rtts, Some { bucket ; more = true }, Some any ->
-        begin try find_in_level (RttMap.find rtt typed) rtts
-          with Not_found -> try find_in_level any rtts
-            with Not_found -> bucket end
-      | rtt :: rtts, (None | Some { more = false }), None ->
-        find_in_level (RttMap.find rtt typed) rtts
-      | rtt :: rtts, (None | Some { more = false }), Some any ->
-        begin try find_in_level (RttMap.find rtt typed) rtts
-          with Not_found -> find_in_level any rtts end
+  let lookup overloading rtts lhs table =
+    let rec find_in_arg { leaf ; typed ; any } rtts = match rtts with
+      | [] -> begin try
+            IntMap.find lhs leaf.exact_arity
+          with Not_found ->
+            IntMap.find lhs leaf.accepts_more
+        end
+      | rtt :: rtts ->
+        try
+          try
+            find_in_arg (RttMap.find rtt typed) rtts
+          with Not_found -> match any with
+            | None -> raise Not_found
+            | Some arg -> find_in_arg arg rtts
+        with Not_found ->
+          IntMap.find lhs leaf.accepts_more
     in
-    find_in_level (OverloadingMap.find overloading !table) rtts
-
-  let lookup_all overloading table =
-    failwith "lookup_all"
-
+    (find_in_arg (OverloadingMap.find overloading !table) rtts).bucket
 end

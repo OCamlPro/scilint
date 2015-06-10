@@ -26,24 +26,25 @@ let load_libraries state lib =
 
 (* from there: typed interface to the library, (* WIP *) *)
 
-let register_primitive ?more ?force ?name lib (overloading, takes, returns) call =
+let register_primitive ?(more = false) ?(force = false) ?name lib (overloading, takes, returns) call =
   let name = match name with Some name -> name | None -> "undefined" in
   let loc = ScilabLocations.External name, ((0,0), (0,0)) in
-  let call args =
-    try call args with
+  let call lhs args =
+    try call lhs args with
     | Interp_error err -> error (Located (loc, err))
     | Bad_type -> error (Located (loc, Generic "bad type"))
     | Bad_index -> error (Located (loc, Generic "bad index"))
     | Bad_cast -> error (Located (loc, Generic "bad cast"))
   in
   let primitive =
-    { call ; takes ; returns = [] ; name } in
-  let policy =
-    let msg = "cannot redefine this protected primitive" in
-    Dispatcher.Error (Interp_error (Located (loc, Generic msg))) in
+    { call ; takes = (takes, more) ; returns = ([], true) ; name } in
   let frozen = true in
-  Dispatcher.(register ~policy ~frozen ?force ?more
-                (overloading, takes) primitive lib)
+  try Dispatcher.(register ~frozen ~more
+                    overloading takes (List.length returns)
+                    primitive lib |> ignore)
+  with Failure "register" ->
+    let msg = "cannot redefine this protected primitive" in
+    if not force then raise (Interp_error (Located (loc, Generic msg)))
 
 type (_, _, _) funtag =
   | Take : 'a argtag * ('b, 'b -> 'c, 'r) funtag -> ('a, 'a -> 'b -> 'c, 'r) funtag
@@ -105,7 +106,7 @@ let rec first_arg_matcher : type a b r. (a, a -> b, r) funtag -> matcher = funct
   | Take (Fake _, (Return _ as r)) -> first_arg_matcher r
   | Return (a, _) -> arg_matcher a
   | Take (a, _) -> arg_matcher a
-    
+
 let rec get_arg
   : type a. a argtag -> (Ast.var option * value) list ->
     Ast.var option * a * (Ast.var option * value) list
@@ -145,8 +146,8 @@ let rec wrap_fun
       inject_result rt (partial av)
 
 let rec return_type : type a f r. (a, f, r) funtag -> r argtag = function
-    | Return (_, rt) -> rt
-    | Take (_, rt) -> return_type rt
+  | Return (_, rt) -> rt
+  | Take (_, rt) -> return_type rt
 
 (** Registers a unary operator ; for immediate types, optionally
     extended to pointwise ([pw = true]) ; the first type is the
@@ -157,30 +158,30 @@ let register_unop ?(pw = false) lib op xt rt f =
   | Arg (Single xt), Arg (Single rt) ->
     register_primitive lib
       (Unary op, [ Typed (T (Single xt)) ], [ Typed (T (Single rt)) ])
-      (function
-        | [ None, xv ] ->
-          let x = extract (Single xt) xv in
-          [ inject (Single rt) (f x) ]
-        | _ -> raise Bad_type) ;
+      (fun lhs -> function
+         | [ None, xv ] ->
+           let x = extract (Single xt) xv in
+           [ inject (Single rt) (f x) ]
+         | _ -> raise Bad_type) ;
     if pw then
       register_primitive lib
         (Unary op, [ Typed (T (Matrix xt)) ], [ Typed (T (Matrix rt)) ])
-        (function
-          | [ None, xv ] ->
-            let x = extract (Matrix xt) xv in
-            let wx, hx = matrix_size x in
-            let m = matrix_create rt wx hx in
-            for i = 1 to wx do
-              for j = 1 to hx do
-                matrix_set m i j (f (matrix_get x i j))
-              done ;
-            done ;
-            [ inject (Matrix rt) m ]
-          | _ -> raise Bad_type)
+        (fun lhs -> function
+           | [ None, xv ] ->
+             let x = extract (Matrix xt) xv in
+             let wx, hx = matrix_size x in
+             let m = matrix_create rt wx hx in
+             for i = 1 to wx do
+               for j = 1 to hx do
+                 matrix_set m i j (f (matrix_get x i j))
+               done ;
+             done ;
+             [ inject (Matrix rt) m ]
+           | _ -> raise Bad_type)
   | _ ->
     register_primitive lib
       (Unary op, [ arg_matcher xt ], [ Any ])
-      (fun l ->
+      (fun lhs l ->
          let _, x, l = get_arg xt l in
          inject_result rt (f x))
 
@@ -194,12 +195,12 @@ let rec register_binop ?(pw = false) ?(scl = false) ?(scr = false) lib op xt yt 
   | Arg (Single xt), Arg (Single yt), Arg (Single rt) ->
     register_primitive lib
       (Binary op, [ Typed (T (Single xt)) ; Typed (T (Single yt)) ], [ Any ])
-      (function
-        | [ None, xv ; None, yv ] ->
-          let x = extract (Single xt) xv in
-          let y = extract (Single yt) yv in
-          [ inject (Single rt) (f x y) ]
-        | _ -> raise Bad_type) ;
+      (fun lhs -> function
+         | [ None, xv ; None, yv ] ->
+           let x = extract (Single xt) xv in
+           let y = extract (Single yt) yv in
+           [ inject (Single rt) (f x y) ]
+         | _ -> raise Bad_type) ;
     if pw then register_pw_i_binop lib op xt yt rt f ;
     if scl then register_scl_i_binop lib op xt yt rt f ;
     if scr then register_scr_i_binop lib op xt yt rt f
@@ -207,69 +208,69 @@ let rec register_binop ?(pw = false) ?(scl = false) ?(scr = false) lib op xt yt 
     assert (not (pw || scl || scr)) ;
     register_primitive lib
       (Binary op, [ arg_matcher xt ; arg_matcher yt ], [ Any ])
-      (fun l ->
+      (fun lhs l ->
          let _, x, l = get_arg xt l in
          let _, y, l = get_arg yt l in
          inject_result rt (f x y))
 and register_pw_i_binop lib op xt yt rt f =
   register_primitive lib
     (Binary op, [ Typed (T (Matrix xt)) ; Typed (T (Matrix yt)) ], [ Any ])
-    (function
-      | [ None, xv ; None, yv ] ->
-        let x = extract (Matrix xt) xv in
-        let wx, hx = matrix_size x in
-        let y = extract (Matrix yt) yv in
-        let wy, hy = matrix_size y in
-        if wx <> wy || hx <> hy then
-          error (Generic ("pointwise "
-                          ^ Ast.string_of_op op
-                          ^ " only works on matrices of the smae size")) ;
-        let m = matrix_create rt wx hx in
-        for i = 1 to wx do
-          for j = 1 to hx do
-            matrix_set m i j (f (matrix_get x i j) (matrix_get y i j))
-          done ;
-        done ;
-        [ inject (Matrix rt) m ]
-      | _ -> raise Bad_type)
+    (fun lhs -> function
+       | [ None, xv ; None, yv ] ->
+         let x = extract (Matrix xt) xv in
+         let wx, hx = matrix_size x in
+         let y = extract (Matrix yt) yv in
+         let wy, hy = matrix_size y in
+         if wx <> wy || hx <> hy then
+           error (Generic ("pointwise "
+                           ^ Ast.string_of_op op
+                           ^ " only works on matrices of the smae size")) ;
+         let m = matrix_create rt wx hx in
+         for i = 1 to wx do
+           for j = 1 to hx do
+             matrix_set m i j (f (matrix_get x i j) (matrix_get y i j))
+           done ;
+         done ;
+         [ inject (Matrix rt) m ]
+       | _ -> raise Bad_type)
 
 and register_scl_i_binop lib op xt yt rt f =
   register_primitive lib
     (Binary op, [ Typed (T (Single xt)) ; Typed (T (Matrix yt)) ], [ Any ])
-    (function
-      | [ None, xv ; None, yv ] ->
-        let x = extract (Single xt) xv in
-        let y = extract (Matrix yt) yv in
-        let w, h = matrix_size y in
-        let m = matrix_create rt w h in
-        for i = 1 to w do
-          for j = 1 to h do
-            matrix_set m i j (f x (matrix_get y i j))
-          done ;
-        done ;
-        [ inject (Matrix rt) m ]
-      | _ -> raise Bad_type)
+    (fun lhs -> function
+       | [ None, xv ; None, yv ] ->
+         let x = extract (Single xt) xv in
+         let y = extract (Matrix yt) yv in
+         let w, h = matrix_size y in
+         let m = matrix_create rt w h in
+         for i = 1 to w do
+           for j = 1 to h do
+             matrix_set m i j (f x (matrix_get y i j))
+           done ;
+         done ;
+         [ inject (Matrix rt) m ]
+       | _ -> raise Bad_type)
 and register_scr_i_binop lib op xt yt rt f =
   register_primitive lib
     (Binary op, [ Typed (T (Matrix xt)) ; Typed (T (Single yt)) ], [ Any ])
-    (function
-      | [ None, xv ; None, yv ] ->
-        let x = extract (Matrix xt) xv in
-        let w, h = matrix_size x in
-        let y = extract (Single yt) yv in
-        let m = matrix_create rt w h in
-        for i = 1 to w do
-          for j = 1 to h do
-            matrix_set m i j (f (matrix_get x i j) y)
-          done ;
-        done ;
-        [ inject (Matrix rt) m ]
-      | _ -> raise Bad_type)
+    (fun lhs -> function
+       | [ None, xv ; None, yv ] ->
+         let x = extract (Matrix xt) xv in
+         let w, h = matrix_size x in
+         let y = extract (Single yt) yv in
+         let m = matrix_create rt w h in
+         for i = 1 to w do
+           for j = 1 to h do
+             matrix_set m i j (f (matrix_get x i j) y)
+           done ;
+         done ;
+         [ inject (Matrix rt) m ]
+       | _ -> raise Bad_type)
 
 (** Registers a range operator *)
 let register_range lib xt st yt rt f =
   let cb =
-    (fun l ->
+    (fun lhs l ->
        let _, x, l = get_arg xt l in
        try
          let _, s, l = get_arg st l in
@@ -285,16 +286,16 @@ let register_range lib xt st yt rt f =
 
 (** Registers an extraction operator for standard matrices *)
 let register_matrix_extraction lib xt =
-  let extract_nil = function
+  let extract_nil lhs = function
     | [ None, m ] -> [ m ]
     | _ -> raise Bad_index in
-  let extract_one = function
+  let extract_one lhs = function
     | [ None, m ; None, i ] ->
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
       let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
       [ inject (Single xt) (matrix_get_linear m i) ]
     | _ -> raise Bad_index in
-  let extract_two = function
+  let extract_two lhs = function
     | [ None, m ; None, i ; None, j ] ->
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
       let j = Values.(extract (Single Int32) (cast j (T (Single Int32)))) in
@@ -332,7 +333,7 @@ let register_matrix_extraction lib xt =
 
 (** Registers an extraction operator for standard matrices *)
 let register_matrix_injection lib xt compatible =
-  let inject_one = function
+  let inject_one lhs = function
     | [ None, m ; None, v ; None, i ] ->
       let m = Values.(extract (Matrix xt) (grab (cast m (T (Matrix xt))))) in
       let v = Values.(extract (Single xt) (cast v (T (Single xt)))) in
@@ -340,7 +341,7 @@ let register_matrix_injection lib xt compatible =
       matrix_set_linear m i v ;
       [ inject (Matrix xt) m ]
     | _ -> raise Bad_index in
-  let inject_two = function
+  let inject_two lhs = function
     | [ None, m ; None, v ; None, i ; None, j ] ->
       let m = Values.(extract (Matrix xt) (grab (cast m (T (Matrix xt))))) in
       let v = Values.(extract (Single xt) (cast v (T (Single xt)))) in
@@ -378,26 +379,26 @@ let register_matrix_injection lib xt compatible =
 let register_casted_homo_binop lib op (at1 : _ argtag) (at2 : _ argtag) (atr : _ argtag) =
   match at1, at2, atr with
   | Arg t1, Arg t2, Arg tr ->
-    let f = Dispatcher.lookup (Binary op, [ T tr ; T tr ]) lib in
+    let f = Dispatcher.lookup (Binary op) [ T tr ; T tr ] 1 lib in
     register_primitive lib
       (Binary op, [ Typed (T t1) ; Typed (T t2) ], [ Any ])
-      (fun l ->
+      (fun lhs l ->
          let _, x, l = get_arg at1 l in
          let _, y, l = get_arg at2 l in
-         f.call [ None, Values.cast (inject t1 x) (T tr) ;
-                  None, Values.cast (inject t2 y) (T tr) ])
+         f.call lhs [ None, Values.cast (inject t1 x) (T tr) ;
+                      None, Values.cast (inject t2 y) (T tr) ])
   | _ -> assert false
 
 (** Register a primitive function and binds it to a name ; the type
     description is used to map the OCaml function type and select the
     right conversions ; also, the first type argument is used for
     dispatch *)
-let register_function 
+let register_function
   : type a b r. lib -> state -> string -> (a, a -> b, r) funtag -> (a -> b) -> unit
   = fun lib state name t f ->
     register_primitive lib
       (Function name, (try [ first_arg_matcher t ] with Not_found -> []), [ Any ])
-      (wrap_fun t f) ;
+      (let cb = wrap_fun t f in fun lhs args -> cb args) ;
     let var = State.var state name in
     State.put state var (inject Primitive name)
 
@@ -405,9 +406,9 @@ let register_function
 let register_cast_function lib state name (T tag1 : rtt) (t2 : rtt) =
   register_primitive lib
     (Function name, [ Typed (T tag1) ], [ Any ])
-    (function
-      | [ None, v ] -> [ Values.cast v t2 ]
-      | _ -> raise Bad_cast) ;
+    (fun lhs -> function
+       | [ None, v ] -> [ Values.cast v t2 ]
+       | _ -> raise Bad_cast) ;
   let var = State.var state name in
   State.put state var (inject Primitive name)
 
@@ -419,21 +420,21 @@ let register_homo_collation lib itag =
   let register_with_casts kind collate tag1 tag2 =
     register_primitive lib
       (kind, [ tag1 ; tag2 ], [ Any ])
-      (function
-        | [ None, v1 ; None, v2 ] ->
-          let v1 = Values.cast v1 (T mtag) in
-          let v2 = Values.cast v2 (T mtag) in
-          let x = extract mtag v1 in
-          let y = extract mtag v2 in
-          [ inject mtag (collate x y) ]
-        | _ -> raise Bad_type)
+      (fun lhs -> function
+         | [ None, v1 ; None, v2 ] ->
+           let v1 = Values.cast v1 (T mtag) in
+           let v2 = Values.cast v2 (T mtag) in
+           let x = extract mtag v1 in
+           let y = extract mtag v2 in
+           [ inject mtag (collate x y) ]
+         | _ -> raise Bad_type)
   in
   List.iter (fun (kind, collate) ->
       List.iter (fun tag ->
           register_primitive lib (kind, [ Typed (T Atom) ; tag ], [ Any ])
-            (function [ None, _ ; None, v ] -> [ v ] | _ -> raise Bad_type) ;
+            (fun lhs -> function [ None, _ ; None, v ] -> [ v ] | _ -> raise Bad_type) ;
           register_primitive lib (kind, [ tag ; Typed (T Atom) ], [ Any ])
-            (function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type))
+            (fun lhs -> function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type))
         ([ Typed (T (Single itag)) ; Typed (T (Matrix itag)) ] : matcher list) ;
       List.iter (fun (tag1, tag2) ->
           register_with_casts kind collate tag1 tag2)
@@ -463,13 +464,13 @@ let stdlib state lib =
     (List.iter (fun n -> State.(clear state (var state n)))) ;
   (*----- lists ----------------------------------------------------------*)
   register_function lib state "list" (seq any @-> vlist) Values.vlist_create ;
-  let list_extract = function
+  let list_extract lhs = function
     | [ None, l ; None, i ] ->
       let l = Values.(extract Vlist l) in
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
       [ Values.vlist_get l i ]
     | _ -> raise Bad_type in
-  let list_inject = function
+  let list_inject lhs = function
     | [ None, l ; None, v ; None, i ] ->
       let l = Values.(extract Vlist (grab l)) in
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
@@ -541,12 +542,12 @@ let stdlib state lib =
   let rec intpow a p = match p with
     | 0 -> 1
     | 1 -> a
-    | n -> 
+    | n ->
       let b = intpow a (n / 2) in
       b * b * (if n mod 2 = 0 then 1 else a) in
   List.iter (fun itag ->
       let tag = Arg (Single itag) in
-      let bound = Values.icast Int32 itag in 
+      let bound = Values.icast Int32 itag in
       register_unop lib Ast.Unary_plus tag tag (fun x -> bound (~+ x)) ;
       register_unop lib Ast.Unary_minus tag tag (fun x -> bound (~- x)) ;
       register_binop lib Ast.Eq tag tag bool (fun x y -> x = y) ;
@@ -604,9 +605,9 @@ let stdlib state lib =
     [ int8 ; int16 ; int32 ; uint8 ; uint16 ; uint32 ] ;
   (*----- homogeneous matrix collation ------------------------------------*)
   register_primitive lib (Matrix_horizontal_collation, [ Typed (T Atom) ; Typed (T Atom) ], [ Any ])
-    (function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type) ;
+    (fun lhs -> function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type) ;
   register_primitive lib (Matrix_vertical_collation, [ Typed (T Atom) ; Typed (T Atom) ], [ Any ])
-    (function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type) ;
+    (fun lhs -> function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type) ;
   register_homo_collation lib (Number Real) ;
   register_homo_collation lib String ;
   register_homo_collation lib Int8 ;
@@ -649,7 +650,7 @@ let stdlib state lib =
   register_binop lib Ast.Ldivide (eye real) real real ( /. ) ;
   List.iter (fun itag ->
       let tag = Arg (Single itag) in
-      let bound = Values.icast Int32 itag in 
+      let bound = Values.icast Int32 itag in
       register_binop lib Ast.Plus (eye real) (eye tag) (eye tag)
         (fun f i -> int_of_float f + i |> bound) ;
       register_binop lib Ast.Plus (eye tag) (eye real) (eye tag)
@@ -670,7 +671,7 @@ let stdlib state lib =
           let tag' = Arg (Single itag') in
           let ritag = max itag itag' in
           let rtag = Arg (Single ritag) in
-          let bound = Values.icast Int32 ritag in 
+          let bound = Values.icast Int32 ritag in
           register_binop lib Ast.Plus (eye tag) (eye tag') (eye rtag)
             (fun x y -> x + y |> bound) ;
           register_binop lib Ast.Minus (eye tag) (eye tag') (eye rtag)
@@ -724,6 +725,8 @@ let stdlib state lib =
          done ; res
        | _ -> raise Bad_type);
   (*----- constants -------------------------------------------------------*)
+  register_function lib state "zeros" (real @* real @-> matrix real)
+    (fun w h -> matrix_create (Number Real) (int_of_float w) (int_of_float h)) ;
   register_function lib state "null" (void @-> null) (fun () -> ()) ;
   State.put state (State.var state ":") (inject (Eye (Number Real)) 1.) ;
   let dol = let edol = poly_create Real "$" in poly_set edol 2 1. ; edol in
