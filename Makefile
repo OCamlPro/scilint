@@ -2,7 +2,8 @@
 
 all: \
   scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm scilob.asm \
-  scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte scilob.byte
+  scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte scilob.byte \
+  scilob.js
 
 OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
 OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats
@@ -75,8 +76,7 @@ OCAML_SCILOB_MLS = \
   src/interp/interpCore.ml \
   src/interp/interpMessages.ml \
   src/interp/interpLib.ml \
-  src/interp/interp.ml \
-  src/interp/interpMain.ml
+  src/interp/interp.ml
 
 OCAML_SCILOB_MLIS = \
   src/interp/interpState.mli \
@@ -205,7 +205,14 @@ scifind.asm : $(SCIFIND_CMXS)
 	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCIFIND_CMXS)
 
-scilob.asm : $(SCILOB_CMXS)
+scilob.js.byte: $(SCILOB_CMOS) src/interp/interpWebMain.ml
+	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) -package js_of_ocaml.tyxml -package js_of_ocaml.syntax \
+          -syntax camlp4o -linkpkg -o $@ $^
+
+scilob.js: scilob.js.byte
+	js_of_ocaml +weak.js $< -o $@
+
+scilob.asm : $(SCILOB_CMXS) src/interp/interpMain.cmx
 	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCILOB_CMXS)
 
@@ -225,7 +232,7 @@ scifind.byte : $(SCIFIND_CMOS)
 	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCIFIND_CMOS)
 
-scilob.byte : $(SCILOB_CMOS)
+scilob.byte : $(SCILOB_CMOS) src/interp/interpMain.cmo
 	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCILOB_CMOS)
 
