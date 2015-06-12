@@ -63,12 +63,11 @@ let update_tty contents =
     (fun () -> failwith "scilab-tty element not found")
     (fun tty ->
        let tty = (tty :> Dom.node Js.t) in
-       Dom.(List.iter
-              (fun node -> tty##removeChild (node) |> ignore)
-              (list_of_nodeList tty##childNodes)) ;
-       tty##appendChild (Tyxml_js.To_dom.of_node contents) |> ignore)
+       let tty = Tyxml_js.Of_dom.of_node contents in
+       M.replaceChildren tty contents)
 
 module D = Tyxml_js.Html5
+module M = Tyxml_js_manip.Manip
 
 let rec render step =
   let state = InterpCore.State.init () in
@@ -87,29 +86,16 @@ let rec render step =
         step.next <- Some { phrase = "" ; answer = "" ; next = None ; updated = false }
     | Some next -> update_results next (nb + 1) in
   let rec format_results step nb =
-    let handler evt =
-      Js.Opt.case
-        (evt##target)
-        (fun () -> assert false)
-        (fun node ->
-           Js.Opt.case
-             (Dom_html.CoerceTo.textarea node)
-             (fun () -> assert false)
-             (fun node -> step.phrase <- Js.to_string node##value ;
-               step.updated <- true;
-               true)) in
-    D.(textarea ~a:[ a_onchange handler ; a_class [ "scilab-input" ] ] (pcdata step.phrase)) ::
-    D.(p ~a:[ a_class [ "scilab-output" ] ] [ pcdata step.answer ]) ::
-    match step.next with
+    let textarea = D.(textarea ~a:[ a_class [ "scilab-input" ] ] (pcdata step.phrase)) in
+    M.Ev.onchange textarea (fun _ev -> step.phrase <- M.value textarea ; true) ;
+    let result = D.([ p ~a:[ a_class [ "scilab-output" ] ] [ pcdata step.answer ] ]) in
+    textarea @ results @ match step.next with
     | None -> []
     | Some next -> format_results next (nb + 1) in
   update_results step 1 ;
-  let handler _ =
-    render step ;
-    true in
-  let contents = D.(h1 [ pcdata "Scilob" ;
-                         button ~a:[ a_onclick handler ] [ entity "#9881" ] ])
-                 :: format_results step 1 in
+  let run_button = D.(button [ entity "#9881" ]) in
+  M.Ev.onclick run_button (fun _ev -> render step ; true) ;
+  let contents = D.(h1 [ pcdata "Scilob" ; run_button ]) :: format_results step 1 in
   update_tty (D.div contents)
 
 (** where the args are passed and all the fun starts *)
