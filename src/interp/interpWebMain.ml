@@ -58,16 +58,13 @@ type step =
     mutable next: step option;
     mutable updated: bool }
 
+module D = Tyxml_js.Html5
+module M = Tyxml_js_manip.Manip
+
 let update_tty contents =
   Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-tty"))
     (fun () -> failwith "scilab-tty element not found")
-    (fun tty ->
-       let tty = (tty :> Dom.node Js.t) in
-       let tty = Tyxml_js.Of_dom.of_node contents in
-       M.replaceChildren tty contents)
-
-module D = Tyxml_js.Html5
-module M = Tyxml_js_manip.Manip
+    (fun tty -> M.replaceChildren (Tyxml_js.Of_dom.of_element tty) contents)
 
 let rec render step =
   let state = InterpCore.State.init () in
@@ -87,16 +84,16 @@ let rec render step =
     | Some next -> update_results next (nb + 1) in
   let rec format_results step nb =
     let textarea = D.(textarea ~a:[ a_class [ "scilab-input" ] ] (pcdata step.phrase)) in
-    M.Ev.onchange textarea (fun _ev -> step.phrase <- M.value textarea ; true) ;
-    let result = D.([ p ~a:[ a_class [ "scilab-output" ] ] [ pcdata step.answer ] ]) in
-    textarea @ results @ match step.next with
+    M.Ev.onchange_textarea textarea (fun _ev -> step.phrase <- M.value textarea ; true) ;
+    let results = D.([ p ~a:[ a_class [ "scilab-output" ] ] [ pcdata step.answer ] ]) in
+    textarea :: results @ match step.next with
     | None -> []
     | Some next -> format_results next (nb + 1) in
   update_results step 1 ;
   let run_button = D.(button [ entity "#9881" ]) in
   M.Ev.onclick run_button (fun _ev -> render step ; true) ;
-  let contents = D.(h1 [ pcdata "Scilob" ; run_button ]) :: format_results step 1 in
-  update_tty (D.div contents)
+  let contents = D.(h1 [ pcdata "Sciweb" ; run_button ]) :: format_results step 1 in
+  update_tty contents
 
 (** where the args are passed and all the fun starts *)
 let main () =

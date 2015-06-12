@@ -3,7 +3,7 @@
 all: \
   scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm scilob.asm \
   scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte scilob.byte \
-  scilob.js
+  sciweb.js
 
 OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
 OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats
@@ -244,7 +244,7 @@ sciweb.byte: $(SCIWEB_CMOS)
 	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' -linkpkg -o $@ $^
 
-sciweb.js: sciweb.js.byte
+sciweb.js: sciweb.byte
 	js_of_ocaml +weak.js $< -o $@
 
 src/common/tyxml_js_manip.cmo \
@@ -297,12 +297,12 @@ scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
 	  $(SCIFIND_MLS) $(SCIFIND_MLIS) \
 	  $(SCILOB_MLS) $(SCILOB_MLIS) \
           > .depend_ocaml
-	$(OCAMLDEP) -native $(OCAML_INCL) \
+	$(OCAMLDEP) $(OCAML_INCL) \
           src/common/tyxml_js_manip.ml \
           src/common/tyxml_js_manip.mli \
           src/interp/interpWebMain.ml \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
-          -syntax camlp4o > .depend_ocaml
+          -syntax camlp4o >> .depend_ocaml
 
 include .depend_ocaml
 
