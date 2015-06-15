@@ -66,7 +66,7 @@ let update_tty contents =
     (fun () -> failwith "scilab-tty element not found")
     (fun tty -> M.replaceChildren (Tyxml_js.Of_dom.of_element tty) contents)
 
-let rec render step =
+let rec render ?(eval = true) step =
   let state = InterpCore.State.init () in
   let lib = InterpCore.Dispatcher.create () in
   InterpLib.load_libraries state lib ;
@@ -77,22 +77,31 @@ let rec render step =
     Buffer.clear buf ;
     treat_source state lib (String ("input-" ^ string_of_int nb, step.phrase)) ;
     step.answer <- Buffer.contents buf ;
+    step.updated <- false ;
     match step.next with
     | None ->
       if step.phrase <> "" then
         step.next <- Some { phrase = "" ; answer = "" ; next = None ; updated = false }
     | Some next -> update_results next (nb + 1) in
-  let rec format_results step nb =
-    let textarea = D.(textarea ~a:[ a_class [ "scilab-input" ] ] (pcdata step.phrase)) in
-    M.Ev.onchange_textarea textarea (fun _ev -> step.phrase <- M.value textarea ; true) ;
-    let results = D.([ p ~a:[ a_class [ "scilab-output" ] ] [ pcdata step.answer ] ]) in
-    textarea :: results @ match step.next with
+  let rec format_results cstep nb invalidated =
+    let invalidated = invalidated || cstep.updated in
+    let textarea = D.(textarea ~a:[ a_class [ "scilab-input" ] ] (pcdata cstep.phrase)) in
+    M.Ev.onchange_textarea textarea (fun _ev ->
+        cstep.phrase <- M.value textarea ;
+        cstep.updated <- true ;
+        render ~eval:false step ;
+        true) ;
+    let invalidated_class =
+      if invalidated then [ "scilab-invalidated" ] else [] in
+    let results =
+      D.([ p ~a:[ a_class ([ "scilab-output" ] @ invalidated_class) ] [ pcdata cstep.answer ] ]) in
+    textarea :: results @ match cstep.next with
     | None -> []
-    | Some next -> format_results next (nb + 1) in
-  update_results step 1 ;
+    | Some next -> format_results next (nb + 1) invalidated in
+  if eval then update_results step 1 ;
   let run_button = D.(button [ entity "#9881" ]) in
   M.Ev.onclick run_button (fun _ev -> render step ; true) ;
-  let contents = D.(h1 [ pcdata "Sciweb" ; run_button ]) :: format_results step 1 in
+  let contents = D.(h1 [ pcdata "Sciweb" ; run_button ]) :: format_results step 1 false in
   update_tty contents
 
 (** where the args are passed and all the fun starts *)

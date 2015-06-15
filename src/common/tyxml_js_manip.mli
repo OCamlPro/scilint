@@ -37,6 +37,9 @@ module Manip : sig
 
   val value: 'a elt -> string
 
+  val addClass: 'a elt -> string -> unit
+  val removeClass: 'a elt -> string -> unit
+
   module Elt : sig
     val body : [`Body] elt
   end

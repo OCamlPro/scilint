@@ -219,6 +219,25 @@ module Manip = struct
     let elt = get_value_elt "value" elt in
     Js.to_string elt##value
 
+  let html_elt_of_elt elt =
+    let node = Html5.toelt elt in
+    match Dom.nodeType node with
+    | Dom.Element elt ->
+      let html_elt = Dom_html.CoerceTo.element elt in
+      Js.Opt.case
+        html_elt
+        (fun () -> manip_error "%s" "non-html element node don't have classes")
+        (fun elt -> elt)
+    | _ -> manip_error "%s" "non-element node don't have classes"
+
+  let addClass elt cls =
+    let elt = html_elt_of_elt elt in
+    elt##classList##add (Js.string cls)
+
+  let removeClass elt cls =
+    let elt = html_elt_of_elt elt in
+    elt##classList##remove (Js.string cls)
+
   module Elt = struct
     let body =
       try Of_dom.of_body (Dom_html.window##document##body)
