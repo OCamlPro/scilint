@@ -160,7 +160,7 @@ module Make
                   ^^ nbsp ^^ document_of_exp rexp))
     | Error ->
       group_sp sp (string "error")
-        
+
   and document_of_op op =
     match op with
     | Plus -> string "+"

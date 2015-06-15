@@ -27,7 +27,7 @@ let load_libraries state lib =
 (* from there: typed interface to the library, (* WIP *) *)
 
 let register_primitive ?(more = false) ?(force = false) ?name lib (overloading, takes, returns) call =
-  let name = match name with Some name -> name | None -> "undefined" in
+  let name = match name with Some name -> name | None -> "(unnamed)" in
   let loc = ScilabLocations.External name, ((0,0), (0,0)) in
   let call lhs args =
     try call lhs args with
@@ -224,7 +224,7 @@ and register_pw_i_binop lib op xt yt rt f =
          if wx <> wy || hx <> hy then
            error (Generic ("pointwise "
                            ^ Ast.string_of_op op
-                           ^ " only works on matrices of the smae size")) ;
+                           ^ " only works on matrices of the same size")) ;
          let m = matrix_create rt wx hx in
          for i = 1 to wx do
            for j = 1 to hx do
