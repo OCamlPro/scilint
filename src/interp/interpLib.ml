@@ -52,7 +52,9 @@ type (_, _, _) funtag =
 
 and _ argtag =
   | Arg : 'a tag -> 'a argtag
+  | Flag : (string * 'a) list -> 'a argtag
   | Seq : 'a argtag -> 'a list argtag
+  | Opt : 'a argtag -> 'a option argtag
   | Fake : 'a -> 'a argtag
   | Any : value argtag
 
@@ -66,6 +68,7 @@ let uint8 = Arg (Single Uint8)
 let uint16 = Arg (Single Uint16)
 let uint32 = Arg (Single Uint32)
 let bool = Arg (Single Bool)
+let flag flags = Flag flags
 let string = Arg (Single String)
 let null = Arg Null
 let void = Fake ()
@@ -83,6 +86,7 @@ let eye = function
   | Arg (Single k) -> Arg (Eye k)
   | _ -> assert false
 let seq t = Seq t
+let opt t = Opt t
 
 (** Main function builder combinator *)
 let ( @-> )
@@ -96,7 +100,9 @@ let ( @* )
 
 let rec arg_matcher : type p. p argtag -> matcher = function
   | Arg at -> Typed (T at)
+  | Flag _ -> Typed (T (Single String))
   | Seq t -> arg_matcher t
+  | Opt t -> arg_matcher t
   | Any -> Any
   | Fake _ -> raise Not_found
 
@@ -107,29 +113,57 @@ let rec first_arg_matcher : type a b r. (a, a -> b, r) funtag -> matcher = funct
   | Return (a, _) -> arg_matcher a
   | Take (a, _) -> arg_matcher a
 
+
+let decode_flag s fs =
+  try List.assoc s fs with Not_found ->
+    let rec msg = function
+      | [] -> ""
+      | [ single, _ ] -> single
+      | [ prev, _ ; last, _ ] -> prev ^ " or " ^ last
+      | (first, _) :: rest -> first ^ ", " ^ msg rest in
+    error (Generic ("flag " ^ s ^ " unrecognised, expecting " ^ msg fs))
+
 let rec get_arg
   : type a. a argtag -> (Ast.var option * value) list ->
     Ast.var option * a * (Ast.var option * value) list
   = fun t l -> match l, t with
     | rest, Fake v -> None, v, rest
     | [], Seq _ -> None, [], []
+    | [], Opt _ -> None, None, []
     | [], Arg Null -> None, (), []
     | [], _ -> error (Werror (P (Too_few_arguments 1)))
+    | (name, v) :: vs, Flag fs ->
+      let s = extract (Single String) v in
+      let enc = decode_flag s fs in
+      name, enc, vs
     | (name, v) :: vs, Arg t -> name, extract t v, vs
     | (name, v) :: vs, Any -> name, v, vs
+    | (name, v) :: vs, Opt (Flag fs) ->
+      let s = extract (Single String) v in
+      let enc = decode_flag s fs in
+      name, Some enc, vs
+    | (name, v) :: vs, Opt (Arg t) -> name, Some (extract t v), vs
+    | (name, v) :: vs, Opt Any -> name, Some v, vs
     | (name, v) :: vs, Seq Any ->
       let _, vrest, vs = get_arg t vs in
       None, v :: vrest, vs
     | (name, v) :: vs, Seq (Arg tv) ->
       let _, vrest, vs = get_arg t vs in
       None, extract tv v :: vrest, vs
+    | (name, v) :: vs, Seq (Flag fs) ->
+      let s = extract (Single String) v in
+      let enc = decode_flag s fs in
+      let _, vrest, vs = get_arg t vs in
+      None, enc :: vrest, vs
     | (name, v) :: vs, Seq (Seq _) -> assert false
+    | (name, v) :: vs, Seq (Opt _) -> assert false
     | (name, v) :: vs, Seq (Fake _) -> assert false
 
 let rec inject_result : type a. a argtag -> a -> value list = fun rt v ->
   match rt with
   | Arg tag -> [ inject tag v ]
   | Any -> [ v ]
+  | Flag _ -> assert false
   | Seq _ -> assert false
   | Fake _ -> assert false
 
