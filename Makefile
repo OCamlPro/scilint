@@ -93,6 +93,7 @@ OCAML_SCIWEB_MLS = \
   src/interp/interpLib.ml \
   src/interp/interp.ml \
   src/common/tyxml_js_manip.ml \
+  src/interp/interpWebLib.ml \
   src/interp/interpWebMain.ml
 
 OCAML_SCIWEB_MLIS = \
@@ -249,6 +250,7 @@ sciweb.js: sciweb.byte
 
 src/common/tyxml_js_manip.cmo \
 src/common/tyxml_js_manip.cmi \
+src/interp/interpWebLib.cmo \
 src/interp/interpWebMain.cmo: \
         OCAML_INCL += \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
@@ -300,6 +302,7 @@ scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
 	$(OCAMLDEP) $(OCAML_INCL) \
           src/common/tyxml_js_manip.ml \
           src/common/tyxml_js_manip.mli \
+          src/interp/interpWebLib.ml \
           src/interp/interpWebMain.ml \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
           -syntax camlp4o >> .depend_ocaml

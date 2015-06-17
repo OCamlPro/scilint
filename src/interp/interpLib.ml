@@ -738,5 +738,5 @@ let stdlib state lib =
   State.put state (State.var state "%e") (inject (Single (Number Real)) e)
 
 (* register all the predefined primitives *)
-let _ =
+let () =
   register_library stdlib
