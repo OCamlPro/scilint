@@ -63,10 +63,7 @@ let rec interpret (state : state) (lib : lib) ast =
           message (Result ("ans", res)) ;
         end else begin
           State.clear state ans ;
-          let open ScilintWarning in
-          output_messages !ScilintOptions.format
-            [ exp.loc, Warning (P (Variable_cleared "ans")) ]
-            stderr
+          messages [ Located (exp.loc, Warning ScilintWarning.(P (Variable_cleared "ans"))) ]
         end
       | Assign (lexps, exp) -> (* TODO: argn, resume, etc. *)
         let lhs = List.length lexps in
@@ -211,11 +208,9 @@ let rec interpret (state : state) (lib : lib) ast =
           if name.[0] = '%' then overload name res exp.loc
         end else begin
           State.clear state var.cstr ;
-          let open ScilintWarning in
-          output_messages !ScilintOptions.format
-            [ exp.loc, Werror (P Null_result) ;
-              exp.loc, Warning (P (Variable_cleared (var_name var))) ]
-            stderr
+          messages
+            [ Located (exp.loc, Werror (P Null_result)) ;
+              Located (exp.loc, Warning (P (Variable_cleared (var_name var)))) ]
         end
       | Call (vexp, args, _) ->
         let vf = recursive_extraction vexp in
@@ -233,7 +228,7 @@ let rec interpret (state : state) (lib : lib) ast =
         begin try State.get state var.cstr with
           | Not_found ->
             let vf = inject Atom () in
-            messages [ Located (loc, Werror (L (Uninitialized_var (State.name var.cstr)))) ;
+            messages [ Located (loc, Werror ScilintOptions.(L (Uninitialized_var (State.name var.cstr)))) ;
                        Located (loc, Result (State.name var.cstr, vf)) ] ;
             vf end
       | { cstr = Call (fexp, args, _) ; loc } ->

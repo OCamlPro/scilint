@@ -11,6 +11,7 @@ open ScilabParserAst
 open ScilintWarning
 open ScilintOptions
 open Printf
+open InterpMessages
 
 (** called by the main on each code source passed on th CLI *)
 let treat_source state lib source =
@@ -42,13 +43,25 @@ let treat_source state lib source =
     printf "\n"
   end ;
   if !ScilintOptions.print_messages then begin
-    let messages = collect_messages ast in
-    output_messages !ScilintOptions.format messages stdout
+    messages
+      (List.map (function
+           | (loc, ScilintWarning.Werror m) -> Located (loc, Werror m)
+           | (loc, ScilintWarning.Unrecovered m)
+           | (loc, ScilintWarning.Recovered m) -> Located (loc, Error m)
+           | (loc, ScilintWarning.Generic (_, None, f)) ->
+             Located (loc, Generic (Format.asprintf "%a" (fun ppf () -> f ppf) ()))
+           | (loc, ScilintWarning.Generic (_, Some n, f)) ->
+             Located (loc, Generic (Format.asprintf "%s: %a" n (fun ppf () -> f ppf) ()))
+           | (loc, ScilintWarning.Warning m) -> Located (loc, Warning m)
+           | (loc, ScilintWarning.Hint msg) -> Located (loc, Hint msg)
+           | (loc, ScilintWarning.Drop) -> Located (loc, Generic "drop token")
+           | (loc, ScilintWarning.Insert m) -> Located (loc, Generic ("insert token " ^ m))
+           | (loc, ScilintWarning.Replace m) -> Located (loc, Generic ("replace token by " ^ m)))
+          (collect_messages ast))
   end ;
   if ast = [] then
-    let w = (source, ((1, 0), (1, 0))),
-            Unrecovered "nothing to do" in
-    output_messages !ScilintOptions.format [ w ] stdout
+    let w = Located ((source, ((1, 0), (1, 0))), Error "nothing to do") in
+    messages [ w ]
   else
     Interp.interpret state lib ast
 
@@ -70,6 +83,7 @@ let rec render ?(eval = true) step =
   let state = InterpCore.State.init () in
   let lib = InterpCore.Dispatcher.create () in
   InterpLib.load_libraries state lib ;
+  ScilintOptions.format := Emacs ;
   let buf = Buffer.create 100 in
   Sys_js.set_channel_flusher stdout (Buffer.add_string buf) ;
   Sys_js.set_channel_flusher stderr (Buffer.add_string buf) ;

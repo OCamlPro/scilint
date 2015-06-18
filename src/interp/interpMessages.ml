@@ -263,10 +263,14 @@ let rec format loc msg =
   | Result (var, v) ->
     [ loc, Generic ("30", None, fun ppf -> Format.fprintf ppf "%s = %a" var print_value v) ]
 
-let message msg =
+
+let default_message msg =
   let msgs = format (ScilabLocations.Nowhere, ((0, 0), (0, 0))) msg in
   ScilintWarning.output_messages !ScilintOptions.format msgs stderr
 
+let message_hook = ref default_message
+
+let message msg = !message_hook msg
+
 let messages msgs =
-  let msgs = List.(map (format (ScilabLocations.Nowhere, ((0, 0), (0, 0)))) msgs |> flatten) in
-  ScilintWarning.output_messages !ScilintOptions.format msgs stderr
+  List.iter message msgs
