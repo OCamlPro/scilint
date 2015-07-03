@@ -95,13 +95,15 @@ OCAML_SCIWEB_MLS = \
   src/interp/interpMathLib.ml \
   src/interp/interp.ml \
   src/common/tyxml_js_manip.ml \
+  src/third_party/c3.ml \
   src/interp/interpWebLib.ml \
   src/interp/interpWebMain.ml
 
 OCAML_SCIWEB_MLIS = \
   src/interp/interpState.mli \
   src/interp/interpValues.mli \
-  src/common/tyxml_js_manip.mli
+  src/common/tyxml_js_manip.mli \
+  src/third_party/c3.mli
 
 OCAML_SCILINT_DOC_GEN_MLS = \
   src/docgen/scilintDocGenMain.ml
@@ -253,6 +255,8 @@ sciweb.js: sciweb.byte
 src/common/tyxml_js_manip.cmo \
 src/common/tyxml_js_manip.cmi \
 src/interp/interpWebLib.cmo \
+src/third_party/c3.cmi \
+src/third_party/c3.cmo \
 src/interp/interpWebMain.cmo: \
         OCAML_INCL += \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
@@ -304,6 +308,8 @@ scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
 	$(OCAMLDEP) $(OCAML_INCL) \
           src/common/tyxml_js_manip.ml \
           src/common/tyxml_js_manip.mli \
+          src/third_party/c3.ml \
+          src/third_party/c3.mli \
           src/interp/interpWebLib.ml \
           src/interp/interpWebMain.ml \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \

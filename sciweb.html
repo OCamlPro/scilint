@@ -24,7 +24,7 @@
     textarea.scilab-input:hover:focus {
 	    background-color: #CEF;
     }
-    .scilab-output {
+    .scilab-result {
 	    padding: 5px;
 	    background-color: #8D8;
 	    color: #000;
@@ -45,6 +45,24 @@
 	    margin: 0;
 	    white-space: pre;
     }
+    
+    .scilab-hint { color: red; }
+    .scilab-output { 
+	    padding: 5px;
+	    background-color: #FFF;
+	    color: #000;
+	    margin: 0;
+	    white-space: pre;
+    }
+    
+    table { 
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            display : inline-table
+    }
+    td { padding: 4px; }
+    ul { diplay : inline-block }
+
     #scilab-tty {
 	    margin: 0;
 	    padding: 5px;
@@ -55,28 +73,45 @@
     #scilab-tty h1 {
 	    margin: 0;
     }
-    #scilab-tty button {
-	    position: fixed;
+
+    .button-run {
+            position: fixed;
 	    right: 10px;
 	    top: 10px;
 	    font-size: 150%;
 	    border: 5px #333 solid;
     }
+    .button-save {
+            position: fixed;
+	    right: 1000px;
+	    top: 10px;
+	    font-size: 100%;
+	    border: 5px #333 solid;
+    }
+   
     .scilab-input:not(:first-child) {
 	    margin: 5px 0 0 0
     }
     .scilab-invalidated {
-	    border: 12px pink dotted;
+    border: 12px pink dotted;
     }
+     
     body {
 	    margin: 0px;
 	    padding: 0px;
 	    background-color: #333;
     }
     </style>
+    <!-- Load c3.css -->
+    <link href="/home/ines/c3-0.4.10/c3.css" rel="stylesheet" type="text/css">
+
+    <!-- Load d3.js and c3.js -->
+    <script src="/home/ines/d3/d3.js" charset="utf-8"></script>
+    <script src="/home/ines/c3-0.4.10/c3.min.js"></script>
     <script src="sciweb.js"></script>
   </head>
   <body>
     <div id="scilab-tty"></div>
+   
   </body>
 </html>

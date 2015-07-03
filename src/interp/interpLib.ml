@@ -13,6 +13,12 @@ open InterpCore.Dispatcher
 open InterpMessages
 open ScilintWarning
 
+type type_plots = { 
+  mutable liste : (float * float) list list ;
+  mutable updated : bool } 
+
+let plots = {liste = []; updated = false}
+
 (** A global store for registering libraries or primitives, simply
     encoded as functions that transform the interpreter's state *)
 let libraries : (state -> lib -> unit) list ref =
@@ -165,7 +171,7 @@ let rec inject_result : type a. a argtag -> a -> value list = fun rt v ->
   | Any -> [ v ]
   | Flag _ -> assert false
   | Seq _ -> assert false
-  | Fake _ -> assert false
+  | Fake _ -> [ inject Null () ]
 
 let rec wrap_fun
   : type a f r. (a, f, r) funtag -> f -> (Ast.var option * value) list -> value list
