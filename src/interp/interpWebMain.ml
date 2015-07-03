@@ -382,7 +382,7 @@ let rec render ?(eval = true) step =
 		  tr_list := !tr_list @ [D.(tr !td_list)] ;
 		  td_list := [];
 		done;
-		D.([table !tr_list]) in
+		D.([table ~a:[a_class ["scilab-matrix"]] !tr_list]) in
 
 	      let format_vlist l =
 		let res = ref [] in
@@ -458,7 +458,6 @@ let rec render ?(eval = true) step =
       | None ->
       if cstep.phrase <> "" then
 	cstep.next <- Some { phrase = "" ; answer = "" ; next = None ; updated = false; liste = [] };
-	
       | Some next -> update_results next (nb+1) ; ); in
 
   let rec format_result cstep nb invalidated = 
@@ -471,10 +470,7 @@ let rec render ?(eval = true) step =
       true) ;
     let invalidated_class =
       if invalidated then [ "scilab-invalidated" ] else [] in
-    let results =  cstep.liste @ 
-      (if cstep.answer <> "" then
-	  D.([ p ~a:[ a_class ([ "scilab-output" ] @ invalidated_class) ] [ pcdata cstep.answer ] ]) 
-       else [])  in 
+    let results = D.([div ~a:[ a_class invalidated_class ] cstep.liste ]) in 
     textarea :: results @ match cstep.next with
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in
@@ -484,7 +480,8 @@ let rec render ?(eval = true) step =
   M.Ev.onclick run_button (fun _ev -> render step ; true) ;
   let save_button = D.(button ~a:[a_class ["button-save"]] [pcdata "Save"] ) in
   M.Ev.onclick save_button (fun _ev -> save_session step ; true);
-  let contents = D.(h1 [ pcdata "Sciweb" ; save_button ; run_button ]) :: format_result step 1 false in
+  let button_box = D.(div ~a:[a_class ["div-button"]] [ run_button ; save_button ]) in
+  let contents = D.(h1 [ pcdata "Sciweb"]) :: [button_box] @ format_result step 1 false in
   update_tty contents ;
   (* prevent C3.js bug *)
   Js.Unsafe.meth_call Dom_html.window "onresize" [||]
