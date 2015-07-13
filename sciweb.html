@@ -75,12 +75,76 @@
     }
 
     button {
-            
-	    font-size: 150%;
+	    font-size: 180%;
 	    border: 5px #333 solid;
     }
     
-   
+    ul.scilab-sessions {
+    	    list-style-type:none;
+    }
+    ul > li { white-space:nowrap; }
+    .onclick-button {
+    	    position: relative;
+    	    display: inline-block;
+    }
+    .onclick-button:focus {
+    	    pointer-events: none;
+    }
+    .onclick-list {
+    	    position: absolute;
+    	    z-index: 1;
+    	    opacity:0;
+    	    visibility: hidden;
+    	    transition: visibility 0.5s;
+    	    background-color: #300;
+    	    
+    	    margin-top: 19px;
+    	    margin-left: 0px;
+    	    padding: 5px;
+    }
+    .onclick-button:focus > .onclick-list {
+    	    opacity:1;
+    	    visibility: visible;
+    	    pointer-events: auto;
+    }
+    
+    .onclick-list button {
+    	    background: transparent none repeat scroll 0% 0%;
+    	    border: medium none;
+    	    color: inherit;
+    	    outline: 0px none;
+    	    cursor: pointer;
+    	    font-size: 150%;
+    }
+    .onclick-list button:hover { color: red; }
+    .onclick-button::before {
+    	    content: " Load ";
+    	    font-size: 180%;
+	    border: 5px #333 solid;
+    	    background-color: #FFF;
+    	    color: #333;
+    padding-left: 5px;
+    padding-right: 5px;
+    }
+    
+    .onclick-list::before {
+    	    content: "";
+    	    width: 0px;
+    	    height: 0px;
+    	    border-bottom: 10px solid #300;
+    	    border-left: 10px solid transparent;
+    	    border-right: 10px solid transparent;
+    	    position: absolute;
+    	    top: -10px;
+    }
+
+    .input-session {
+    display:inline; 
+    padding:5px;
+    margin-bottom:5px;
+    border: 5px #333 solid;
+    }
+
     .scilab-input:not(:first-child) {
 	    margin: 5px 0 0 0
     }
@@ -104,6 +168,6 @@
   </head>
   <body>
     <div id="scilab-tty"></div>
-   
+    
   </body>
 </html>

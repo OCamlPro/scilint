@@ -330,28 +330,111 @@ let plot_canvas xvalues y =
   canvas 
 
 
-let save_session step =
-  let tmp = Js.Optdef.to_option (Dom_html.window##localStorage) in
-  match tmp with
+let save_session step name =
+  match Js.Optdef.to_option (Dom_html.window##localStorage) with
   | None -> ()
-  | Some locStorage -> 
-    locStorage##setItem (Js.string (string_of_int 1), Js.string step.phrase );
-    let rec save tmp next nb =
+  | Some locStorage ->
+    let res = ref (step.phrase) in
+    let rec save next =
       match next with
       | None -> ()
       | Some s -> 
-	locStorage##setItem (Js.string (string_of_int nb), Js.string s.phrase );
-	save locStorage s.next (nb+1)
-    in save locStorage step.next 2
+	if s.phrase <>"" then res := !res ^ "@" ^ s.phrase; save s.next;
+    in save step.next;
+    locStorage##setItem (Js.string name, Js.string !res)
 
 
+let load_session step name =
+  match Js.Optdef.to_option (Dom_html.window##localStorage) with
+  | None -> ()
+  | Some locStorage ->
+    let liste =
+      match Js.Opt.to_option locStorage##getItem (Js.string name) with
+      | None ->  []
+      | Some phrase -> Regexp.split (Regexp.regexp "@") (Js.to_string phrase);
+    in
+    step.phrase <- List.hd liste; 
+    step.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
+    let liste = List.tl liste in
+    let rec show s l =
+      match l with
+      | [] -> ()
+      | hd :: tl ->
+	match s with
+	| None -> ()
+	| Some n -> n.phrase <- hd; 
+	  n.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
+	  show n.next tl
+    in show step.next liste
+
+let delete_session step name =
+  match Js.Optdef.to_option (Dom_html.window##localStorage) with
+  | None -> ()
+  | Some locStorage -> 
+     match Js.Opt.to_option locStorage##getItem (Js.string name) with
+      | None ->  ()
+      | Some phrase -> locStorage##removeItem (Js.string name);
+	step.phrase <- "m = [ 3 4 ; 5 6 ] * 3" ;
+	step.answer <- "" ; step.next <- None ; step.updated <- false; step.liste <- [] 
+
+
+let download_session step file_content =
+  let str = Regexp.split (Regexp.regexp "\n") (Js.to_string file_content) in
+  step.phrase <- List.hd str; 
+  step.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
+  let str = List.tl str in
+  let rec dl cstep l =
+    match l with
+    | [] -> ()
+    | hd :: tl -> match cstep with
+      | None -> ()
+      | Some s -> s.phrase <- hd; (match s.next with 
+	| None -> s.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
+	| Some next -> ());
+	dl s.next tl
+  in dl step.next str
+	    
+    
+let current_session = ref ""
+exception No_input_elt;;
+
+class type blob = object
+end
+
+let blob : (Js.js_string Js.t Js.js_array Js.t -> blob Js.t) Js.constr =
+  Js.Unsafe.global ## _Blob
+
+class type url = object 
+  method createObjectURL : blob Js.t -> url Js.meth
+end
+
+let url  = Js.Unsafe.global ## _URL
+
+class type anchorElement = object
+  inherit Dom_html.anchorElement
+  method download : Js.js_string Js.t Js.prop
+end 
+
+let coerceanchor : Dom_html.anchorElement Js.t -> anchorElement Js.t = Js.Unsafe.coerce
+let coerceback : anchorElement Js.t -> Dom_html.anchorElement Js.t  = Js.Unsafe.coerce
+let coerceToNode : Dom_html.anchorElement Js.t -> Dom.node Js.t = Js.Unsafe.coerce
+
+let session_to_array step =
+  let array = jsnew Js.array_empty () in
+  array##push( Js.string step.phrase); array##push(Js.string "\n");
+  let rec push_rest cstep =
+    match cstep with
+    | None -> ()
+    | Some n -> array##push(Js.string n.phrase); array##push(Js.string "\n"); push_rest n.next;
+  in push_rest step.next;
+  array
 
 
 let rec render ?(eval = true) step =
   let state = InterpCore.State.init () in
   let lib = InterpCore.Dispatcher.create () in
   InterpLib.load_libraries state lib ;
-  ScilintOptions.format := Emacs ;
+  ScilintOptions.format := Emacs;
   let buf = Buffer.create 100 in
   Sys_js.set_channel_flusher stdout (Buffer.add_string buf) ;
   Sys_js.set_channel_flusher stderr (Buffer.add_string buf) ;
@@ -478,10 +561,80 @@ let rec render ?(eval = true) step =
   if eval then ( InterpLib.plots.liste <- [] ; update_results step 1 ; ());
   let run_button = D.(button ~a:[a_class ["button-run"]] [ entity "#9881" ] ) in
   M.Ev.onclick run_button (fun _ev -> render step ; true) ;
-  let save_button = D.(button ~a:[a_class ["button-save"]] [pcdata "Save"] ) in
-  M.Ev.onclick save_button (fun _ev -> save_session step ; true);
-  let button_box = D.(div ~a:[a_class ["div-button"]] [ run_button ; save_button ]) in
-  let contents = D.(h1 [ pcdata "Sciweb"]) :: [button_box] @ format_result step 1 false in
+
+  let input_session_name = D.(input ~a:[a_class ["input-session"] ; a_placeholder "untitled"; a_size (12) ] () ) in
+  let save_button = D.(button ~a:[a_class ["button-save"]] [entity "#58532"])  in
+  M.Ev.onclick save_button (fun _ev -> save_session step (M.value input_session_name); true);
+
+  let list_sessions step =
+  let res = ref [] in
+  match Js.Optdef.to_option (Dom_html.window##localStorage) with
+  | None -> D.(div [pcdata "no sessions"])
+  | Some locStorage ->
+    for i=0 to (locStorage##length -1) do
+      match Js.Opt.to_option (locStorage##key(i)) with
+      | None -> ()
+      | Some key -> let bu = D.(button [entity "#10007"]) in
+		    M.Ev.onclick bu (fun _ev -> delete_session step (Js.to_string key); true);
+		    let b = D.(li ~a:[a_class ["scilab-sessions"]] [D.(button [pcdata (Js.to_string key)] ) ; bu ] ) in
+		    M.Ev.onclick b (fun _ev -> load_session step (Js.to_string key); current_session := (Js.to_string key); render ~eval:false step; true); 
+		    res := !res @ [b] 
+    done;
+   D.(div ~a:[a_tabindex (0) ; a_class [ "onclick-button"]] [ D.(ul ~a:[a_class ["onclick-list"; "scilab-sessions"] ] !res) ]) in
+
+  let selected_file = ref [] in
+  let input_files = D.(input ~a:[(D.(a_input_type `File)); a_id "files"; a_name "files[]"; a_style "diplay:none"] ()) in 
+  M.Ev.onchange input_files (fun _ev -> 
+    match Js.Opt.to_option _ev##target with
+    | None ->  raise No_input_elt
+    | Some t -> match Js.Opt.to_option (Dom_html.CoerceTo.input(t)) with
+      | None -> raise No_input_elt
+      | Some inp -> match Js.Optdef.to_option inp##files with
+	| None -> raise No_input_elt
+	| Some files -> 
+	  match Js.Opt.to_option files##item(0) with
+	  | None -> raise No_input_elt
+	  | Some file -> selected_file := [file];
+	    let var = jsnew blob ( session_to_array step) in
+	    let url =  url##createObjectURL(var) in
+	    let link = Dom_html.createA(Dom_html.document) in
+	    Dom_html.document##body##appendChild (coerceToNode(link));
+	    let link = coerceanchor(link) in
+	    link##href <- url;
+	    link##download <- (match !selected_file with
+	    | [] -> Js.string "sciweb_file"
+	    | hd :: _ -> hd##name);
+	    Js.Unsafe.meth_call link "click" [||]; true);
+
+  let input_files_load = D.(input ~a:[(D.(a_input_type `File)); a_id "files"; a_name "files[]"; a_style "diplay:none"] ()) in 
+  M.Ev.onchange input_files_load (fun _ev -> 
+    match Js.Opt.to_option _ev##target with
+    | None ->  raise No_input_elt
+    | Some t -> match Js.Opt.to_option (Dom_html.CoerceTo.input(t)) with
+      | None -> raise No_input_elt
+      | Some inp -> match Js.Optdef.to_option inp##files with
+	| None -> raise No_input_elt
+	| Some files -> 
+	  match Js.Opt.to_option files##item(0) with
+	  | None -> raise No_input_elt
+	  | Some file -> selected_file := [file];
+	    let fileReader = jsnew File.fileReader() in 
+	    
+	    let f _ev = match Js.Opt.to_option _ev##target with
+	      | None -> false
+	      | Some t -> match Js.Opt.to_option (File.CoerceTo.string(t##result)) with
+		| None -> false
+		| Some s -> download_session step s ; render ~eval:false step; true in
+	    fileReader##onload <- Dom.handler (fun e -> Js.bool (f e)) ;
+	    fileReader##readAsText(List.hd !selected_file); true);
+  
+  let load_file_button = D.(button [pcdata "Open file"] (*entity "#58531"*)) in
+  M.Ev.onclick load_file_button (fun _ev -> Js.Unsafe.meth_call input_files_load "click" [||]);
+  let save_file_button = D.(button [(*entity "#10514"*) pcdata "Save as file" ]) in
+  M.Ev.onclick save_file_button (fun _ev -> Js.Unsafe.meth_call input_files "click" [||]; true);
+  
+  let button_box = D.(div ~a:[a_class ["div-button"]] [run_button ; save_button; list_sessions step; save_file_button; load_file_button ]) in
+  let contents = D.(h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb  -  "]) :: [input_session_name] @ [button_box] @ format_result step 1 false in
   update_tty contents ;
   (* prevent C3.js bug *)
   Js.Unsafe.meth_call Dom_html.window "onresize" [||]
@@ -494,7 +647,7 @@ let main () =
   let open  Lwt in
   Lwt_js_events.onload () >>= fun _ ->
   let step = { phrase = "m = [ 3 4 ; 5 6 ] * 3" ;
-               answer = "" ; next = None ; updated = false ; liste=[]} in
+             answer = "" ; next = None ; updated = false; liste=[] } in
   render step ;
   Lwt.return ()
 
@@ -502,3 +655,5 @@ let () =
   Lwt.async (fun () -> main ())
 
 
+
+    
