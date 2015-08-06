@@ -1,9 +1,9 @@
 <html>
   <head>
     <title>Sciweb</title>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8"/>
     <style>
-    textarea.scilab-input {
+      textarea.scilab-input {
 	    padding: 2px;
 	    background-color: #CCC;
 	    color: #000;
@@ -53,6 +53,10 @@
 	    color: #000;
 	    margin: 0;
 	    white-space: pre;
+      width:95%;
+      display:block;
+      margin-left:auto;
+      margin-right:auto;
     }
     
     table.scilab-matrix { 
@@ -75,7 +79,7 @@
     }
 
     button {
-	    font-size: 180%;
+	    font-size: 160%;
 	    border: 5px #333 solid;
     }
     
@@ -119,7 +123,7 @@
     .onclick-list button:hover { color: red; }
     .onclick-button::before {
     	    content: " Load ";
-    	    font-size: 180%;
+    	    font-size: 160%;
 	    border: 5px #333 solid;
     	    background-color: #FFF;
     	    color: #333;
@@ -138,11 +142,13 @@
     	    top: -10px;
     }
 
-    .input-session {
+    .input-session-name {
     display:inline; 
-    padding:5px;
-    margin-bottom:5px;
+    padding:2px;
     border: 5px #333 solid;
+    background: #333;
+    color:white;
+    font-size: 150%;
     }
 
     .scilab-input:not(:first-child) {
@@ -152,6 +158,13 @@
     border: 12px pink dotted;
     }
      
+    .div-button {
+    position: absolute;
+    display: inline;
+    right: 5px;
+    }
+    
+
     body {
 	    margin: 0px;
 	    padding: 0px;
@@ -159,11 +172,12 @@
     }
     </style>
     <!-- Load c3.css -->
-    <link href="src/third_party/c3-0.4.10/c3.css" rel="stylesheet" type="text/css">
+    <!-- <link href="src/third_party/c3-0.4.10/c3.css" rel="stylesheet" type="text/css"> -->
 
     <!-- Load d3.js and c3.js -->
     <script src="src/third_party/d3/d3.js" charset="utf-8"></script>
     <script src="src/third_party/c3-0.4.10/c3.min.js"></script>
+
     <script src="sciweb.js"></script>
   </head>
   <body>
@@ -171,3 +185,5 @@
     
   </body>
 </html>
+   
+

@@ -142,30 +142,62 @@ let plot3 liste =
     
 let matrix_to_list m =
   let open InterpCore.Values in
-  let w, h = matrix_size m in
+  let h, w = matrix_size m in
   let l = ref [] in
-  for i=1 to w do
-    for j=1 to h do
-      l := (matrix_get m i j) :: !l
+  for i=1 to h do
+    for j=1 to w do
+      l := (matrix_get m j i) :: !l
     done;
   done;
   !l
 
-let plot points = 
-  let kind = `Line in
-  let bindto = D.( div ~a:[ a_class [ "scilab-output" ]] [ ] ) in
-  let init = C3.Line.make ~kind:`XY () in
+class type xmlSerializer = object 
+  method serializeToString : Dom_html.element Js.t -> Js.js_string Js.t Js.meth
+end
+
+let xmlSerializer  = Js.Unsafe.global ## _XMLSERIALIZER
+
+let win = Js.Unsafe.global ## _WINDOW
+
+class type anchorElement = object
+  inherit Dom_html.anchorElement
+  method download : Js.js_string Js.t Js.prop
+end 
+
+let coerceanchor : Dom_html.anchorElement Js.t -> anchorElement Js.t = Js.Unsafe.coerce
+let coerceback : anchorElement Js.t -> Dom_html.anchorElement Js.t  = Js.Unsafe.coerce
+let coerceToNode : Dom_html.anchorElement Js.t -> Dom.node Js.t = Js.Unsafe.coerce
+
+let plot points =
+  let open InterpLib in
+  let bindto = D.( div ~a:[ a_class [ "scilab-output" ]; a_id "thesvg"] [ ] ) in
+  let hd = List.hd points in
+  let x_label, y_label = match hd.x_label, hd.y_label with
+    | None, None -> "", ""
+    | Some xlab, Some ylab -> xlab, ylab in
+  let graph_title = match hd.title with
+    | None -> ""
+    | Some t -> t in
+  let init = C3.Line.make ~x_label:x_label ~y_label:y_label ~kind:`XY () in
   let rec tmp d l cpt = match l with
     | [] -> d
-    | hd :: tl ->
+    | hd :: tl -> 
       (*let hd = [ 1., 1. ; 3., 3. ; 5., 5. ] in*)
-      let d =  C3.Line.add ~segment:(C3.Segment.make ~kind ~points:hd  ~label:((C3.Segment.string_of_kind kind)^(string_of_int cpt)) ()) d in
+      let kin = match hd.kind with
+	| `L -> `Line
+	| `B -> `Bar in
+      let d =  C3.Line.add ~segment:(C3.Segment.make ~kind:kin ~points:hd.points ~label:((C3.Segment.string_of_kind kin)^(string_of_int cpt)) ()) d in
       tmp d tl (cpt+1)
   in
   let res = tmp init points 1 in
   ignore (C3.Line.render_in_tyxml_elt ~bindto:bindto res) ;
-  bindto
-    
+  let savepng = D.(button ~a:[a_style "display:block"] [pcdata "png"]) in
+  let link = Dom_html.createA(Dom_html.document) in
+  M.Ev.onclick savepng (fun _ev -> Js.Unsafe.fun_call (Js.Unsafe.variable "saveaspng") [| Js.Unsafe.inject "thesvg"|];);
+  D.(div ~a:[a_class["c3-title"]; a_id "graphe"] [ pcdata graph_title; bindto; savepng ])
+  
+
+
 type attr = {
   minX: float;
   minY: float;
@@ -187,8 +219,7 @@ type attr = {
   scaleX : float;
   scaleY : float;
 }
-   
-
+  
     
 let drawXAxis context width attr = 
   context##save();
@@ -268,6 +299,10 @@ let drawYAxis context height attr =
     unit := !unit -. attr.unitsPerTick;
     yPos := ceil (!yPos +. yPosIncrement);
   done;
+  (***********************)
+  context##textAlign <- Js.string "start";
+  context##fillText(Js.string "xlabeloijojojijojpmk", 10., attr.centerY -. 30.);
+  
   context##restore()
   
 let init minX minY maxX maxY unitsPerTick iteration =
@@ -279,14 +314,14 @@ let init minX minY maxX maxY unitsPerTick iteration =
     minX = minX; maxX = maxX;
     minY = minY; maxY = maxY;
     unitsPerTick = unitsPerTick;
-    axisColor = "#aaa";
-    font = "8pt Calibri";
-    tickSize = 15.;
+    axisColor = "#000";
+    font = "8pt Sans-serif";
+    tickSize = 12.;
     rangeX = rangeX;
     rangeY = rangeY;
     unitX = w /. rangeX;
     unitY = h /. rangeY;
-    centerY = ceil (abs_float(minY /. rangeY) *. h);
+    centerY = ceil (abs_float(maxY /. rangeY) *. h);
     centerX = ceil (abs_float(minX /. rangeX) *. w);
     iteration = (*iteration;*) (maxX -. minX) /. 1000.;
     scaleX = w /. rangeX;
@@ -295,17 +330,20 @@ let init minX minY maxX maxY unitsPerTick iteration =
   drawYAxis context h myattr;
   (canvas, myattr)
  
-let drawEquation canvas attr equation  =
+let drawEquation canvas attr equation xvalues =
   let context = canvas##getContext (Dom_html._2d_) in
   context##save();        
   context##translate(attr.centerX, attr.centerY);
   context##scale(attr.scaleX, -.attr.scaleY);
   context##beginPath();
   context##moveTo(attr.minX, equation(attr.minX));
-  let x = ref ( attr.minX +. attr.iteration) in
+  (*let x = ref ( attr.minX +. attr.iteration) in
   while !x <= attr.maxX do
     context##lineTo(!x, equation(!x));
     x := !x +. attr.iteration;
+  done;*)
+  for i=0 to Array.length xvalues -1 do
+     context##lineTo(xvalues.(i), equation(xvalues.(i)));
   done;
   context##restore();
   context##lineJoin <- Js.string "round";
@@ -318,17 +356,48 @@ let drawEquation canvas attr equation  =
 let plot_canvas xvalues y =
   let minX = xvalues.(0) and maxX = xvalues.(Array.length xvalues -1) in
   let minY = ref 0. and maxY = ref 0. in
-  minY := infinity ; maxY := neg_infinity ;
-  for i=0 to Array.length xvalues -1 do
-    if !minY > y(float_of_int i) then
-      minY := y(float_of_int i);
-    if !maxY < y(float_of_int i) then
-      maxY := y(float_of_int i);
+  minY := y(xvalues.(0)) ; maxY := y(xvalues.(0)) ;
+  for i=1 to Array.length xvalues -1 do
+    if !minY > y(xvalues.(i)) then
+      minY := y(xvalues.(i));
+    if !maxY < y(xvalues.(i)) then
+      maxY := y(xvalues.(i));
   done;
   let initial, attr = init minX !minY maxX !maxY 1. 1. in
-  let canvas = drawEquation initial attr y in
+  let canvas = drawEquation initial attr y xvalues in
   canvas 
+   
+let drawEquation2 canvas attr yvalues xvalues =
+  let context = canvas##getContext (Dom_html._2d_) in
+  context##save();        
+  context##translate(attr.centerX, attr.centerY);
+  context##scale(attr.scaleX, -.attr.scaleY);
+  context##beginPath();
+  context##moveTo(attr.minX, yvalues.(0));
+  for i=0 to Array.length xvalues -1 do
+     context##lineTo(xvalues.(i), yvalues.(i));
+  done;
+  context##restore();
+  context##lineJoin <- Js.string "round";
+  context##lineWidth <- 2.;
+  context##strokeStyle <- Js.string "green";
+  context##stroke();
+  context##restore();
+  Tyxml_js.Of_dom.of_canvas (canvas)
 
+let plot_canvas2 xvalues y =
+  let minX = xvalues.(0) and maxX = xvalues.(Array.length xvalues -1) in
+  let minY = ref 0. and maxY = ref 0. in
+  minY := y.(0) ; maxY := y.(0) ;
+  for i=1 to Array.length xvalues -1 do
+    if !minY > y.(i) then
+      minY := y.(i);
+    if !maxY < y.(i) then
+      maxY := y.(i);
+  done;
+  let initial, attr = init minX !minY maxX !maxY 1. 1. in
+  let canvas = drawEquation2 initial attr y xvalues in
+  canvas 
 
 let save_session step name =
   match Js.Optdef.to_option (Dom_html.window##localStorage) with
@@ -353,7 +422,7 @@ let load_session step name =
       | None ->  []
       | Some phrase -> Regexp.split (Regexp.regexp "@") (Js.to_string phrase);
     in
-    step.phrase <- List.hd liste; 
+    step.phrase <- List.hd liste;  
     step.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
     let liste = List.tl liste in
     let rec show s l =
@@ -373,7 +442,7 @@ let delete_session step name =
   | Some locStorage -> 
      match Js.Opt.to_option locStorage##getItem (Js.string name) with
       | None ->  ()
-      | Some phrase -> locStorage##removeItem (Js.string name);
+     | Some phrase -> locStorage##removeItem (Js.string name);
 	step.phrase <- "m = [ 3 4 ; 5 6 ] * 3" ;
 	step.answer <- "" ; step.next <- None ; step.updated <- false; step.liste <- [] 
 
@@ -386,12 +455,15 @@ let download_session step file_content =
   let rec dl cstep l =
     match l with
     | [] -> ()
-    | hd :: tl -> match cstep with
-      | None -> ()
-      | Some s -> s.phrase <- hd; (match s.next with 
-	| None -> s.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
-	| Some next -> ());
-	dl s.next tl
+    | hd :: tl -> 
+      match hd with 
+      | "" -> ()
+      | _ -> match cstep with
+	| None -> ()
+	| Some s -> s.phrase <- hd; (match s.next with 
+	  | None -> s.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
+	  | Some next -> ());
+	  dl s.next tl
   in dl step.next str
 	    
     
@@ -410,14 +482,7 @@ end
 
 let url  = Js.Unsafe.global ## _URL
 
-class type anchorElement = object
-  inherit Dom_html.anchorElement
-  method download : Js.js_string Js.t Js.prop
-end 
 
-let coerceanchor : Dom_html.anchorElement Js.t -> anchorElement Js.t = Js.Unsafe.coerce
-let coerceback : anchorElement Js.t -> Dom_html.anchorElement Js.t  = Js.Unsafe.coerce
-let coerceToNode : Dom_html.anchorElement Js.t -> Dom.node Js.t = Js.Unsafe.coerce
 
 let session_to_array step =
   let array = jsnew Js.array_empty () in
@@ -456,11 +521,11 @@ let rec render ?(eval = true) step =
 	    begin
 	      let open InterpCore.Values in
 	      let matrix_to_table m f =
-		let (nbRow, nbCol) = matrix_size m in
+		let w, h = matrix_size m in
 		let td_list = ref [] and tr_list = ref [] in
-		for i=1 to nbRow do
-		  for j=1 to nbCol do
-		    td_list := !td_list @ [(D.td [ D.pcdata (f (matrix_get m i j)) ])] 
+		for i=1 to h do
+		  for j=1 to w do
+		    td_list := !td_list @ [(D.td [ D.pcdata (f (matrix_get m j i)) ])] 
 		  done;
 		  tr_list := !tr_list @ [D.(tr !td_list)] ;
 		  td_list := [];
@@ -507,7 +572,7 @@ let rec render ?(eval = true) step =
 		| V (Matrix (Uint32), m) -> (matrix_to_table m (string_of_int))
 		| V (Matrix (Bool), m) -> (matrix_to_table m (string_of_bool))
 		| V (Matrix (String), m) ->  (matrix_to_table m (fun x -> x))
-		| V (Matrix (Number Complex), m) ->  (*[plot (matrix_to_list m)]*)
+		| V (Matrix (Number Complex), m) ->  
 		  (matrix_to_table m (fun x -> 
 		    Buffer.clear myBuf;
 		    InterpMessages.print_value ppf (inject (Single (Number Complex)) x); 
@@ -530,13 +595,15 @@ let rec render ?(eval = true) step =
     cstep.answer <- Buffer.contents buf ;
     cstep.updated <- false ;
     cstep.liste <- !liste ;
-    (*let xval = Array.make 10 0. in
-    for i=0 to 9 do
-      xval.(i) <- float_of_int i;
-    done;
-    cstep.liste <- !liste @ [ plot_canvas xval sin ] ;*)
-    if InterpLib.plots.updated = true then 
-      ( cstep.liste <- cstep.liste @ [ plot InterpLib.plots.liste ] ; InterpLib.plots.updated <- false ) ;
+    (*let xval = Array.make 20 0. in
+    for i=0 to 19 do
+      xval.(i) <- float_of_int (i-10);(***************************************)
+    done; 
+    cstep.liste <- !liste @ [ plot_canvas xval (fun v -> sin(v))  ] ;*)
+    if InterpLib.plots_in_canvas.updated = true then 
+      ( cstep.liste <- cstep.liste @ [ plot_canvas2 (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).xvalues) (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).yvalues) ] ; InterpLib.plots_in_canvas.updated <- false;  ) ; 
+      (*cstep.liste <- cstep.liste @ [ plot InterpLib.plots.liste ] ; InterpLib.plots.updated <- false;*) ; 
+ 
     (match cstep.next with 
       | None ->
       if cstep.phrase <> "" then
@@ -553,7 +620,10 @@ let rec render ?(eval = true) step =
       true) ;
     let invalidated_class =
       if invalidated then [ "scilab-invalidated" ] else [] in
-    let results = D.([div ~a:[ a_class invalidated_class ] cstep.liste ]) in 
+    let results = D.([div ~a:[ a_class invalidated_class ] cstep.liste ]) @ (if cstep.answer <> "" then 
+	D.([ p ~a:[ a_class ([ "scilab-output" ] @ invalidated_class) ] [ pcdata cstep.answer ] ])
+      else []) in
+    (*let results = D.([div ~a:[ a_class invalidated_class ] cstep.liste ]) in *)
     textarea :: results @ match cstep.next with
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in
@@ -562,10 +632,14 @@ let rec render ?(eval = true) step =
   let run_button = D.(button ~a:[a_class ["button-run"]] [ entity "#9881" ] ) in
   M.Ev.onclick run_button (fun _ev -> render step ; true) ;
 
-  let input_session_name = D.(input ~a:[a_class ["input-session"] ; a_placeholder "untitled"; a_size (12) ] () ) in
+  let input_session_name = D.(input ~a:[a_class ["input-session-name"] ; a_placeholder "untitled"; a_value !current_session; a_size (12) ] ()) in
   let save_button = D.(button ~a:[a_class ["button-save"]] [entity "#58532"])  in
-  M.Ev.onclick save_button (fun _ev -> save_session step (M.value input_session_name); true);
-
+  M.Ev.onclick save_button (fun _ev -> 
+    let name = M.value input_session_name in
+    match name with
+    | "" -> Dom_html.window##alert(Js.string "Please pick a name for your current session before saving."); true;
+    | x -> save_session step x; true;);
+  
   let list_sessions step =
   let res = ref [] in
   match Js.Optdef.to_option (Dom_html.window##localStorage) with
@@ -575,37 +649,36 @@ let rec render ?(eval = true) step =
       match Js.Opt.to_option (locStorage##key(i)) with
       | None -> ()
       | Some key -> let bu = D.(button [entity "#10007"]) in
-		    M.Ev.onclick bu (fun _ev -> delete_session step (Js.to_string key); true);
+		    M.Ev.onclick bu (fun _ev -> 
+		      let r = Dom_html.window##confirm(Js.string ("Are you sure you want to delete session \""^(Js.to_string key)^"\" ?")) in
+		      match Js.to_bool r with
+		      | true -> delete_session step (Js.to_string key); true
+		      | _ -> true);
 		    let b = D.(li ~a:[a_class ["scilab-sessions"]] [D.(button [pcdata (Js.to_string key)] ) ; bu ] ) in
-		    M.Ev.onclick b (fun _ev -> load_session step (Js.to_string key); current_session := (Js.to_string key); render ~eval:false step; true); 
+		    M.Ev.onclick b (fun _ev -> load_session step (Js.to_string key); current_session := (Js.to_string key); 
+		     (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value <- key;
+		     render ~eval:true step;
+		     true); 
 		    res := !res @ [b] 
     done;
    D.(div ~a:[a_tabindex (0) ; a_class [ "onclick-button"]] [ D.(ul ~a:[a_class ["onclick-list"; "scilab-sessions"] ] !res) ]) in
 
-  let selected_file = ref [] in
-  let input_files = D.(input ~a:[(D.(a_input_type `File)); a_id "files"; a_name "files[]"; a_style "diplay:none"] ()) in 
-  M.Ev.onchange input_files (fun _ev -> 
-    match Js.Opt.to_option _ev##target with
-    | None ->  raise No_input_elt
-    | Some t -> match Js.Opt.to_option (Dom_html.CoerceTo.input(t)) with
-      | None -> raise No_input_elt
-      | Some inp -> match Js.Optdef.to_option inp##files with
-	| None -> raise No_input_elt
-	| Some files -> 
-	  match Js.Opt.to_option files##item(0) with
-	  | None -> raise No_input_elt
-	  | Some file -> selected_file := [file];
-	    let var = jsnew blob ( session_to_array step) in
-	    let url =  url##createObjectURL(var) in
-	    let link = Dom_html.createA(Dom_html.document) in
-	    Dom_html.document##body##appendChild (coerceToNode(link));
-	    let link = coerceanchor(link) in
-	    link##href <- url;
-	    link##download <- (match !selected_file with
-	    | [] -> Js.string "sciweb_file"
-	    | hd :: _ -> hd##name);
-	    Js.Unsafe.meth_call link "click" [||]; true);
-
+  let link = Dom_html.createA(Dom_html.document) in
+  (*Dom_html.document##body##appendChild (coerceToNode(link));*)
+  let tyxlink = Tyxml_js.Of_dom.of_anchor(link) in
+  link##onclick <- Dom_html.handler (fun e -> Js.bool ((fun _ev ->
+    let var = jsnew blob ( session_to_array step) in
+    let url =  url##createObjectURL(var) in
+    let link = coerceanchor(link) in
+    link##href <- url;
+    link##download <-
+      (let name = M.value input_session_name in match name with
+	| "" -> Js.string "sciweb-file.sci"
+	| x -> Js.string (match Regexp.string_match (Regexp.regexp ".*.sci") x 0 with
+	  | None -> name^".sci"
+	  | _ -> x));		   
+    Js.Unsafe.meth_call link "click" [||]; true) e));
+  
   let input_files_load = D.(input ~a:[(D.(a_input_type `File)); a_id "files"; a_name "files[]"; a_style "diplay:none"] ()) in 
   M.Ev.onchange input_files_load (fun _ev -> 
     match Js.Opt.to_option _ev##target with
@@ -617,7 +690,8 @@ let rec render ?(eval = true) step =
 	| Some files -> 
 	  match Js.Opt.to_option files##item(0) with
 	  | None -> raise No_input_elt
-	  | Some file -> selected_file := [file];
+	  | Some file ->
+	    current_session := Js.to_string file##name;
 	    let fileReader = jsnew File.fileReader() in 
 	    
 	    let f _ev = match Js.Opt.to_option _ev##target with
@@ -626,18 +700,24 @@ let rec render ?(eval = true) step =
 		| None -> false
 		| Some s -> download_session step s ; render ~eval:false step; true in
 	    fileReader##onload <- Dom.handler (fun e -> Js.bool (f e)) ;
-	    fileReader##readAsText(List.hd !selected_file); true);
+	    fileReader##readAsText(file); true);
   
-  let load_file_button = D.(button [pcdata "Open file"] (*entity "#58531"*)) in
+  let load_file_button = D.(button [pcdata "Open file"]) in
   M.Ev.onclick load_file_button (fun _ev -> Js.Unsafe.meth_call input_files_load "click" [||]);
   let save_file_button = D.(button [(*entity "#10514"*) pcdata "Save as file" ]) in
-  M.Ev.onclick save_file_button (fun _ev -> Js.Unsafe.meth_call input_files "click" [||]; true);
-  
-  let button_box = D.(div ~a:[a_class ["div-button"]] [run_button ; save_button; list_sessions step; save_file_button; load_file_button ]) in
-  let contents = D.(h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb  -  "]) :: [input_session_name] @ [button_box] @ format_result step 1 false in
-  update_tty contents ;
+  M.Ev.onclick save_file_button (fun _ev -> Js.Unsafe.meth_call link "click" [||]; true);
+  let clear_button = D.(button [pcdata "Clear"]) in
+  M.Ev.onclick clear_button (fun _ev -> 
+    let r = Dom_html.window##confirm(Js.string ("Are you sure you want erase the page ?")) in
+    match Js.to_bool r with
+    | true -> step.phrase <- ""; step.phrase <- ""; step.next <- None; current_session := ""; render step; true
+    | _ -> true);
+  let button_box = D.(div ~a:[a_class ["div-button"]] [run_button ; save_button; list_sessions step; save_file_button; load_file_button; clear_button]) in
+  let contents = D.(h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb  -  "; tyxlink]) :: [input_session_name] @ [button_box] @ format_result step 1 false in
+  update_tty contents;
+  Js.Unsafe.fun_call (Js.Unsafe.variable "inline") [||];
   (* prevent C3.js bug *)
-  Js.Unsafe.meth_call Dom_html.window "onresize" [||]
+   Js.Unsafe.meth_call Dom_html.window "onresize" [||]
 
   
 
