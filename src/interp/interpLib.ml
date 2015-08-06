@@ -60,11 +60,9 @@ let register_primitive ?(more = false) ?(force = false) ?name lib (overloading, 
     | Bad_cast -> error (Located (loc, Generic "bad cast"))
   in
   let primitive =
-    { call ; takes = (takes, more) ; returns = ([], true) ; name } in
+    { call ; name } in
   let frozen = true in
-  try Dispatcher.(register ~frozen ~more
-                    overloading takes (List.length returns)
-                    primitive lib |> ignore)
+  try Dispatcher.(register ~frozen ~more overloading takes returns primitive lib |> ignore)
   with Failure "register" ->
     let msg = "cannot redefine this protected primitive" in
     if not force then raise (Interp_error (Located (loc, Generic msg)))
@@ -78,6 +76,7 @@ and _ argtag =
   | Flag : (string * 'a) list -> 'a argtag
   | Seq : 'a argtag -> 'a list argtag
   | Opt : 'a argtag -> 'a option argtag
+  | Pair : 'a argtag * 'b argtag -> ('a * 'b) argtag
   | Fake : 'a -> 'a argtag
   | Any : value argtag
 
@@ -98,6 +97,7 @@ let void = Fake ()
 let vlist = Arg Vlist
 let tlist n = Arg (Tlist n)
 let mlist n = Arg (Mlist n)
+let atom = Arg Atom
 let any = Any
 let matrix = function
   | Arg (Single k) -> Arg (Matrix k)
@@ -110,6 +110,7 @@ let eye = function
   | _ -> assert false
 let seq t = Seq t
 let opt t = Opt t
+let (@+) tl tr = Pair (tl, tr)
 
 (** Main function builder combinator *)
 let ( @-> )
@@ -122,6 +123,7 @@ let ( @* )
   = fun l r -> Take (l, r)
 
 let rec arg_matcher : type p. p argtag -> matcher = function
+  | Pair (lt, _) -> arg_matcher lt
   | Arg at -> Typed (T at)
   | Flag _ -> Typed (T (Single String))
   | Seq t -> arg_matcher t
@@ -136,6 +138,18 @@ let rec first_arg_matcher : type a b r. (a, a -> b, r) funtag -> matcher = funct
   | Return (a, _) -> arg_matcher a
   | Take (a, _) -> arg_matcher a
 
+let rec arity : type p. p argtag -> int = function
+  | Pair (lt, rt) -> arity lt + arity rt
+  | Arg at -> 1
+  | Flag _ -> 1
+  | Seq _ -> invalid_arg "InterpLib.arity"
+  | Opt _ -> invalid_arg "InterpLib.arity"
+  | Any -> 1
+  | Fake _ -> 0
+
+let rec return_arity : type a b r. (a, a -> b, r) funtag -> int = function
+  | Return (_, r) -> arity r
+  | Take (_, r) -> return_arity r
 
 let decode_flag s fs =
   try List.assoc s fs with Not_found ->
@@ -178,6 +192,10 @@ let rec get_arg
       let enc = decode_flag s fs in
       let _, vrest, vs = get_arg t vs in
       None, enc :: vrest, vs
+    | l, Pair (tl, tr) ->
+      let _, vl, l = get_arg tl l in
+      let _, vr, l = get_arg tr l in
+      None, (vl, vr), l
     | (_, _) :: vs, Seq _ -> assert false
     | (_, _) :: vs, Opt _ -> assert false
 
@@ -186,6 +204,7 @@ let rec inject_result : type a. a argtag -> a -> value list = fun rt v ->
   | Arg tag -> [ inject tag v ]
   | Any -> [ v ]
   | Fake _ -> []
+  | Pair (tl, tr) -> inject_result tl (fst v) @ inject_result tr (snd v)
   | Opt rt -> (match v with Some v -> inject_result rt v | None -> [])
   | Flag _ -> assert false
   | Seq _ -> assert false
@@ -200,12 +219,8 @@ let rec wrap_fun
       wrap_fun rt (partial av) rest
     | Return (at, rt) ->
       let _, av, rest = get_arg at args in
-      if rest <> [] then error (Generic "too many arguments") ;
+      if rest <> [] then error (Werror (P (Too_many_arguments (List.length rest)))) ;
       inject_result rt (partial av)
-
-let rec return_type : type a f r. (a, f, r) funtag -> r argtag = function
-  | Return (_, rt) -> rt
-  | Take (_, rt) -> return_type rt
 
 (** Registers a unary operator ; for immediate types, optionally
     extended to pointwise ([pw = true]) ; the first type is the
@@ -215,7 +230,7 @@ let register_unop ?(pw = false) lib op xt rt f =
   match xt, rt with
   | Arg (Single xt), Arg (Single rt) ->
     register_primitive lib
-      (Unary op, [ Typed (T (Single xt)) ], [ Typed (T (Single rt)) ])
+      (Unary op, [ Typed (T (Single xt)) ], 1)
       (fun lhs -> function
          | [ None, xv ] ->
            let x = extract (Single xt) xv in
@@ -223,7 +238,7 @@ let register_unop ?(pw = false) lib op xt rt f =
          | _ -> raise Bad_type) ;
     if pw then
       register_primitive lib
-        (Unary op, [ Typed (T (Matrix xt)) ], [ Typed (T (Matrix rt)) ])
+        (Unary op, [ Typed (T (Matrix xt)) ], 1)
         (fun lhs -> function
            | [ None, xv ] ->
              let x = extract (Matrix xt) xv in
@@ -238,7 +253,7 @@ let register_unop ?(pw = false) lib op xt rt f =
            | _ -> raise Bad_type)
   | _ ->
     register_primitive lib
-      (Unary op, [ arg_matcher xt ], [ Any ])
+      (Unary op, [ arg_matcher xt ], 1)
       (fun lhs l ->
          let _, x, l = get_arg xt l in
          inject_result rt (f x))
@@ -252,7 +267,7 @@ let rec register_binop ?(pw = false) ?(scl = false) ?(scr = false) lib op xt yt 
   match xt, yt, rt with
   | Arg (Single xt), Arg (Single yt), Arg (Single rt) ->
     register_primitive lib
-      (Binary op, [ Typed (T (Single xt)) ; Typed (T (Single yt)) ], [ Any ])
+      (Binary op, [ Typed (T (Single xt)) ; Typed (T (Single yt)) ], 1)
       (fun lhs -> function
          | [ None, xv ; None, yv ] ->
            let x = extract (Single xt) xv in
@@ -265,14 +280,14 @@ let rec register_binop ?(pw = false) ?(scl = false) ?(scr = false) lib op xt yt 
   | _ ->
     assert (not (pw || scl || scr)) ;
     register_primitive lib
-      (Binary op, [ arg_matcher xt ; arg_matcher yt ], [ Any ])
+      (Binary op, [ arg_matcher xt ; arg_matcher yt ], 1)
       (fun lhs l ->
          let _, x, l = get_arg xt l in
          let _, y, l = get_arg yt l in
          inject_result rt (f x y))
 and register_pw_i_binop lib op xt yt rt f =
   register_primitive lib
-    (Binary op, [ Typed (T (Matrix xt)) ; Typed (T (Matrix yt)) ], [ Any ])
+    (Binary op, [ Typed (T (Matrix xt)) ; Typed (T (Matrix yt)) ], 1)
     (fun lhs -> function
        | [ None, xv ; None, yv ] ->
          let x = extract (Matrix xt) xv in
@@ -294,7 +309,7 @@ and register_pw_i_binop lib op xt yt rt f =
 
 and register_scl_i_binop lib op xt yt rt f =
   register_primitive lib
-    (Binary op, [ Typed (T (Single xt)) ; Typed (T (Matrix yt)) ], [ Any ])
+    (Binary op, [ Typed (T (Single xt)) ; Typed (T (Matrix yt)) ], 1)
     (fun lhs -> function
        | [ None, xv ; None, yv ] ->
          let x = extract (Single xt) xv in
@@ -310,7 +325,7 @@ and register_scl_i_binop lib op xt yt rt f =
        | _ -> raise Bad_type)
 and register_scr_i_binop lib op xt yt rt f =
   register_primitive lib
-    (Binary op, [ Typed (T (Matrix xt)) ; Typed (T (Single yt)) ], [ Any ])
+    (Binary op, [ Typed (T (Matrix xt)) ; Typed (T (Single yt)) ], 1)
     (fun lhs -> function
        | [ None, xv ; None, yv ] ->
          let x = extract (Matrix xt) xv in
@@ -338,9 +353,9 @@ let register_range lib xt st yt rt f =
          let _, y, l = get_arg yt l in
          inject_result rt (f x ?step:None y)) in
   register_primitive lib
-    (Colon, [ arg_matcher xt ; arg_matcher st ; arg_matcher yt ], [ Any ]) cb ;
+    (Colon, [ arg_matcher xt ; arg_matcher st ; arg_matcher yt ], 1) cb ;
   register_primitive lib ~more:true
-    (Colon, [ arg_matcher xt ; arg_matcher yt ], [ Any ]) cb
+    (Colon, [ arg_matcher xt ; arg_matcher yt ], 1) cb
 
 (** Registers an extraction operator for standard matrices *)
 let register_matrix_extraction lib xt =
@@ -366,24 +381,24 @@ let register_matrix_extraction lib xt =
     Typed (T (Single Uint8)) ; Typed (T (Single Uint16)) ; Typed (T (Single Uint32)) ] in
   List.iter (fun overloading ->
       register_primitive lib ~more:false
-        (overloading, [ Typed (T (Matrix xt)) ], [ Any ])
+        (overloading, [ Typed (T (Matrix xt)) ], 1)
         extract_nil ;
       register_primitive lib ~more:false
-        (overloading, [ Typed (T (Single xt)) ], [ Any ])
+        (overloading, [ Typed (T (Single xt)) ], 1)
         extract_nil ;
       List.iter (fun ki ->
           register_primitive lib ~more:false
-            (overloading, [ Typed (T (Matrix xt)) ; ki ], [ Any ])
+            (overloading, [ Typed (T (Matrix xt)) ; ki ], 1)
             extract_one ;
           register_primitive lib ~more:false
-            (overloading, [ Typed (T (Single xt)) ; ki ], [ Any ])
+            (overloading, [ Typed (T (Single xt)) ; ki ], 1)
             extract_one ;
           List.iter (fun kj ->
               register_primitive lib ~force:true ~more:false
-                (overloading, [ Typed (T (Matrix xt)) ; ki ; kj ], [ Any ])
+                (overloading, [ Typed (T (Matrix xt)) ; ki ; kj ], 1)
                 extract_two ;
               register_primitive lib ~force:true ~more:false
-                (overloading, [ Typed (T (Single xt)) ; ki ; kj ], [ Any ])
+                (overloading, [ Typed (T (Single xt)) ; ki ; kj ], 1)
                 extract_two)
             indexes)
         indexes)
@@ -415,17 +430,17 @@ let register_matrix_injection lib xt compatible =
   List.iter (fun kv ->
       List.iter (fun ki ->
           register_primitive lib ~more:false
-            (Injection, [ Typed (T (Matrix xt)) ; kv ; ki ], [ Any ])
+            (Injection, [ Typed (T (Matrix xt)) ; kv ; ki ], 1)
             inject_one ;
           register_primitive lib ~more:false
-            (Injection, [ Typed (T (Single xt)) ; kv ; ki ], [ Any ])
+            (Injection, [ Typed (T (Single xt)) ; kv ; ki ], 1)
             inject_one ;
           List.iter (fun kj ->
               register_primitive lib ~force:true ~more:false
-                (Injection, [ Typed (T (Matrix xt)) ; kv ; ki ; kj ], [ Any ])
+                (Injection, [ Typed (T (Matrix xt)) ; kv ; ki ; kj ], 1)
                 inject_two ;
               register_primitive lib ~force:true ~more:false
-                (Injection, [ Typed (T (Single xt)) ; kv ; ki ; kj ], [ Any ])
+                (Injection, [ Typed (T (Single xt)) ; kv ; ki ; kj ], 1)
                 inject_two)
             indexes)
         indexes)
@@ -439,7 +454,7 @@ let register_casted_homo_binop lib op (at1 : _ argtag) (at2 : _ argtag) (atr : _
   | Arg t1, Arg t2, Arg tr ->
     let f = Dispatcher.lookup (Binary op) [ T tr ; T tr ] 1 lib in
     register_primitive lib
-      (Binary op, [ Typed (T t1) ; Typed (T t2) ], [ Any ])
+      (Binary op, [ Typed (T t1) ; Typed (T t2) ], 1)
       (fun lhs l ->
          let _, x, l = get_arg at1 l in
          let _, y, l = get_arg at2 l in
@@ -454,8 +469,10 @@ let register_casted_homo_binop lib op (at1 : _ argtag) (at2 : _ argtag) (atr : _
 let register_function
   : type a b r. lib -> state -> string -> (a, a -> b, r) funtag -> (a -> b) -> unit
   = fun lib state name t f ->
-    register_primitive lib
-      (Function name, (try [ first_arg_matcher t ] with Not_found -> []), [ Any ])
+    register_primitive lib ~name
+      (Function name,
+       (try [ first_arg_matcher t ] with Not_found -> []), (* drop compat to be better? *)
+       return_arity t)
       (let cb = wrap_fun t f in fun lhs args -> cb args) ;
     let var = State.var state name in
     State.put state var (inject Primitive name)
@@ -463,7 +480,7 @@ let register_function
 (** Registers a predefined cast between two types under some name *)
 let register_cast_function lib state name (T tag1 : rtt) (t2 : rtt) =
   register_primitive lib
-    (Function name, [ Typed (T tag1) ], [ Any ])
+    (Function name, [ Typed (T tag1) ], 1)
     (fun lhs -> function
        | [ None, v ] -> [ Values.cast v t2 ]
        | _ -> raise Bad_cast) ;
@@ -477,7 +494,7 @@ let register_homo_collation lib itag =
   let mtag = Matrix itag in
   let register_with_casts kind collate tag1 tag2 =
     register_primitive lib
-      (kind, [ tag1 ; tag2 ], [ Any ])
+      (kind, [ tag1 ; tag2 ], 1)
       (fun lhs -> function
          | [ None, v1 ; None, v2 ] ->
            let v1 = Values.cast v1 (T mtag) in
@@ -489,9 +506,9 @@ let register_homo_collation lib itag =
   in
   List.iter (fun (kind, collate) ->
       List.iter (fun tag ->
-          register_primitive lib (kind, [ Typed (T Atom) ; tag ], [ Any ])
+          register_primitive lib (kind, [ Typed (T Atom) ; tag ], 1)
             (fun lhs -> function [ None, _ ; None, v ] -> [ v ] | _ -> raise Bad_type) ;
-          register_primitive lib (kind, [ tag ; Typed (T Atom) ], [ Any ])
+          register_primitive lib (kind, [ tag ; Typed (T Atom) ], 1)
             (fun lhs -> function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type))
         ([ Typed (T (Single itag)) ; Typed (T (Matrix itag)) ] : matcher list) ;
       List.iter (fun (tag1, tag2) ->
@@ -521,8 +538,90 @@ let stdlib state lib =
     (seq string @-> null)
     (List.iter (fun n -> State.(clear state (var state n)))) ;
   State.put state (State.var state "argn") (inject Primitive "argn") ;
+  State.put state (State.var state "stacksize") (inject Primitive "stacksize") ;
+  register_function lib state "type"
+    (any @-> real)
+    (fun v ->
+       let rec typenum : type t. t Values.tag -> float = function
+         | Null -> 0.
+         | Atom -> 0.
+         | Single t -> itypenum t
+         | Matrix t -> itypenum t
+         | Sparse Bool -> 6.
+         | Sparse _ -> 5.
+         | Macro -> 13.
+         | Vlist -> 15.
+         | Tlist _ -> 16.
+         | Mlist _ -> 17.
+         | Primitive -> 130.
+         | Handle -> 9.
+         | Eye t -> itypenum t
+       and itypenum : type t. t Values.itag -> float = function
+         | Number _ -> 1.
+         | Poly _ -> 2.
+         | Bool -> 4.
+         | Int8 -> 8.
+         | Int16 -> 8.
+         | Int32 -> 8.
+         | Uint8 -> 8.
+         | Uint16 -> 8.
+         | Uint32 -> 8.
+         | String -> 10. in
+       let T t = Values.typeof v in
+       typenum t) ;
+  register_function lib state "typeof"
+    (any @-> string)
+    (fun v ->
+       let rec typename : type t. t Values.tag -> string = function
+         | Null -> raise Bad_type
+         | Atom -> raise Bad_type
+         | Single t -> itypename t
+         | Matrix t -> itypename t
+         | Sparse Bool -> "boolean sparse"
+         | Sparse _ -> "sparse"
+         | Macro -> "function"
+         | Vlist -> "list"
+         | Tlist n -> n
+         | Mlist n -> n
+         | Primitive -> "fptr"
+         | Handle -> "handle"
+         | Eye t -> itypename t
+       and itypename : type t. t Values.itag -> string = function
+         | Number _ -> "constant"
+         | Poly _ -> "polynomial"
+         | Bool -> "boolean"
+         | Int8 -> "int8"
+         | Int16 -> "int16"
+         | Int32 -> "int32"
+         | Uint8 -> "uint8"
+         | Uint16 -> "uint16"
+         | Uint32 -> "uint32"
+         | String -> "string" in
+       let T t = Values.typeof v in
+       typename t) ;
+  register_function lib state "inttype"
+    (any @-> real)
+    (fun v ->
+       let rec typenum : type t. t Values.tag -> float = function
+         | Single t -> itypenum t
+         | Matrix t -> itypenum t
+         | Eye t -> itypenum t
+         | _ -> raise Bad_type
+       and itypenum : type t. t Values.itag -> float = function
+         | Int8 -> 1.
+         | Int16 -> 2.
+         | Int32 -> 4.
+         | Uint8 -> 11.
+         | Uint16 -> 12.
+         | Uint32 -> 14.
+         | _ -> raise Bad_type in
+       let T t = Values.typeof v in
+       typenum t) ;
+  register_function lib state "error"
+    (string @-> real)
+    (fun msg -> raise (Interp_error (Generic msg))) ;
   (*----- lists ----------------------------------------------------------*)
-  register_function lib state "list" (seq any @-> vlist) Values.vlist_create ;
+  register_function lib state "list" (seq any @-> vlist) (Values.vlist_create) ;
   let list_extract lhs = function
     | [ None, l ; None, i ] ->
       let l = Values.(extract Vlist l) in
@@ -537,13 +636,13 @@ let stdlib state lib =
     | _ -> raise Bad_type in
   List.iter (fun (T ti) ->
       register_primitive lib
-        (Injection, [ Typed (T Vlist) ; Typed (T ti) ; Any ], [ Any ])
+        (Injection, [ Typed (T Vlist) ; Typed (T ti) ; Any ], 1)
         list_inject ;
       register_primitive lib
-        (Recursive_extraction, [ Typed (T Vlist) ; Typed (T ti) ], [ Any ])
+        (Recursive_extraction, [ Typed (T Vlist) ; Typed (T ti) ], 1)
         list_extract ;
       register_primitive lib
-        (Extraction, [ Typed (T Vlist) ; Typed (T ti) ], [ Any ])
+        (Extraction, [ Typed (T Vlist) ; Typed (T ti) ], 1)
         list_extract)
     [ T (Single (Number Real)) ;
       T (Single Int8) ; T (Single Int16) ; T (Single Int32) ;
@@ -587,7 +686,8 @@ let stdlib state lib =
     (string @* seq any @-> any)
     (fun name contents -> inject (Mlist name) (Values.mlist_create name [] contents)) ;
   (*----- misc operations -------------------------------------------------*)
-  register_function lib state "quit" (void @-> null) (fun () -> raise Exit) ;
+  register_function lib state "quit" (void @-> null)
+    (fun () -> raise Exit) ;
   let disp l =
     List.iter
       (fun v -> Printf.printf "%s\n%!" (string_of_value v))
@@ -663,9 +763,9 @@ let stdlib state lib =
       register_casted_homo_binop lib Ast.Eq tr real real)
     [ int8 ; int16 ; int32 ; uint8 ; uint16 ; uint32 ] ;
   (*----- homogeneous matrix collation ------------------------------------*)
-  register_primitive lib (Matrix_horizontal_collation, [ Typed (T Atom) ; Typed (T Atom) ], [ Any ])
+  register_primitive lib (Matrix_horizontal_collation, [ Typed (T Atom) ; Typed (T Atom) ], 1)
     (fun lhs -> function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type) ;
-  register_primitive lib (Matrix_vertical_collation, [ Typed (T Atom) ; Typed (T Atom) ], [ Any ])
+  register_primitive lib (Matrix_vertical_collation, [ Typed (T Atom) ; Typed (T Atom) ], 1)
     (fun lhs -> function [ None, v ; None, _ ] -> [ v ] | _ -> raise Bad_type) ;
   register_homo_collation lib (Number Real) ;
   register_homo_collation lib String ;
@@ -675,6 +775,48 @@ let stdlib state lib =
   register_homo_collation lib Uint8 ;
   register_homo_collation lib Uint16 ;
   register_homo_collation lib Uint32 ;
+  (*----- matrix size -----------------------------------------------------*)
+  let size_matrix w h =
+    let res = matrix_create (Number Real) 2 1 in
+    matrix_set res 1 1 w ;
+    matrix_set res 2 1 h ;
+    res in
+  register_function lib state "size" (eye real @* opt any @-> matrix real)
+    (fun _ _ -> size_matrix (-. 1.) (-. 1.)) ;
+  register_function lib state "size" (eye real @* opt any @-> real @+ real)
+    (fun _ _ -> (-. 1., -. 1.)) ;
+  register_function lib state "size" (atom @* opt any @-> matrix real)
+    (fun () _ -> size_matrix 0. 0.) ;
+  register_function lib state "size" (atom @* opt any @-> real @+ real)
+    (fun () _ -> (0., 0.)) ;
+  List.iter
+    (function
+      | T (Matrix itag) ->
+        register_function lib state "size"
+          (Arg (Single itag) @* opt any @-> matrix real)
+          (fun _ _ -> size_matrix 1. 1.) ;
+        register_function lib state "size"
+          (Arg (Single itag) @* opt any @-> real @+ real)
+          (fun _ _ -> (1., 1.)) ;
+        register_function lib state "size"
+          (Arg (Matrix itag) @* opt any @-> matrix real)
+          (fun mat flag ->
+             let w, h = matrix_size mat in
+             size_matrix (float w) (float h)) ;
+        register_function lib state "size"
+          (Arg (Matrix itag) @* opt any @-> real @+ real)
+          (fun mat flag ->
+             let w, h = matrix_size mat in
+             float h, float w)
+      | _ -> assert false)
+    [ T (Matrix (Number Real)) ; T (Matrix (Number Complex)) ;
+      T (Matrix (Poly Real)) ; T (Matrix (Poly Complex)) ;
+      T (Matrix String) ; T (Matrix Bool) ;
+      T (Matrix Int8) ; T (Matrix Int16) ; T (Matrix Int32) ;
+      T (Matrix Uint8) ; T (Matrix Uint16) ; T (Matrix Uint32) ] ;
+  register_function lib state "size"
+    (vlist @-> real)
+    (fun l -> float (vlist_length l)) ;
   (*----- matrix extraction -----------------------------------------------*)
   register_matrix_extraction lib (Number Real) ;
   register_matrix_extraction lib Int8 ;

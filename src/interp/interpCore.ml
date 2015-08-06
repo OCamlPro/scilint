@@ -32,9 +32,14 @@ and Values
   module Parameters = struct type macro = Ast.defun_params end
   include InterpValuesPureOCaml.Make (Parameters)
 end
+and Frame
+  : sig type t = int * int * Ast.defun_params end = struct
+  type t = int * int * Ast.defun_params
+end
 and State
-  : InterpState.S with type value := Values.value = struct
-  include InterpStatePureOCaml.Make (Values)
+  : InterpState.S with type value := Values.value
+                   and type frame := Frame.t = struct
+  include InterpStatePureOCaml.Make (Values) (Frame)
 end
 and Dispatcher
   : InterpDispatcher.S with type rtt := Values.rtt = struct
@@ -61,8 +66,6 @@ end
 
 type primitive =
   { call : int -> (Ast.var option * Values.value) list -> Values.value list ;
-    takes : Dispatcher.matcher list * bool ;
-    returns : Dispatcher.matcher list * bool ;
     name : string }
 
 type lib =

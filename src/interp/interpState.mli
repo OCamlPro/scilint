@@ -10,9 +10,9 @@
 (** Stores the state of variables in the interpreter *)
 module type S = sig
 
-  (** Raised if {!resume} is called while no local scope has been
-      opened inside the toplevel one. *)
-  exception Cannot_resume_from_toplevel
+  (** Raised if {!resume} or {!frame} is called while no local scope
+      has been opened inside the toplevel one. *)
+  exception Toplevel
 
   (** Imperative state of the interpreter *)
   type state
@@ -24,6 +24,9 @@ module type S = sig
   (** Values stored in variables *)
   type value
 
+  (** Stack frame identifiers *)
+  type frame
+
   (** Builds an initial, empty state *)
   val init : unit -> state
 
@@ -34,7 +37,13 @@ module type S = sig
   val name : variable -> string
 
   (** Opens a local scope *)
-  val enter_scope : state -> unit
+  val enter_scope : state -> frame -> unit
+
+  (** Returns the current frame, may raise {!Toplevel} *)
+  val frame : state -> frame
+
+  (** Returns the number of frames in the stack *)
+  val level : state -> int
 
   (** Closes a local scope *)
   val exit_scope : state -> unit
