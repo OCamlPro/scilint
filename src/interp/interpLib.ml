@@ -155,17 +155,17 @@ let rec get_arg
       let enc = decode_flag s fs in
       let _, vrest, vs = get_arg t vs in
       None, enc :: vrest, vs
-    | (name, v) :: vs, Seq (Seq _) -> assert false
-    | (name, v) :: vs, Seq (Opt _) -> assert false
-    | (name, v) :: vs, Seq (Fake _) -> assert false
+    | (_, _) :: vs, Seq _ -> assert false
+    | (_, _) :: vs, Opt _ -> assert false
 
 let rec inject_result : type a. a argtag -> a -> value list = fun rt v ->
   match rt with
   | Arg tag -> [ inject tag v ]
   | Any -> [ v ]
+  | Fake _ -> []
+  | Opt rt -> (match v with Some v -> inject_result rt v | None -> [])
   | Flag _ -> assert false
   | Seq _ -> assert false
-  | Fake _ -> assert false
 
 let rec wrap_fun
   : type a f r. (a, f, r) funtag -> f -> (Ast.var option * value) list -> value list
@@ -496,6 +496,7 @@ let stdlib state lib =
   register_function lib state "clear"
     (seq string @-> null)
     (List.iter (fun n -> State.(clear state (var state n)))) ;
+  State.put state (State.var state "argn") (inject Primitive "argn") ;
   (*----- lists ----------------------------------------------------------*)
   register_function lib state "list" (seq any @-> vlist) Values.vlist_create ;
   let list_extract lhs = function

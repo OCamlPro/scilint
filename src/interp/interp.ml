@@ -35,6 +35,7 @@ let rec interpret (state : state) (lib : lib) ast =
   let varargin = State.var state "varargin" in
   let varargout = State.var state "varargout" in
   let var_name { cstr } = State.name cstr in
+  let stack = ref [] in
   let rec interpret_stmt_toplevel stmt =
     try interpret_stmt stmt with
     | Interp_error err ->
@@ -178,13 +179,13 @@ let rec interpret (state : state) (lib : lib) ast =
           match overloading  with
           | Extraction | Recursive_extraction ->
             (fun lhs -> function
-               | v :: rest -> callback (rest @ [ v ])
+               | v :: rest -> callback (Min lhs) (rest @ [ v ])
                | _ -> raise Bad_type)
           | Injection ->
             (fun lhs -> function
-               | v :: r :: rest -> callback (rest @ [ r ; v ])
+               | v :: r :: rest -> callback (Min lhs) (rest @ [ r ; v ])
                | _ -> raise Bad_type)
-          | _ -> (fun lhs args -> callback args)
+          | _ -> (fun lhs -> callback (Min lhs))
         in
         List.iter (fun rtts ->
             register
@@ -342,6 +343,38 @@ let rec interpret (state : state) (lib : lib) ast =
           extract_tlist_index t tl f
         | Injection, [ T (Tlist t) ; _ ; T (Single (Number Real)) ], [ _, tl ; _, v ; _, f ] ->
           inject_tlist_index t tl f v
+        | Function "argn", [], [] ->
+          begin match !stack with
+            | [] ->
+              [ inject (Single (Number Real)) 0. ;
+                inject (Single (Number Real)) 0. ]
+            | (_, lhs, rhs) :: _ ->
+              [ inject (Single (Number Real)) (float lhs) ;
+                inject (Single (Number Real)) (float rhs) ] end
+        | Function "argn", [ T (Single (Number Real)) ], [ _, v ] ->
+          let v = ceil (extract (Single (Number Real)) v) in
+          if v = 0. then
+            match !stack with
+            | [] ->
+              [ inject (Single (Number Real)) 0. ;
+                inject (Single (Number Real)) 0. ]
+            | (_, lhs, rhs) :: _ ->
+              [ inject (Single (Number Real)) (float lhs) ;
+                inject (Single (Number Real)) (float rhs) ]
+          else if v = 1. then
+            match !stack with
+            | [] ->
+              [ inject (Single (Number Real)) 0. ]
+            | (_, lhs, _) :: _ ->
+              [ inject (Single (Number Real)) (float lhs) ]
+          else if v = 2. then
+            match !stack with
+            | [] ->
+              [ inject (Single (Number Real)) 0. ]
+            | (_, _, rhs) :: _ ->
+              [ inject (Single (Number Real)) (float rhs) ]
+          else
+            error (Located (loc, Generic "bad argument to argn, expecting 0, 1, 2 or none"))
         | _ -> default ()
       in
       filter dest loc (predef ())
@@ -418,7 +451,7 @@ let rec interpret (state : state) (lib : lib) ast =
         begin match typeof f with
           | T Macro ->
             let defun = Values.extract Macro f in
-            filter dest loc (interpret_macro_call loc (defun : Ast.defun_params) vargs)
+            filter dest loc (interpret_macro_call loc (defun : Ast.defun_params) dest vargs)
           | T Primitive ->
             let name = Values.extract Primitive f in
             let rtts = match vargs with
@@ -506,7 +539,9 @@ let rec interpret (state : state) (lib : lib) ast =
     | One -> 1
     | Min lhs -> lhs
 
-  and interpret_macro_call loc defun vargs =
+  and interpret_macro_call
+    : type res. loc -> defun_params -> res dest -> (var option * value) list -> value list
+    = fun loc defun dest vargs ->
     (* right to left name assignment *)
     let rec assign_args acc args vargs =
       match args, vargs with (* TODO: null () argument *)
@@ -563,6 +598,7 @@ let rec interpret (state : state) (lib : lib) ast =
     in
     let arg_assignments = assign_args [] defun.args vargs in
     State.enter_scope state ;
+    stack := (defun, expected dest, List.length vargs) :: !stack ;
     let old_lib = !lib in
     lib := Dispatcher.dup !lib ;
     try
@@ -573,10 +609,12 @@ let rec interpret (state : state) (lib : lib) ast =
       let rets = assign_rets [] defun.rets in
       State.exit_scope state ;
       lib := old_lib ;
+      stack := List.tl !stack ;
       rets
     with err ->
       State.exit_scope state ;
       lib := old_lib ;
+      stack := List.tl !stack ;
       match err with
       | Interp_error err ->
         raise (Interp_error (Located (loc, err)))
