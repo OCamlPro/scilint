@@ -35,11 +35,13 @@ let rec interpret (state : state) (lib : lib) ast =
   let varargin = State.var state "varargin" in
   let varargout = State.var state "varargout" in
   let var_name { cstr } = State.name cstr in
-  let stack = ref [] in
   let rec interpret_stmt_toplevel stmt =
     try interpret_stmt stmt with
     | Interp_error err ->
       message err
+    | Exit_function -> ()
+    | Break -> error (Located (stmt.loc, Werror (L Break_outside_loop)))
+    | Continue -> error (Located (stmt.loc, Werror (L Continue_outside_loop)))
     | Exit ->
       Printf.fprintf stderr "Bye.\n%!" ;
       exit 0
@@ -191,8 +193,7 @@ let rec interpret (state : state) (lib : lib) ast =
             register
               ~frozen:false ~more:true
               overloading rtts 1
-              { name = name ; call ;
-                takes = ([], true) ; returns = ([], true) } !lib |> ignore (* FIXME: warn *) )
+              { name = name ; call } !lib |> ignore (* FIXME: warn *) )
           rttss
       | _ ->
         let msg = "overloading is only possible with a user function" in
@@ -343,35 +344,41 @@ let rec interpret (state : state) (lib : lib) ast =
           extract_tlist_index t tl f
         | Injection, [ T (Tlist t) ; _ ; T (Single (Number Real)) ], [ _, tl ; _, v ; _, f ] ->
           inject_tlist_index t tl f v
+        | Function "stacksize", [], [] ->
+          messages [ Located (loc, Generic "stacksize function not implemented (ignored)") ] ;
+          [ inject (Matrix (Number Real)) (matrix_create (Number Real) 1 2) ]
+        | Function "stacksize", _, _ ->
+          messages [ Located (loc, Generic "stacksize function not implemented (ignored)") ] ;
+          [ inject Null () ]
         | Function "argn", [], [] ->
-          begin match !stack with
-            | [] ->
+          begin match State.frame state with
+            | exception State.Toplevel ->
               [ inject (Single (Number Real)) 0. ;
                 inject (Single (Number Real)) 0. ]
-            | (_, lhs, rhs) :: _ ->
+            | (lhs, rhs, _) ->
               [ inject (Single (Number Real)) (float lhs) ;
                 inject (Single (Number Real)) (float rhs) ] end
         | Function "argn", [ T (Single (Number Real)) ], [ _, v ] ->
           let v = ceil (extract (Single (Number Real)) v) in
           if v = 0. then
-            match !stack with
-            | [] ->
+            match State.frame state with
+            | exception State.Toplevel ->
               [ inject (Single (Number Real)) 0. ;
                 inject (Single (Number Real)) 0. ]
-            | (_, lhs, rhs) :: _ ->
+            | (lhs, rhs, _) ->
               [ inject (Single (Number Real)) (float lhs) ;
                 inject (Single (Number Real)) (float rhs) ]
           else if v = 1. then
-            match !stack with
-            | [] ->
+            match State.frame state with
+            | exception State.Toplevel ->
               [ inject (Single (Number Real)) 0. ]
-            | (_, lhs, _) :: _ ->
+            | (lhs, _, _) ->
               [ inject (Single (Number Real)) (float lhs) ]
           else if v = 2. then
-            match !stack with
-            | [] ->
+            match State.frame state with
+            | exception State.Toplevel ->
               [ inject (Single (Number Real)) 0. ]
-            | (_, _, rhs) :: _ ->
+            | (_, rhs, _) ->
               [ inject (Single (Number Real)) (float rhs) ]
           else
             error (Located (loc, Generic "bad argument to argn, expecting 0, 1, 2 or none"))
@@ -597,27 +604,23 @@ let rec interpret (state : state) (lib : lib) ast =
       | [] -> List.rev acc
     in
     let arg_assignments = assign_args [] defun.args vargs in
-    State.enter_scope state ;
-    stack := (defun, expected dest, List.length vargs) :: !stack ;
+    State.enter_scope state (expected dest, List.length vargs, defun) ;
     let old_lib = !lib in
     lib := Dispatcher.dup !lib ;
     try
       List.iter
         (fun (n, v) -> State.put state n v)
         arg_assignments ;
-      interpret_stmt defun.body ;
+      (try interpret_stmt defun.body with Exit_function -> ()) ;
       let rets = assign_rets [] defun.rets in
       State.exit_scope state ;
       lib := old_lib ;
-      stack := List.tl !stack ;
       rets
     with err ->
       State.exit_scope state ;
       lib := old_lib ;
-      stack := List.tl !stack ;
       match err with
-      | Interp_error err ->
-        raise (Interp_error (Located (loc, err)))
+      | Interp_error err -> raise (Interp_error (Located (loc, err)))
       | err -> raise err
   in
   List.iter interpret_stmt_toplevel (from_parser state ast)

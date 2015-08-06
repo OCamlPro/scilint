@@ -153,7 +153,7 @@ module type S = sig
 
   (** Generic OCaml view of values *)
   type view = V : 'a tag * 'a -> view
-          
+
   (** Obtains an OCaml view of a value *)
   val view : value -> view
 
@@ -162,7 +162,7 @@ module type S = sig
 
   (** Conversion between immediate types *)
   val icast : 'a itag -> 'b itag -> 'a -> 'b
-    
+
   (** Performs a deep copy *)
   val copy : value -> value
 

@@ -65,7 +65,7 @@ module Make (Parameters : Parameters) = struct
 
   let rec icast : type a b. a itag -> b itag -> a -> b = fun k1 k2 v ->
     let s m v =
-      let r = v land m in 
+      let r = v land m in
       if r land ((m + 1) lsr 1) = 0 then r else r lor (lnot m)
     in
     let u m v =
@@ -470,7 +470,7 @@ module Make (Parameters : Parameters) = struct
     | Handle, V (Handle, v) -> v
     | Atom, V (Atom, v) -> v
     | Null, V (Null, v) -> v
-    | _ -> raise Bad_type    
+    | _ -> raise Bad_type
 
   and extract_matrix : type a b. a itag -> b itag -> b matrix -> a matrix = fun ta tb v ->
     match ta, tb with

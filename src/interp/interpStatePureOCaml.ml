@@ -11,12 +11,13 @@
     lists for O(1) access, O(1) scope opening and O(vars used) scope
     closing *)
 
-module Make (Values : InterpValues.S)
-  : InterpState.S with type value := Values.value = struct
+module Make (Values : InterpValues.S) (Frame : sig type t end)
+  : InterpState.S with type value := Values.value
+                   and type frame := Frame.t = struct
 
   open Values
 
-  exception Cannot_resume_from_toplevel
+  exception Toplevel
 
   type variable =
     { name : string ;
@@ -30,6 +31,7 @@ module Make (Values : InterpValues.S)
   and state =
     { table : (string, variable) Hashtbl.t ;
       mutable level : level ;
+      mutable stack : Frame.t list ;
       mutable max_id : int ;
       mutable restoration : (variable * binding) list ref list }
   and level =
@@ -50,10 +52,11 @@ module Make (Values : InterpValues.S)
 
   let name { name } =
     name
-    
+
   let init () =
     { table = Hashtbl.create 1000 ;
       level = 0 ;
+      stack = [] ;
       max_id = 0 ;
       restoration = [ ref [] ] }
 
@@ -156,7 +159,7 @@ module Make (Values : InterpValues.S)
 
   let resume state var v =
     (* somewhat inefficient but who cares about the efficiency of resume ? *)
-    if state.level <= 0 then raise Cannot_resume_from_toplevel ;
+    if state.level <= 0 then raise Toplevel ;
     let rlist = List.hd state.restoration in
     let prev_binding =
       try
@@ -179,8 +182,9 @@ module Make (Values : InterpValues.S)
     put prev_state prev_var v ;
     rlist := (var, prev_var.binding) :: !rlist
 
-  let enter_scope st =
+  let enter_scope st frame =
     st.level <- st.level + 1 ;
+    st.stack <- frame :: st.stack ;
     st.restoration <- ref [] :: st.restoration
 
   let exit_scope st =
@@ -197,5 +201,13 @@ module Make (Values : InterpValues.S)
           | _ -> ()
         end ;
         var.binding <- binding) diff ;
-    st.level <- st.level - 1
+    st.level <- st.level - 1 ;
+    st.stack <- List.tl st.stack
+
+  let frame = function
+    | { stack = [] } -> raise Toplevel
+    | { stack = frame :: _ } -> frame
+
+  let level { level } =
+    level
 end
