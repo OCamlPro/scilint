@@ -22,4 +22,7 @@ and source =
   | String of string * string (** (name, raw input string) *)
   | File of string (** file name from its path *)
   | Eval_string of loc (** recursive source for eval strings *)
+  | Call of loc * source (** recursive location for run-time messages with call stack *)
+  | External of string (** external named source *)
   | Forged (** ghost source *)
+  | Nowhere (** for global messages *)

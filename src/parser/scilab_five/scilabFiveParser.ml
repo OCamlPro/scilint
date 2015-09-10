@@ -56,7 +56,7 @@ module StreamReader : sig
   val extract_from : state -> position -> string
 end = struct
   type state = {
-    mutable buffer : string ;
+    mutable buffer : bytes ;
     mutable position : int ;
     mutable limit : int ;
     raw_read : unit -> string ;
@@ -64,7 +64,7 @@ end = struct
   and position = int
 
   let generic_reader raw_read =
-    { buffer = "" ; limit = 0 ; position = 0 ; raw_read }
+    { buffer = Bytes.empty ; limit = 0 ; position = 0 ; raw_read }
 
   let string_reader str =
     let already_read = ref false in
@@ -73,29 +73,29 @@ end = struct
     in generic_reader raw_read
 
   let channel_reader chan =
-    let buf = String.make 10_000 '\000' in
+    let buf = Bytes.make 10_000 '\000' in
     let raw_read () =
       let len = Pervasives.input chan buf 0 10_000 in
-      String.sub buf 0 len
+      Bytes.unsafe_to_string (Bytes.sub buf 0 len)
     in generic_reader raw_read
 
   let fill state bytes =
     let buffer_chunk_size = 10_000 in
-    let len = String.length state.buffer in
+    let len = Bytes.length state.buffer in
     let bytes_len = String.length bytes in
     let new_len = state.limit + bytes_len in
     if new_len >= len then begin
       let new_len = new_len + buffer_chunk_size in
-      let new_buffer = String.make new_len '\000' in
-      String.blit state.buffer 0 new_buffer 0 state.limit ;
+      let new_buffer = Bytes.make new_len '\000' in
+      Bytes.blit state.buffer 0 new_buffer 0 state.limit ;
       state.buffer <- new_buffer
     end ;
-    String.blit bytes 0 state.buffer state.limit bytes_len ;
+    Bytes.blit_string bytes 0 state.buffer state.limit bytes_len ;
     state.limit <- state.limit + bytes_len
 
   let rec read state =
     if state.position < state.limit then
-      let res = String.unsafe_get state.buffer state.position in
+      let res = Bytes.unsafe_get state.buffer state.position in
       state.position <- state.position + 1 ;
       res
     else
@@ -105,7 +105,7 @@ end = struct
 
   let rec write state char =
     if state.position < state.limit then begin
-      String.unsafe_set state.buffer state.position char ;
+      Bytes.unsafe_set state.buffer state.position char ;
       state.position <- state.position + 1
     end else
       let new_bytes = state.raw_read () in
@@ -114,7 +114,7 @@ end = struct
 
   let rec peek state =
     if state.position < state.limit then
-      String.unsafe_get state.buffer state.position
+      Bytes.unsafe_get state.buffer state.position
     else
       let new_bytes = state.raw_read () in
       if String.length new_bytes = 0 then '\000'
@@ -122,7 +122,7 @@ end = struct
 
   let rec poke state char =
     if state.position < state.limit then
-      String.unsafe_set state.buffer state.position char
+      Bytes.unsafe_set state.buffer state.position char
     else
       let new_bytes = state.raw_read () in
       if String.length new_bytes = 0 then invalid_arg "poke"
@@ -155,10 +155,10 @@ end = struct
     state.position <- pos
 
   let extract_from state pos =
-    String.sub state.buffer pos (state.position - pos)
+    Bytes.to_string @@ Bytes.sub state.buffer pos (state.position - pos)
 
   let extract_between state start_pos end_pos =
-    String.sub state.buffer start_pos (end_pos - start_pos + 1)
+    Bytes.to_string @@ Bytes.sub state.buffer start_pos (end_pos - start_pos + 1)
 end
 
 (** A character per character reader with Scilab specific hacks.  It
@@ -231,6 +231,23 @@ end = struct
     let (line, column) = state.point in
     state.point <- (line, column + 1)
 
+  let eat_comment state =
+    (* Ugly hack, because "..( .)*\n" are not taken into account after
+       a "//". This function has no other use case than eating
+       comments until the next line feed (skippable or not). It
+       positions the state at line's end and declares all dots as
+       meaningful ones by changing them into '\003'. See {!read}.  *)
+    let rec eat () =
+      match StreamReader.read state.reader_state with
+      | '\r' | '\n' | '\002' -> StreamReader.rewind state.reader_state 1
+      | '.' ->
+        StreamReader.rewind state.reader_state 1 ;
+        StreamReader.write state.reader_state '\003' ;
+        column_feed state ; eat ()
+      | '\000' -> ()
+      | _ -> column_feed state ; eat ()
+    in eat ()
+
   let eat_lf state =
     (* See {!read} for explanation. *)
     match StreamReader.peek state.reader_state with
@@ -239,11 +256,36 @@ end = struct
 
   let rec eol_dots state =
     (* See {!read} for explanation. *)
-    match StreamReader.read state.reader_state with
-    | '.' | ' ' -> eol_dots state
-    | '\n' -> line_feed state ; true
-    | '\r' -> line_feed state ; eat_lf state ; true
+    match StreamReader.peek state.reader_state with
+    | '.' | ' ' ->
+      StreamReader.skip state.reader_state 1 ;
+      eol_dots state
+    | '\n' ->
+      StreamReader.write state.reader_state '\002' ;
+      true
+    | '\r' ->
+      StreamReader.write state.reader_state '\002' ;
+      eat_lf state ; true
+    | '/' ->
+      StreamReader.skip state.reader_state 1 ;
+      (* preserve any comment between a line continuator and a line terminator *)
+      if StreamReader.peek state.reader_state = '/' then begin
+        eat_comment state ;
+        eol_dots state
+      end else false
     | _ -> false
+
+  let rec patch_eol state =
+    (* See {!read} for explanation. *)
+    match StreamReader.peek state.reader_state with
+    | '\002' -> () (* stop at line stop *)
+    | '/'
+      (* TODO: accept or drop in-expression / in-word comments as in
+         "1 + ..//x\n 2" or "12..//x\n34" *)
+    | _ ->
+      StreamReader.write state.reader_state '\001' ;
+      column_feed state ;
+      patch_eol state
 
   let rec read state =
     (* To be able to extract text and to speed up, we scan for line
@@ -252,24 +294,20 @@ end = struct
        skippable line break and '\003' for meaningful dots that have
        already been scanned as such. *)
     match StreamReader.read state.reader_state with
-    | '.' -> 
+    | '.' when StreamReader.peek state.reader_state = '.' -> 
       StreamReader.rewind state.reader_state 1 ;
       let spos = StreamReader.pos state.reader_state in
       if eol_dots state then begin
-        let epos = StreamReader.pos state.reader_state in
         StreamReader.go_to state.reader_state spos ;
-        StreamReader.write state.reader_state '\002' ;
-        while StreamReader.pos state.reader_state < epos do
-          StreamReader.write state.reader_state '\001'
-        done ;
-        line_feed state ; read state
+        patch_eol state ;
+        read state
       end else begin
         StreamReader.go_to state.reader_state spos ;
         while StreamReader.peek state.reader_state = '.' do
           StreamReader.write state.reader_state '\003'
         done ;
         StreamReader.go_to state.reader_state spos ;
-        StreamReader.discard state.reader_state ;
+        StreamReader.skip state.reader_state 1 ;
         column_feed state ; '.'
       end
     | '\r' ->
@@ -278,13 +316,13 @@ end = struct
       eat_lf state ; line_feed state ; '\n'
     | '\n' as res -> line_feed state ; res
     | '\000' -> '\000'
-    | '\001' -> read state
+    | '\001' -> column_feed state ; read state
     | '\002' -> line_feed state ; read state
     | '\003' -> column_feed state ; '.'
     | res -> column_feed state ; res
 
   let advance state n =
-    for i = 1 to n do ignore (read state) done
+    for i = 1  to n do ignore (read state) done
 
   let advance_1 state =
     ignore (read state)
@@ -311,39 +349,23 @@ end = struct
 
   let correct s =
     (* See {!read} and {!eol_dots} for explanation. *)
-    let len = String.length s in
+    let len = Bytes.length s in
     let i = ref 0 and j = ref 0 in
     while !i < len do
-      match s.[!i] with
+      match Bytes.get s !i with
       | '\000' | '\001' | '\002' -> incr i
-      | '\003' -> s.[!j] <- '.' ; incr i ; incr j
-      | c -> s.[!j] <- c ; incr i ; incr j
+      | '\003' -> Bytes.set s !j '.' ; incr i ; incr j
+      | c -> Bytes.set s !j c ; incr i ; incr j
     done ;
-    String.sub s 0 !j
+    Bytes.sub s 0 !j
 
   let extract_from state (pos, loc) =
     let s = StreamReader.extract_from state.reader_state pos in
-    let s = correct s in
-    (s, (loc, point state))
+    let s = correct (Bytes.unsafe_of_string s) in
+    (Bytes.unsafe_to_string s, (loc, point state))
 
   let from state (pos, loc) =
     (loc, point state)
-
-  let eat_comment state =
-    (* Ugly hack, because "..( .)*\n" are not taken into account after
-       a "//". This function has no other use case than eating
-       comments. It positions the state at line's end and declares all
-       dots as meaningful ones by changing them into '\003'. See {!read}.  *)
-    let rec eat () =
-      match StreamReader.read state.reader_state with
-      | '\r' | '\n' -> StreamReader.rewind state.reader_state 1
-      | '.' ->
-        StreamReader.rewind state.reader_state 1 ;
-        StreamReader.write state.reader_state '\003' ;
-        column_feed state ; eat ()
-      | '\000' -> ()
-      | _ -> column_feed state ; eat ()
-    in eat ()
 end
 
 (** A quick and dirty regexp-like matching module based on
@@ -520,11 +542,11 @@ end = struct
 
   let (--) c1 c2 =
     let c1 = Char.code c1 and c2 = Char.code c2 in
-    let s = String.make (c2 - c1 + 1) '_' in
+    let s = Bytes.make (c2 - c1 + 1) '_' in
     for i = c1 to c2 do
-      s.[i - c1] <- Char.chr i
+      Bytes.set s (i - c1) (Char.chr i)
     done ;
-    s
+    Bytes.unsafe_to_string s
 
   type group = (string * (point * point)) option ref
 
@@ -652,10 +674,29 @@ end = struct
       (any_of ('a'--'z' ^ 'A'--'Z' ^ spchars_first) ||| utf_opt) ;
       star (any_of ('a'--'z' ^ 'A'--'Z' ^ spchars_next) ||| utf_opt) ]
     ||| char ':'
-  let wildcard =
+  let nested s e stop =
+    callback (fun st ->
+        let cp = checkpoint st in
+        let rec loop n =
+          if exec stop st then
+            (restore st cp ; false)
+          else
+            let c = read st in
+            if c = e && n = 0 then true
+            else if c = e then loop (n - 1)
+            else if c = s then loop (n + 1)
+            else loop n
+        in
+        if read st = s then loop 0
+        else (restore st cp ; false))
+  let simple_wildcard =
     seq [ char '%' ;
           star (any_of ('a' -- 'z' ^ 'A' -- 'Z' ^ '0' -- '9' ^ "_")) ;
-          char '?' ; maybe (char '?') ]
+          char '?' ]
+  let wildcard =
+    seq [ simple_wildcard ; maybe (char '?') ]
+  let wildcard_with_args =
+    seq [ simple_wildcard ; spaces ; nested '{' '}' (any_of "\000\n") ]
   let unop = any_of "@~-+"
   let binop =
     alts [
@@ -670,18 +711,21 @@ end = struct
             phantom (any_but ('0'--'9')) ] ;
       seq [ char '.' ; star space ; any_of "*/\\^" ] ]
   let shell_call_start =
-    seq [ ident ; plus space ; phantom (any_but ".-/+*&|<>=,;\n\000^") ]
+    alts [ seq [ wildcard_with_args ; plus space ;
+                 phantom (any_but ".-/+*&|<>=,;\n\000^") ] ;
+           seq [ ident ; plus space ;
+                 phantom (any_but ".-/+*&|<>=,;\n\000{^") ] ]
 
   let drop_spaces op bounds =
     (* clean spaces in element wise and kronecker operators *)
     let rec clean s i j =
-      if i = String.length s then
-        String.sub s 0 j
-      else if s.[i] = ' ' then
+      if i = Bytes.length s then
+        Bytes.sub s 0 j
+      else if Bytes.get s i = ' ' then
         clean s (succ i) j
-      else (s.[j] <- s.[i] ; clean s (succ i) (succ j))
+      else (Bytes.set s j (Bytes.get s i) ; clean s (succ i) (succ j))
     in
-    let nop = clean op 0 0 in
+    let nop = Bytes.(unsafe_to_string (clean (unsafe_of_string op) 0 0)) in
     if nop <> op then
       nop, [ bounds, Replace nop ;
              bounds, Warning (S Spaces_in_operator)]
@@ -711,15 +755,17 @@ end = struct
 
   let descr ?(warns = []) ?(comment = []) cstr ((sl, sc), (el, ec)) ctx =
     let warns = List.map (fun (bounds, warn) ->  ((ctx.src, bounds), warn)) warns in
-    { cstr ; comment ; loc = loc ctx.src sl sc el ec ; meta = warns }
+    { cstr ; comment ; loc = loc ctx.src sl sc el ec ; meta = warns ;
+      id = UUID.make () }
 
   let descr_for_seq ?(warns = []) ?(comment = []) cstr seq =
     let loc = merge_descr_locs seq in
     let warns = List.map (fun (bounds, warn) ->  ((fst loc, bounds), warn)) warns in
-    { cstr ; loc ; meta = warns ; comment }
+    { cstr ; loc ; meta = warns ; comment ; id = UUID.make () }
 
   let descr_exp descr =
-    { descr with cstr = Exp descr ; meta = [] ; comment = [] }
+    { descr with cstr = Exp descr ; meta = [] ; comment = [] ;
+                 id = UUID.make () }
 
   let string_descr ?warns (tok, (s, e)) ctx =
     descr ?warns tok (s, e) ctx
@@ -890,9 +936,11 @@ end = struct
        it to OCaml's converter, meaning we convert any 'D' exponent prefix
        to an 'E' and put a '0' instead of an empty exponent *)
   let float_of_string str =
-    (try str.[String.index str 'd'] <- 'e' with Not_found -> ()) ;
-    (try str.[String.index str 'D'] <- 'e' with Not_found -> ()) ;
-    let last =  str.[String.length str - 1] in
+    let str = Bytes.of_string str in
+    (try Bytes.(set str (index str 'd') 'e') with Not_found -> ()) ;
+    (try Bytes.(set str (index str 'D') 'e') with Not_found -> ()) ;
+    let last =  Bytes.(get str (length str - 1)) in
+    let str = Bytes.unsafe_to_string str in
     let str = if last = 'e' || last = 'E' then str ^ "0" else str in
     float_of_string str
 
@@ -900,6 +948,7 @@ end = struct
     discard spaces ctx.st ;
     let cp = checkpoint ctx.st in
     let default id =
+      (* TODO: Ambiguous_toplevel_expression *)
       restore ctx.st cp ;
       if id then
 	if ctx.in_function || not ctx.allow_toplevel_exprs then
@@ -910,8 +959,7 @@ end = struct
         let as_expr = parse_toplevel_expr ctx in
         match as_expr.cstr with
         | Error -> `Stmt (parse_shell_call ctx)
-        (* TODO: better heuristics ? macro generate 'typeof id = function' ? *)
-        | Var _ ->
+        | Var { cstr } ->
           let cp' = checkpoint ctx.st in
           restore ctx.st cp ;
           if exec shell_call_start ctx.st then begin
@@ -921,7 +969,10 @@ end = struct
             restore ctx.st cp' ;
             `Stmt (descr_exp as_expr)
           end
-        | _ -> `Stmt (descr_exp as_expr)
+        | _ ->
+          (* it's a bit ugly: we try to parse the line as a shell call
+             to issue an ambiguity warning *)
+          `Stmt (descr_exp as_expr)
       else  `Stmt (descr_exp (parse_toplevel_expr ctx))
     in
     match peek ctx.st with
@@ -1133,7 +1184,7 @@ end = struct
            | _ -> failwith "too many pattern parameters") ;
           let cstr = 
             if spec = "var" then
-              Var { var with cstr = var.cstr ^ regexp }
+              Var { var with cstr = var.cstr ^ regexp ; id = UUID.make () }
             else
               String (var.cstr ^ regexp)
           in
@@ -1176,7 +1227,8 @@ end = struct
                 (from_last "pattern" ctx)
                 ctx
             | Some exps ->
-              let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) })) in
+              let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) ;
+                                                id = UUID.make () })) in
               descr_exp (ghost (Call (name, exps, Tuplified))))
          | _, (_, _) ->
            drop_end 0 ;
@@ -1188,7 +1240,6 @@ end = struct
       (fun ctx kind drop_end ->
          let rec loop acc =
            let arg, term = parse_expr ctx in
-           let cp = checkpoint ctx.st in
            match term with
            | (`Fake | `Term _), "," ->
              loop ((None, arg) :: acc)
@@ -1202,7 +1253,8 @@ end = struct
            failwith "missing pattern"
          else
            let exps = loop [] in
-           let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) })) in
+           let name = ghost (Var ({ var with cstr = (var.cstr ^ kind) ;
+                                             id = UUID.make () })) in
            ghost (Call (name, exps, Tuplified)))
       (fun d -> d)
     
@@ -1293,8 +1345,9 @@ end = struct
         (* let dot, dot_bounds = extract_from ctx.st cp in *)
         blanks := !blanks || exec (plus space) ctx.st ;
         let eloc = point ctx.st in
+        let cpident = checkpoint ctx.st in
         if exec ident ctx.st then
-          let name, name_bounds = extract_from ctx.st cp in
+          let name, name_bounds = extract_from ctx.st cpident in
           let warns = if keyword name then [ name_bounds, Warning (S Misused_keyword) ] else [] in
           let rexpr = descr ~warns (String name) name_bounds ctx in
 	  let expr = Call (lexpr, [ None, rexpr], Field) in
@@ -1768,9 +1821,9 @@ end = struct
     match read ctx.st with
     | ')' -> terminate [ "(" ]
     | ']' -> terminate [ "{" ; "[" ]
-    | '}' -> terminate [ "{" ; "[" ]
+    | '}' -> terminate [ "{" ; "[" ; "pattern" ]
     | '\000' -> terminate [ "program" ; "expression" ]
-    | ',' -> terminate [ "{" ; "[" ; "(" ; "expression" ]
+    | ',' -> terminate [ "{" ; "[" ; "(" ; "expression" ; "pattern" ]
     | ';' -> terminate [ "{" ; "[" ; "(" ; "expression" ]
     | '\n' -> terminate [ "{" ; "[" ; "expression" ]
     | ':' ->
@@ -1856,8 +1909,7 @@ end = struct
             transpose loc expr eacc
           else
             transpose loc var eacc
-	else
-        if exec comment ctx.st then
+	else if exec comment ctx.st then
           let com = extract_from ctx.st cp in
           let term = detect_end_of_expr terminators ctx in
           List.rev (`Comment com :: eacc), term

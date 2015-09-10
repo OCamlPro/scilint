@@ -13,12 +13,59 @@ open ScilabLocations
 open ScilintWarning
 open Printf
 
+
+(* Notes on how to add:
+   - duplicate names in the pattern, restricted to matching the same
+     variable multplie times (%x? = %?, %x? = %?)
+   - arbitrarily deeply nested subgroups (%?{rec, <pattern>})
+     The idea is more or less to simulate what a tree automaton would do,
+     without having to code a more heavy infrastructure.
+
+  For the {rec} specifier:
+   - Traverse the pattern and uniquely name (ints ?) all subpatterns
+     for quick retrieval and ordering in a set.
+   - Search the AST for deeper subpatterns first, starting with
+     variables. Continue up to the pattern root.
+   - At every step, store any matched subpattern in the corresponding
+     AST node, and propagate it into the node's ancestors, up to the
+     root. Thanks to this, performing a recursive search (the rec
+     aribtrary nesting specifier) is just a lookup in the match table
+     of the currently  examined node.
+
+  For the duplicate variable names:
+    - identify all such variable placeholders and check that they only
+      match identifiers (constants ? any finite set ?)
+    - in the previous algorithm, not only store the subpatterns, but
+      also the instanciation of their variable holes. In case of a
+      dependent match, these variables are inspected. Otherwise, there
+      is no overcost. *)
+
+
 (** Option set if matched groups are to be displayed *)
 let print_memory = ref false
 let print_memory_arg =
   ("-show-groups", Arg.Set print_memory,
    "Display the sub-expressions matched by named patterns")
 
+(*
+(** The pattern is parsed as a sequence of statements, but could read
+    as other kinds of expressions. Instead of expliciting all of these
+    equivalences in the matching algorithm, we generate a bunch of
+    similar statement constructions for each expression. Then, when
+    matching a pattern against an expression node, we match it over
+    its equivalent instead.*)
+let stmt_equivalents exp =
+  let specific =
+    match exp.cstr with
+    | Identity exps ->
+      let item e = { e with cstr = Exp e } in
+      let items = List.map item exps in
+      { exp with cstr = Seq items }
+
+    | _ -> []
+  in { exp with cstr = Exp exp } :: specific
+
+*)
 (** Tests if a statement matches a pattern and returns the matched
     groups as a hash table. *)
 let matches stmt pat =
@@ -222,7 +269,7 @@ let search ast pat =
       let source, (start, _) = hd.loc in
       let stop = stop acc in
       { loc = source, (start, stop) ; cstr = Seq acc ;
-        meta = [] ; comment = [] }
+        meta = [] ; comment = [] ; id = UUID.make () }
   in
   let collector = object (self)
     inherit ast_iterator as dad
@@ -337,7 +384,7 @@ let main () =
          "    scifind 'disp (%?, %?)' *.sci" ;
          "  - find all calls to disp with two or more arguments" ;
          "    scifind 'disp (%?, %??)' *.sci" ;
-         "  - find all strings that contains sci (using a regexp)" ;
+         "  - find all strings that contains bob (using a regexp)" ;
          "    scifind '%?{str, \".*bob.*\"}' *.sci" ;
          "Advanced examples:" ;
          "  - find all tests using the '<' operator and display the operands" ;

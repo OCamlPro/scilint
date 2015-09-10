@@ -1,0 +1,82 @@
+<html>
+  <head>
+    <title>Sciweb</title>
+    <meta charset="UTF-8">
+    <style>
+    textarea.scilab-input {
+	    padding: 2px;
+	    background-color: #CCC;
+	    color: #000;
+	    margin: 0;
+	    display:block;
+	    border: 3px #CCC solid;
+	    width: 100%;
+	    resize: vertical;
+    }
+    textarea.scilab-input:focus {
+	    border: 3px #ADF solid;
+	    background-color: #ADF;
+	    color: #036;
+    }
+    textarea.scilab-input:hover {
+	    background-color: #DDD;
+    }
+    textarea.scilab-input:hover:focus {
+	    background-color: #CEF;
+    }
+    .scilab-output {
+	    padding: 5px;
+	    background-color: #8D8;
+	    color: #000;
+	    margin: 0;
+	    white-space: pre;
+    }
+    .scilab-error {
+	    padding: 5px;
+	    background-color: #D88;
+	    color: #000;
+	    margin: 0;
+	    white-space: pre;
+    }
+    .scilab-warning {
+	    padding: 5px;
+	    background-color: #DD8;
+	    color: #000;
+	    margin: 0;
+	    white-space: pre;
+    }
+    #scilab-tty {
+	    margin: 0;
+	    padding: 5px;
+	    background-color: #333;
+	    font-family: monospace;
+	    color: white;
+    }
+    #scilab-tty h1 {
+	    margin: 0;
+    }
+    #scilab-tty button {
+	    position: fixed;
+	    right: 10px;
+	    top: 10px;
+	    font-size: 150%;
+	    border: 5px #333 solid;
+    }
+    .scilab-input:not(:first-child) {
+	    margin: 5px 0 0 0
+    }
+    .scilab-invalidated {
+	    border: 12px pink dotted;
+    }
+    body {
+	    margin: 0px;
+	    padding: 0px;
+	    background-color: #333;
+    }
+    </style>
+    <script src="sciweb.js"></script>
+  </head>
+  <body>
+    <div id="scilab-tty"></div>
+  </body>
+</html>

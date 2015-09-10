@@ -336,7 +336,7 @@ let loc start_pos end_pos =
       else uncorrupt_loc start_pos end_pos
 
 let descr ?(warns = []) ?(comment = []) cstr loc =
-  { cstr ; comment ; loc ; meta = warns }
+  { cstr ; comment ; loc ; meta = warns ; id = UUID.make () }
 
 let string_descr ?warns str loc =
   descr ?warns str loc

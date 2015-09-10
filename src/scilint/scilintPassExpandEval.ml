@@ -132,13 +132,13 @@ let pass ast =
                            | _ -> raise Exit
                          end)
                        cells
-                   in { loc ; meta ; comment ; cstr } )
+                   in { loc ; meta ; comment ; cstr ; id = UUID.make () } )
                 cells
             in
             if !all_simple then
               let str = Pretty.to_compact_string [ ghost (Exp (ghost (Matrix parsed))) ] in
               let meta = (loc, Replace str) :: meta in
-              { cstr = Matrix parsed ; loc ; meta ; comment }
+              { cstr = Matrix parsed ; loc ; meta ; comment ; id = UUID.make () }
             else
               let defun = { name = ghost (var ^ "_f") ;
                             args = [] ; rets = [ ghost var ] ;

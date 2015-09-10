@@ -8,8 +8,10 @@
 *.cmxs
 *.cmxa
 *~
+*.automaton
+
 _obuild
-scilint.asm
+.depend_ocaml
 
 src/parser/scilabParser.ml
 src/parser/scilabParser.mli

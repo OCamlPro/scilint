@@ -26,20 +26,6 @@ let init_lexer_var () =
   last_token := SOF;
   matrix_level := 0
 
-let print_pos pos =
-  Printf.printf "%i %i %i" pos.pos_lnum pos.pos_bol pos.pos_cnum
-
-let print_lexbuf lexbuf =
-  Printf.printf "======================\n";
-  Printf.printf "lex_buffer : %s\n" lexbuf.lex_buffer;
-  Printf.printf "lex_buffer_len : %i\n" lexbuf.lex_buffer_len;
-  Printf.printf "lex_abs_pos : %i\n" lexbuf.lex_abs_pos;
-  Printf.printf "lex_start_pos : %i\n" lexbuf.lex_start_pos;
-  Printf.printf "lex_curr_pos : %i\n" lexbuf.lex_curr_pos;
-  Printf.printf "lex_last_pos : %i\n" lexbuf.lex_last_pos;    
-  Printf.printf "lex_start_p :"; print_pos lexbuf.lex_start_p; Printf.printf "\n";
-  Printf.printf "lex_curr_p :"; print_pos lexbuf.lex_curr_p; Printf.printf "\n======================\n\n"
-
 let return_token tok =
   if !shellmode_on then shellmode_on := false;
   last_token := tok;
@@ -115,13 +101,13 @@ let end_cmt lexbuf =
 (** xd-y -> xe-y
       xD-y -> xe-y **)
 let convert_scientific_notation str =
-  let s = String.copy str in
-  for i = 0 to String.length s - 1 do
-    match s.[i] with
-      'd' | 'D' -> s.[i] <- 'e'
+  let s = Bytes.of_string str in
+  for i = 0 to Bytes.length s - 1 do
+    match Bytes.get s i with
+      'd' | 'D' -> Bytes.set s i 'e'
     | _ -> ()
-  done;
-  s
+  done ;
+  Bytes.unsafe_to_string s
 
 let warning_only_scila5 msg lexbuf =
   let curr = lexbuf.Lexing.lex_curr_p in
@@ -134,12 +120,12 @@ let unicode_to_utf32le u =
   c1 = (u lsr 16) land 255 and
   c2 = (u lsr 8) land 255 and
   c3 = u land 255 in
-  let utf32 = String.make 4 '0' in
-  utf32.[0] <- Char.chr c3;
-  utf32.[1] <- Char.chr c2;
-  utf32.[2] <- Char.chr c1;
-  utf32.[3] <- Char.chr c0;
-  utf32
+  let utf32 = Bytes.make 4 '0' in
+  Bytes.set utf32 0 @@ Char.chr c3;
+  Bytes.set utf32 1 @@ Char.chr c2;
+  Bytes.set utf32 2 @@ Char.chr c1;
+  Bytes.set utf32 3 @@ Char.chr c0;
+  Bytes.unsafe_to_string utf32
 
 let utf_8_normalize s =
   let b = Buffer.create (String.length s * 3) in

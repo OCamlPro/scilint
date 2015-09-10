@@ -11,10 +11,10 @@
 module type ConverterParameters = sig
 
   (** Domain *)
-  module From : ScilabAst.Parameters
+  module From : ScilabAst.S
 
   (** Domain *)
-  module To : ScilabAst.Parameters
+  module To : ScilabAst.S
 
   (** Location converter *)
   val loc : From.loc -> To.loc
@@ -25,23 +25,22 @@ module type ConverterParameters = sig
 end
 
 module Make
-    (From : ScilabAst.Parameters)
-    (To : ScilabAst.Parameters)
-    (FromAst : module type of ScilabAst.Make (From))
-    (ToAst : module type of ScilabAst.Make (To))
+    (From : ScilabAst.S)
+    (To : ScilabAst.S)
     (Parameters : ConverterParameters with module From = From
                                        and module To = To) = struct
 
-  let rec convert_ast (ast : FromAst.ast) : ToAst.ast =
+  let rec convert_ast (ast : From.ast) : To.ast =
     List.map convert_stmt ast
   and convert_descr
-    : 'a 'b. ('a -> 'b) -> 'a FromAst.descr -> 'b ToAst.descr
-    = fun convert { FromAst.loc ; FromAst.meta ; FromAst.cstr ; FromAst.comment } ->
-    let open ToAst in
+    : 'a 'b. ('a -> 'b) -> 'a From.descr -> 'b To.descr
+    = fun convert { From.loc ; From.meta ; From.cstr ; From.comment } ->
+    let open To in
     { loc = Parameters.loc loc ;
       meta = Parameters.meta meta ;
       cstr = convert cstr ;
-      comment = List.map (convert_descr (fun x -> x)) comment }
+      comment = List.map (convert_descr (fun x -> x)) comment ;
+      id = UUID.make () }
 
   and convert_matrix_contents rows =
     let convert_row row = List.map convert_exp row in 
@@ -58,70 +57,70 @@ module Make
     convert_exp exp
 
   and convert_stmt_cstr cstr =
-    let open ToAst in
+    let open To in
     match cstr with
-    | FromAst.Assign (lefts, right) ->
+    | From.Assign (lefts, right) ->
       Assign (List.map (convert_exp) lefts, convert_exp right)
-    | FromAst.Seq stmts ->
+    | From.Seq stmts ->
       Seq (List.map (convert_stmt) stmts)
-    | FromAst.Defun { FromAst.name ; FromAst.args ; FromAst.rets ; FromAst.body } ->
+    | From.Defun { From.name ; From.args ; From.rets ; From.body } ->
       Defun { name = convert_var name ;
               args = List.map (convert_var) args ;
               rets = List.map (convert_var) rets ;
               body = convert_stmt body }
-    | FromAst.Exp exp ->
+    | From.Exp exp ->
       Exp (convert_exp exp)
-    | FromAst.Break ->
+    | From.Break ->
       Break
-    | FromAst.Continue ->
+    | From.Continue ->
       Continue
-    | FromAst.Comment text ->
+    | From.Comment text ->
       Comment text
-    | FromAst.For (it, range, body) ->
+    | From.For (it, range, body) ->
       For (convert_var it, convert_exp range, convert_stmt body)
-    | FromAst.If (cond, tbody, Some fbody)  ->
+    | From.If (cond, tbody, Some fbody)  ->
       If (convert_exp cond, convert_stmt tbody, Some (convert_stmt fbody)) 
-    | FromAst.If (cond, tbody, None)  ->
+    | From.If (cond, tbody, None)  ->
       If (convert_exp cond, convert_stmt tbody, None) 
-    | FromAst.Return  ->
+    | From.Return  ->
       Return 
-    | FromAst.Select { FromAst.cond ; FromAst.cases ; FromAst.default = None }  ->
+    | From.Select { From.cond ; From.cases ; From.default = None }  ->
       let cases = List.map (fun (e, s) -> convert_exp e, convert_stmt s) cases in
       Select { cond = convert_exp cond ; cases ; default = None } 
-    | FromAst.Select { FromAst.cond ; FromAst.cases ; FromAst.default = Some d }  ->
+    | From.Select { From.cond ; From.cases ; From.default = Some d }  ->
       let cases = List.map (fun (e, s) -> convert_exp e, convert_stmt s) cases in
       Select { cond = convert_exp cond ; cases ; default = Some (convert_stmt d) } 
-    | FromAst.Try (tbody, cbody)  ->
+    | From.Try (tbody, cbody)  ->
       Try (convert_stmt tbody, convert_stmt cbody) 
-    | FromAst.While (cond, tbody, Some fbody)  ->
+    | From.While (cond, tbody, Some fbody)  ->
       While (convert_exp cond, convert_stmt tbody, Some (convert_stmt fbody)) 
-    | FromAst.While (cond, tbody, None)  ->
+    | From.While (cond, tbody, None)  ->
       While (convert_exp cond, convert_stmt tbody, None) 
         
   and convert_exp_cstr cstr =
-    let open ToAst in
+    let open To in
     match cstr with
-    | FromAst.Call (name, args, kind) ->
+    | From.Call (name, args, kind) ->
       Call (convert_exp name, List.map (convert_arg) args, kind)
-    | FromAst.Identity args ->
+    | From.Identity args ->
       Identity (List.map (convert_exp) args)
-    | FromAst.Range (sexp, None, eexp) ->
+    | From.Range (sexp, None, eexp) ->
       Range (convert_exp sexp, None, convert_exp eexp)
-    | FromAst.Range (sexp, Some stepexp, eexp) ->
+    | From.Range (sexp, Some stepexp, eexp) ->
       Range (convert_exp sexp, Some (convert_exp stepexp), convert_exp eexp)
-    | FromAst.Var sym ->
+    | From.Var sym ->
       Var (convert_var sym)
-    | FromAst.Matrix rows ->
+    | From.Matrix rows ->
       Matrix (convert_matrix_contents rows)
-    | FromAst.Cell_array rows ->
+    | From.Cell_array rows ->
       Cell_array (convert_matrix_contents rows)
-    | FromAst.Unop (unop, exp) ->
+    | From.Unop (unop, exp) ->
       Unop (unop, convert_exp exp)
-    | FromAst.Op (op, lexp, rexp) ->
+    | From.Op (op, lexp, rexp) ->
       Op (op, convert_exp lexp, convert_exp rexp)
-    | FromAst.Bool b -> Bool b
-    | FromAst.Num n -> Num n
-    | FromAst.String s -> String s
-    | FromAst.Colon -> Colon
-    | FromAst.Error -> Error
+    | From.Bool b -> Bool b
+    | From.Num n -> Num n
+    | From.String s -> String s
+    | From.Colon -> Colon
+    | From.Error -> Error
 end

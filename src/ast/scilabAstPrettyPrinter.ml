@@ -160,7 +160,7 @@ module Make
                   ^^ nbsp ^^ document_of_exp rexp))
     | Error ->
       group_sp sp (string "error")
-        
+
   and document_of_op op =
     match op with
     | Plus -> string "+"
@@ -213,9 +213,9 @@ module Make
       | [] -> [], [], false
     in
     let pad s w =
-      let r = String.make (w + 1) ' ' in
-      String.blit s 0 r 0 (String.length s) ;
-      r.[String.length s] <- ',' ; r
+      let r = Bytes.make (w + 1) ' ' in
+      Bytes.blit_string s 0 r 0 (String.length s) ;
+      r.[String.length s] <- ',' ; Bytes.to_string r
     in
     let format_row w s =
       let rec loop acc w s =

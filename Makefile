@@ -1,16 +1,19 @@
 .PHONY: clean
 
 all: \
-  scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm \
-  scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte
+  scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm scilob.asm \
+  scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte scilob.byte \
+  sciweb.js
 
-OCAMLOPT=ocamlfind ocamlopt
-OCAMLC=ocamlfind ocamlc
+OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
+OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats
 OCAMLYACC=menhir
 OCAMLLEX=ocamllex
 OCAMLDEP=ocamlfind ocamldep
 
 OCAML_COMMON_MLS = \
+  src/third_party/ptmap.ml \
+  src/third_party/ptset.ml \
   src/common/scilintManual.ml \
   src/common/scilintWarning.ml \
   src/common/scilabLocations.ml \
@@ -20,6 +23,8 @@ OCAML_COMMON_MLS = \
   src/input/scilabTypedPrimitivesLoader.ml
 
 OCAML_COMMON_MLIS = \
+  src/third_party/ptset.mli \
+  src/third_party/ptmap.mli \
   src/common/scilintWarning.mli \
 
 src/input/scilabTypedPrimitivesParser.cmi: \
@@ -62,6 +67,41 @@ OCAML_SCINTAX_MLS = \
 OCAML_SCIFIND_MLS = \
   src/common/scilintOptions.ml \
   src/scifind/scifindMain.ml
+
+OCAML_SCILOB_MLS = \
+  src/common/scilintOptions.ml \
+  src/interp/interpStatePureOCaml.ml \
+  src/interp/interpValuesPureOCaml.ml \
+  src/interp/interpDispatcher.ml \
+  src/interp/interpCore.ml \
+  src/interp/interpMessages.ml \
+  src/interp/interpLib.ml \
+  src/interp/interpMathLib.ml \
+  src/interp/interp.ml \
+  src/interp/interpMain.ml
+
+OCAML_SCILOB_MLIS = \
+  src/interp/interpState.mli \
+  src/interp/interpValues.mli \
+
+OCAML_SCIWEB_MLS = \
+  src/common/scilintOptions.ml \
+  src/interp/interpStatePureOCaml.ml \
+  src/interp/interpValuesPureOCaml.ml \
+  src/interp/interpDispatcher.ml \
+  src/interp/interpCore.ml \
+  src/interp/interpMessages.ml \
+  src/interp/interpLib.ml \
+  src/interp/interpMathLib.ml \
+  src/interp/interp.ml \
+  src/common/tyxml_js_manip.ml \
+  src/interp/interpWebLib.ml \
+  src/interp/interpWebMain.ml
+
+OCAML_SCIWEB_MLIS = \
+  src/interp/interpState.mli \
+  src/interp/interpValues.mli \
+  src/common/tyxml_js_manip.mli
 
 OCAML_SCILINT_DOC_GEN_MLS = \
   src/docgen/scilintDocGenMain.ml
@@ -130,13 +170,47 @@ SCIFIND_CMIS = $(SCIFIND_MLS:.ml=.cmi) $(SCIFIND_MLIS:.mli=.cmi)
 SCIFIND_CMXS = $(SCIFIND_MLS:.ml=.cmx)
 SCIFIND_CMOS = $(SCIFIND_MLS:.ml=.cmo)
 
+########## SCILOB
+
+SCILOB_MLS = \
+	$(OCAML_COMMON_MLS) \
+	$(OCAML_AST_MLS) \
+	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
+	$(OCAML_SCILAB_SIX_PARSER_MLS) \
+	$(OCAML_SCILOB_MLS)
+
+SCILOB_MLIS = \
+	$(OCAML_COMMON_MLIS) \
+	$(OCAML_SCILOB_MLIS)
+
+SCILOB_CMIS = $(SCILOB_MLS:.ml=.cmi) $(SCILOB_MLIS:.mli=.cmi)
+SCILOB_CMXS = $(SCILOB_MLS:.ml=.cmx)
+SCILOB_CMOS = $(SCILOB_MLS:.ml=.cmo)
+
+########## SCIWEB
+
+SCIWEB_MLS = \
+	$(OCAML_COMMON_MLS) \
+	$(OCAML_AST_MLS) \
+	$(OCAML_SCILAB_FIVE_PARSER_MLS) \
+	$(OCAML_SCILAB_SIX_PARSER_MLS) \
+	$(OCAML_SCIWEB_MLS)
+
+SCIWEB_MLIS = \
+	$(OCAML_COMMON_MLIS) \
+	$(OCAML_SCIWEB_MLIS)
+
+SCIWEB_CMIS = $(SCIWEB_MLS:.ml=.cmi) $(SCIWEB_MLIS:.mli=.cmi)
+SCIWEB_CMXS = $(SCIWEB_MLS:.ml=.cmx)
+SCIWEB_CMOS = $(SCIWEB_MLS:.ml=.cmo)
+
 ########## SCILINT_DOC_GEN
 
 SCILINT_DOC_GEN_MLS = \
 	$(OCAML_COMMON_MLS) \
 	$(OCAML_SCILINT_DOC_GEN_MLS)
 
-SCILINIT_DOC_GEN_MLIS = \
+SCILINT_DOC_GEN_MLIS = \
 	$(OCAML_COMMON_MLIS) \
 
 SCILINT_DOC_GEN_CMIS = $(SCILINT_DOC_GEN_MLS:.ml=.cmi) $(SCILINT_DOC_GEN_MLIS:.mli=.cmi)
@@ -146,14 +220,16 @@ SCILINT_DOC_GEN_CMOS = $(SCILINT_DOC_GEN_MLS:.ml=.cmo)
 ########## COMMON FLAGS
 
 OCAML_INCL= \
-  -package 'unix,uutf,pprint,re,re.posix' \
+  -package 'unix,uutf,pprint,re,re.pcre,re.posix' \
   -I src/common -I src/input \
   -I src/ast -I src/parser/scilab_five \
+  -I src/third_party \
   -I src/parser/scilab_six \
   -I src/scilint -I src/scilint/config \
   -I src/scintax -I src/scifind -I src/docgen \
+  -I src/interp
 
-OPTFLAGS = -g -fPIC $(OCAML_INCL)
+OPTFLAGS = -g -fPIC
 
 scilint.asm : $(SCILINT_CMXS)
 	$(OCAMLOPT) $(OCAML_INCL) -linkpkg \
@@ -167,8 +243,27 @@ scifind.asm : $(SCIFIND_CMXS)
 	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCIFIND_CMXS)
 
+sciweb.byte: $(SCIWEB_CMOS)
+	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) \
+          -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' -linkpkg -o $@ $^
+
+sciweb.js: sciweb.byte
+	js_of_ocaml +weak.js $< -o $@
+
+src/common/tyxml_js_manip.cmo \
+src/common/tyxml_js_manip.cmi \
+src/interp/interpWebLib.cmo \
+src/interp/interpWebMain.cmo: \
+        OCAML_INCL += \
+          -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
+          -syntax camlp4o
+
+scilob.asm : $(SCILOB_CMXS)
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
+          -o $@ $(SCILOB_CMXS)
+
 scilint_doc_gen.asm : $(SCILINT_DOC_GEN_CMXS)
-	$(OCAMLOPT) $(OPTFLAGS) -package 'unix' -linkpkg \
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -package 'unix' -linkpkg \
           -o $@ $(SCILINT_DOC_GEN_CMXS)
 
 scilint.byte : $(SCILINT_CMOS)
@@ -183,15 +278,36 @@ scifind.byte : $(SCIFIND_CMOS)
 	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCIFIND_CMOS)
 
+scilob.byte : $(SCILOB_CMOS)
+	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) -linkpkg \
+          -o $@ $(SCILOB_CMOS)
+
 scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
 	$(OCAMLC) $(OCAML_INCL) -package 'unix' -linkpkg \
           -o $@ $(SCILINT_DOC_GEN_CMOS)
 
 .depend_ocaml: $(SCILINT_DOC_GEN_MLS) $(SCILINT_DOC_GEN_MLIS) \
+	  $(OCAML_COMMON_MLS) $(OCAML_COMMON_MLIS) \
 	  $(SCILINT_MLS) $(SCILINT_MLIS) \
 	  $(SCINTAX_MLS) $(SCINTAX_MLIS) \
-	  $(SCIFIND_MLS) $(SCIFIND_MLIS)
-	$(OCAMLDEP) -native $(OCAML_INCL) $^ > .depend_ocaml
+	  $(SCIFIND_MLS) $(SCIFIND_MLIS) \
+	  $(SCILOB_MLS) $(SCILOB_MLIS) \
+	  $(SCIWEB_MLS) $(SCIWEB_MLIS)
+	$(OCAMLDEP) -native $(OCAML_INCL) \
+          $(SCILINT_DOC_GEN_MLS) $(SCILINT_DOC_GEN_MLIS) \
+	  $(OCAML_COMMON_MLS) $(OCAML_COMMON_MLIS) \
+	  $(SCILINT_MLS) $(SCILINT_MLIS) \
+	  $(SCINTAX_MLS) $(SCINTAX_MLIS) \
+	  $(SCIFIND_MLS) $(SCIFIND_MLIS) \
+	  $(SCILOB_MLS) $(SCILOB_MLIS) \
+          > .depend_ocaml
+	$(OCAMLDEP) $(OCAML_INCL) \
+          src/common/tyxml_js_manip.ml \
+          src/common/tyxml_js_manip.mli \
+          src/interp/interpWebLib.ml \
+          src/interp/interpWebMain.ml \
+          -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
+          -syntax camlp4o >> .depend_ocaml
 
 include .depend_ocaml
 
@@ -202,19 +318,19 @@ ChangeLog.txt: scilint_doc_gen.asm
 .SUFFIXES: .ml .mli .mll .mly .cmi .cmx .cmo
 
 .ml.cmx:
-	$(OCAMLOPT) $(OPTFLAGS) -c $<
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -c $<
 
 .ml.cmo:
 	$(OCAMLC) $(OCAML_INCL) -c $<
 
 .mll.cmx:
 	$(OCAMLLEX) $<
-	$(OCAMLOPT) $(OPTFLAGS) -c $*.ml
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -c $*.ml
 
 .mli.cmi:
-	$(OCAMLOPT) $(OPTFLAGS) -c $<
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -c $<
 
-.mll.ml: 
+.mll.ml:
 	$(OCAMLLEX) $<
 
 .mly.ml:
@@ -222,8 +338,8 @@ ChangeLog.txt: scilint_doc_gen.asm
 
 .mly.cmx:
 	$(OCAMLYACC) $<
-	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
-	$(OCAMLOPT) $(OPTFLAGS) -c $*.ml
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -c $*.mli
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -c $*.ml
 
 .mly.cmo:
 	$(OCAMLYACC) $<
@@ -232,7 +348,7 @@ ChangeLog.txt: scilint_doc_gen.asm
 
 .mly.cmi:
 	$(OCAMLYACC) -v $<
-	$(OCAMLOPT) $(OPTFLAGS) -c $*.mli
+	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -c $*.mli
 
 clean:
 	rm -fr \
@@ -244,6 +360,7 @@ clean:
 	  scilint_doc_gen.byte scilint_doc_gen.asm \
 	  scintax.byte scintax.asm \
 	  scifind.byte scifind.asm \
+	  scilob.byte scilob.asm \
 	  src/parser/scilab_six/scilabSixLexer.ml \
 	  src/parser/scilab_six/scilabSixGenParser.ml \
 	  src/parser/scilab_six/scilabSixGenParser.mli \

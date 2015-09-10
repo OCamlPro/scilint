@@ -154,7 +154,7 @@ let warnings_to_html filename =
 
     List.iter (fun (number, name, version, info) ->
       if version <> "" then begin
-        Printf.fprintf oc "<tr><td class=\"id\"><a href=\"#W%003d\">W%03d</a></td>"
+        Printf.fprintf oc "<tr><td class=\"id\"><a href=\"#W%03d\">W%03d</a></td>"
           number number;
         Printf.fprintf oc "<td class=\"title\">%s<td class=\"version\">%s</td></tr>\n"
           name version
