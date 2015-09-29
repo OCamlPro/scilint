@@ -68,6 +68,7 @@ let treat_source state lib source =
 
 module D = Tyxml_js.Html5
 module M = Tyxml_js_manip.Manip
+module A = Archimedes 
 
 type 'a step =
   { mutable phrase: string;
@@ -166,7 +167,9 @@ end
 
 let coerceanchor : Dom_html.anchorElement Js.t -> anchorElement Js.t = Js.Unsafe.coerce
 let coerceback : anchorElement Js.t -> Dom_html.anchorElement Js.t  = Js.Unsafe.coerce
-let coerceToNode : Dom_html.anchorElement Js.t -> Dom.node Js.t = Js.Unsafe.coerce
+let coerceCanvasToNode : Dom_html.canvasElement Js.t -> Dom.node Js.t = Js.Unsafe.coerce
+let coerceEltToNode : Dom_html.element Js.t -> Dom.node Js.t = Js.Unsafe.coerce
+let coerceEltToDiv : Dom.node Js.t -> Dom_html.divElement Js.t = Js.Unsafe.coerce
 
 let plot points =
   let open InterpLib in
@@ -195,7 +198,104 @@ let plot points =
   let link = Dom_html.createA(Dom_html.document) in
   M.Ev.onclick savepng (fun _ev -> Js.Unsafe.fun_call (Js.Unsafe.variable "saveaspng") [| Js.Unsafe.inject "thesvg"|];);
   D.(div ~a:[a_class["c3-title"]; a_id "graphe"] [ pcdata graph_title; bindto; savepng ])
-  
+    
+
+
+
+
+let archimedes_plot plots nb =
+  let w = Js.Opt.case (Dom_html.document##getElementById(Js.string "blabla"))
+    (fun () -> failwith "no div blabla")
+    (fun d -> Js.Opt.case (Dom_html.CoerceTo.div(d))
+      (fun () -> failwith " coercion problem")
+      (fun res -> ref (float_of_int res##clientWidth) )) in
+  Firebug.console##log(Js.string @@ "div width = "^ (string_of_float !w));
+  (* let w = ref (match Js.Optdef.to_option Dom_html.window##innerWidth with *)
+  (* 	| None -> failwith "no height" *)
+  (* 	| Some x -> float_of_int x (\*500.*\)) in *)
+  let h = ref 500. in
+  let canvas_id = "canvas"^(string_of_int nb) in 
+  Js.Opt.case (Dom_html.document##getElementById (Js.string canvas_id))
+    (fun () -> ())
+    (fun c ->     match Js.Opt.to_option c##parentNode with
+    | None -> failwith "no parent node"
+    | Some p -> p##removeChild(coerceEltToNode c); ());
+  let canv = D.(canvas ~a:[a_id canvas_id; a_width (int_of_float (!w)); a_height (int_of_float !h)] []) in
+  M.appendToBody canv;
+  let vp = A.init ~w:(!w) ~h:(!h) ["canvas"; canvas_id] in
+  let open InterpLib in 
+  let draw canv plots vp =
+    let rec draw_all canvas plots vp =
+      match plots with
+      | [] -> canvas
+      | hd :: tl ->
+      (* A.set_line_width vp 1.; *)
+	A.Viewport.set_color vp (A.Color.rgb 0. 0. 0.);
+	(match hd.xlabel with
+	| Some lab ->  A.Viewport.xlabel vp lab);
+	(match hd.ylabel with
+	| Some lab ->  A.Viewport.ylabel vp lab);
+	(match hd.title with
+	| Some t ->  A.Viewport.title vp t);
+	
+	let xtics = A.Tics.(Equidistants ((Number 5), 0., 1., 0)) in
+	let ytics = A.Tics.(Equidistants ((Number 5), 0., 1., 0)) in
+	A.Axes.y ~grid:hd.grid ~tics:ytics ~offset:(Relative 0.) vp;
+	A.Axes.x ~grid:hd.grid ~tics:xtics ~offset:(Relative 0.) vp;
+	A.Axes.y ~grid:false ~tics:ytics ~offset:(Relative 0.) vp;
+	
+	A.Viewport.set_color vp A.Color.blue;
+	A.Array.xy  ~style:hd.style vp (Array.of_list hd.xvalues) (Array.of_list hd.yvalues);
+	
+	draw_all canvas tl vp in
+    draw_all canv plots.plots vp;
+    if (A.Viewport.xmin vp) > 0. then A.xrange vp 0. (A.Viewport.xmax vp);
+    if (A.Viewport.xmax vp) < 0. then A.xrange vp (A.Viewport.xmin vp) 0.;
+    if (A.Viewport.ymin vp) > 0. then A.yrange vp 0. (A.Viewport.ymax vp);
+    if (A.Viewport.ymax vp) < 0. then A.yrange vp (A.Viewport.ymin vp) 0.;
+    A.close vp in
+  draw canv plots vp;
+  let cx = ref 0 and cy = ref 0 in
+
+  M.Ev.onmousedown canv (fun _ev ->
+    cx := _ev##clientX ; cy := _ev##clientY ; true
+  );
+  M.Ev.onmouseup canv (fun _ev ->
+    let xx = _ev##clientX - !cx and yy = _ev##clientY - !cy in
+    (Tyxml_js.To_dom.of_canvas(canv))##getContext(Dom_html._2d_)##clearRect(0.,0., !w, !h);
+    (Tyxml_js.To_dom.of_canvas(canv))##getContext(Dom_html._2d_)##translate(float_of_int xx, float_of_int yy);
+    let vp = A.init ~w:(!w) ~h:(!h) ["canvas"; canvas_id] in
+    let open InterpLib in 
+    draw canv plots vp;  true);
+  Dom_html.document##body##removeChild(coerceCanvasToNode(Tyxml_js.To_dom.of_canvas canv));
+
+  let zoomin = D.(button [entity "#10133"]) in
+  M.Ev.onclick zoomin (fun _ev ->
+    (Tyxml_js.To_dom.of_canvas(canv))##getContext(Dom_html._2d_)##clearRect(0.,0., !w, !h);
+    w := !w +. 100. ; h := !h +. 100.;
+    let vp = A.init ~w:(!w) ~h:(!h) ["canvas"; canvas_id] in
+    let open InterpLib in 
+    draw canv plots vp;  true);
+  let zoomout = D.(button [entity "#10134"]) in
+  M.Ev.onclick zoomout (fun _ev ->
+    (Tyxml_js.To_dom.of_canvas(canv))##getContext(Dom_html._2d_)##clearRect(0.,0., !w, !h);
+    w := !w -. 100. ; h := !h -. 100. ;
+    let vp = A.init ~w:(!w) ~h:(!h) ["canvas"; canvas_id] in
+    let open InterpLib in 
+    draw canv plots vp;  true);
+  let f _ev = 
+    (Tyxml_js.To_dom.of_canvas(canv))##getContext(Dom_html._2d_)##clearRect(0.,0., !w, !h);
+    w := Js.Opt.case (Dom_html.document##getElementById(Js.string "blabla"))
+      (fun () -> failwith "no div blabla")
+      (fun d -> Js.Opt.case (Dom_html.CoerceTo.div(d))
+	(fun () -> failwith " coercion problem")
+	(fun res -> float_of_int res##clientWidth));
+    h := 500. ;
+    let vp = A.init ~w:(!w) ~h:(!h) ["canvas"; canvas_id] in
+    let open InterpLib in 
+    draw canv plots vp; true in
+  Dom_html.window##onresize <- (Dom_html.handler (fun e -> Js.bool (f e)));
+  D.(div [ canv ; zoomin ; zoomout ])
 
 
 type attr = {
@@ -495,6 +595,7 @@ let session_to_array step =
   array
 
 
+
 let rec render ?(eval = true) step =
   let state = InterpCore.State.init () in
   let lib = InterpCore.Dispatcher.create () in
@@ -530,7 +631,7 @@ let rec render ?(eval = true) step =
 		  tr_list := !tr_list @ [D.(tr !td_list)] ;
 		  td_list := [];
 		done;
-		D.([table ~a:[a_class ["scilab-matrix"]] !tr_list]) in
+		D.([table ~a:[a_class ["scilab-matrix"] ] !tr_list]) in
 
 	      let format_vlist l =
 		let res = ref [] in
@@ -600,10 +701,13 @@ let rec render ?(eval = true) step =
       xval.(i) <- float_of_int (i-10);(***************************************)
     done; 
     cstep.liste <- !liste @ [ plot_canvas xval (fun v -> sin(v))  ] ;*)
-    if InterpLib.plots_in_canvas.updated = true then 
-      ( cstep.liste <- cstep.liste @ [ plot_canvas2 (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).xvalues) (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).yvalues) ] ; InterpLib.plots_in_canvas.updated <- false;  ) ; 
-      (*cstep.liste <- cstep.liste @ [ plot InterpLib.plots.liste ] ; InterpLib.plots.updated <- false;*) ; 
+
  
+    if InterpLib.all_plots.updated = true then 
+      (*cstep.liste <- cstep.liste @ [ plot_canvas2 (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).xvalues) (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).yvalues) ] ; InterpLib.plots_in_canvas.updated <- false;*) 
+      (*cstep.liste <- cstep.liste @ [ plot InterpLib.plots.liste ] ; InterpLib.plots.updated <- false;*)
+      (cstep.liste <- cstep.liste @ [ archimedes_plot InterpLib.all_plots nb ];
+       InterpLib.all_plots.updated <- false);
     (match cstep.next with 
       | None ->
       if cstep.phrase <> "" then
@@ -628,7 +732,7 @@ let rec render ?(eval = true) step =
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in
   
-  if eval then ( InterpLib.plots.liste <- [] ; update_results step 1 ; ());
+  if eval then ( InterpLib.all_plots.plots <- [] ; InterpLib.all_plots.updated <- false; update_results step 1 ; ());
   let run_button = D.(button ~a:[a_class ["button-run"]] [ entity "#9881" ] ) in
   M.Ev.onclick run_button (fun _ev -> render step ; true) ;
 
@@ -708,14 +812,14 @@ let rec render ?(eval = true) step =
   M.Ev.onclick save_file_button (fun _ev -> Js.Unsafe.meth_call link "click" [||]; true);
   let clear_button = D.(button [pcdata "Clear"]) in
   M.Ev.onclick clear_button (fun _ev -> 
-    let r = Dom_html.window##confirm(Js.string ("Are you sure you want erase the page ?")) in
+    let r = Dom_html.window##confirm(Js.string ("Are you sure you want to erase the page ?")) in
     match Js.to_bool r with
     | true -> step.phrase <- ""; step.phrase <- ""; step.next <- None; current_session := ""; render step; true
     | _ -> true);
   let button_box = D.(div ~a:[a_class ["div-button"]] [run_button ; save_button; list_sessions step; save_file_button; load_file_button; clear_button]) in
-  let contents = D.(h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb  -  "; tyxlink]) :: [input_session_name] @ [button_box] @ format_result step 1 false in
+  let contents = D.(h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb  -  "; tyxlink]) :: [input_session_name] @ [button_box] @ [D.(div ~a:[a_id "blabla"] [])] @ format_result step 1 false in
   update_tty contents;
-  Js.Unsafe.fun_call (Js.Unsafe.variable "inline") [||];
+  (*Js.Unsafe.fun_call (Js.Unsafe.variable "inline") [||];*)
   (* prevent C3.js bug *)
    Js.Unsafe.meth_call Dom_html.window "onresize" [||]
 
