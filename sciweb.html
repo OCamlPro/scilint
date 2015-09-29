@@ -30,6 +30,7 @@
 	    color: #000;
 	    margin: 0;
 	    white-space: pre;
+      overflow: auto; <!-- for table overflow -->
     }
     .scilab-error {
 	    padding: 5px;
@@ -53,19 +54,19 @@
 	    color: #000;
 	    margin: 0;
 	    white-space: pre;
-      width:95%;
-      display:block;
-      margin-left:auto;
-      margin-right:auto;
+      <!-- width:95%; -->
+      <!-- display:block; -->
+      <!-- margin-left:auto; -->
+      <!-- margin-right:auto; -->
     }
     
     table.scilab-matrix { 
             border-left: 1px solid black;
             border-right: 1px solid black;
-            display : inline-table
+            display : inline-table;
     }
     td { padding: 4px; }
-    ul { diplay : inline-block }
+    ul { display : inline-block }
 
     #scilab-tty {
 	    margin: 0;
@@ -161,9 +162,10 @@
     .div-button {
     position: absolute;
     display: inline;
-    right: 5px;
+    right: 1px;
     }
     
+      canvas {background-color:#FFF;  }
 
     body {
 	    margin: 0px;
@@ -171,17 +173,12 @@
 	    background-color: #333;
     }
     </style>
-    <!-- Load c3.css -->
-    <!-- <link href="src/third_party/c3-0.4.10/c3.css" rel="stylesheet" type="text/css"> -->
-
-    <!-- Load d3.js and c3.js -->
-    <script src="src/third_party/d3/d3.js" charset="utf-8"></script>
-    <script src="src/third_party/c3-0.4.10/c3.min.js"></script>
-
+        
     <script src="sciweb.js"></script>
+    
   </head>
   <body>
-    <div id="scilab-tty"></div>
+    <div id="scilab-tty">  </div>
     
   </body>
 </html>

@@ -172,7 +172,7 @@ let () =
 
 (*--- Charts ---*)
 
-let () =
+(*let () =
   register_library (fun state lib ->
     register_function lib state "plot" (matrix real @* matrix real @-> void)
       (fun xMat yMat ->
@@ -187,7 +187,7 @@ let () =
 	InterpLib.plots.liste <- 
 	  InterpLib.plots.liste @ [{kind = `L; x_label=None; y_label=None; title=None; points = !l}] ;
 	InterpLib.plots.updated <- true)
-  )
+  )*)
 
 let () =
   register_library (fun state lib ->
@@ -211,12 +211,78 @@ let () =
   register_library (fun state lib ->
     register_function lib state "clf" (void @-> void)
       (fun () ->
-	InterpLib.plots.liste <- [];
+	InterpLib.all_plots.plots <- [];
 	(*InterpLib.plots.updated <- true;*)
       )
   )
 
 let () =
+  register_library (fun state lib ->
+    register_function lib state "plot" (matrix real @* matrix real @-> void)
+      (fun xMat yMat ->
+	let w, h = matrix_size xMat in
+	let xval = ref []  and yval = ref [] in
+	for i=1 to w do
+	  for j=1 to h do
+	    xval := !xval @ [matrix_get xMat i j];
+	    yval := !yval @ [matrix_get yMat i j];
+	  done;
+	done;
+	let open InterpLib in
+	InterpLib.all_plots.plots <- 
+	  InterpLib.all_plots.plots @ [{style =`Lines; xvalues = !xval; yvalues = !yval;
+			    grid=false; title=Some ""; xlabel=Some ""; ylabel=Some ""}] ;
+	InterpLib.all_plots.updated <- true)
+  )
+
+let () =
+  register_library (fun state lib ->
+    register_function lib state "bar" (matrix real @* matrix real @-> void)
+      (fun xMat yMat ->
+	let w, h = matrix_size xMat in
+	let xval = ref []  and yval = ref [] in
+	for i=1 to w do
+	  for j=1 to h do
+	    xval := !xval @ [matrix_get xMat i j];
+	    yval := !yval @ [matrix_get yMat i j];
+	  done;
+	done;
+	let open InterpLib in
+	InterpLib.all_plots.plots <- 
+	  InterpLib.all_plots.plots @ [{style =(`Bars 0.1); xvalues = !xval; yvalues = !yval;
+			    grid=false; title=Some ""; xlabel=Some ""; ylabel=Some ""}] ;
+	InterpLib.all_plots.updated <- true)
+  )
+
+
+let () =
+  register_library (fun state lib ->
+    register_function lib state "xtitle" (string @* opt string @* opt string @-> void)
+      (fun title xlabel ylabel ->
+	let hd = List.hd InterpLib.all_plots.plots in
+	let tl = List.tl InterpLib.all_plots.plots in
+	let new_hd = match xlabel, ylabel with
+	  | None, None -> {hd with title=Some title}
+	  | Some x, Some y -> {hd with xlabel=Some x; ylabel=Some y; title=Some title}
+	  | None, Some y -> {hd with ylabel=Some y; title=Some title}
+	  | Some x, None -> {hd with xlabel=Some x; title=Some title} in
+	InterpLib.all_plots.plots <- new_hd :: tl;
+	InterpLib.all_plots.updated <- true)
+  )
+
+let () =
+  register_library (fun state lib ->
+    register_function lib state "grid" (void @-> void)
+      (fun () -> 
+	let hd = List.hd InterpLib.all_plots.plots in
+	let tl = List.tl InterpLib.all_plots.plots in
+	let new_hd = {hd with grid = not hd.grid} in
+	InterpLib.all_plots.plots <- new_hd :: tl;
+	InterpLib.all_plots.updated <- true)
+  )
+
+
+(*let () =
   register_library (fun state lib ->
     register_function lib state "bar" ( matrix real @* opt(matrix real) @-> void)
       (fun xMat yMat ->
@@ -238,9 +304,9 @@ let () =
 	InterpLib.plots.liste <- 
 	  InterpLib.plots.liste @ [{kind=`B; x_label=None; y_label=None; title=None; points= !l}] ;
 	InterpLib.plots.updated <- true)
-  )
+  )*)
 
-let () =
+(*let () =
   register_library (fun state lib ->
     register_function lib state "xtitles" (string @* opt string @* opt string @-> void)
       (fun title x_label y_label -> 
@@ -252,7 +318,7 @@ let () =
 	  | _, _ -> raise Bad_type in
 	InterpLib.plots.liste <- new_hd :: tl;
 	InterpLib.plots.updated <- true)
-  )
+  )*)
 
 (*--- Statistiques ---*)
 
@@ -372,3 +438,17 @@ let () =
 	res)
   )
 
+
+let () =
+  register_library (fun state lib ->
+    register_function lib state "sin" (matrix real @-> matrix real)
+      (fun mat -> 
+	let w, h = matrix_size mat in
+	let res = matrix_create (Number Real) w h in
+	for i=1 to w do
+	  for j=1 to h do
+	    matrix_set res i j (sin ( matrix_get mat i j))
+	  done;
+	done;
+	res)
+  ) 
