@@ -1,0 +1,6 @@
+To compile with OPAM:
+=====================
+
+# opam switch 4.02.1
+# opam install re menhir uutf pprint js_of_ocaml tyxml 
+# make

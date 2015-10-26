@@ -3,7 +3,7 @@
 all: \
   scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm scilob.asm \
   scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte scilob.byte \
-  sciweb.js
+  sciweb.js scilint.cmxa
 
 OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
 OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats 
@@ -236,6 +236,9 @@ OPTFLAGS = -g -fPIC
 scilint.asm : $(SCILINT_CMXS)
 	$(OCAMLOPT) $(OCAML_INCL) -linkpkg \
 	  -o $@ $(SCILINT_CMXS)
+
+scilint.cmxa : $(SCILINT_CMXS)
+	ocamlopt -a -o $@ $(SCILINT_CMXS)
 
 scintax.asm : $(SCINTAX_CMXS)
 	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
