@@ -1,0 +1,11 @@
+!! No ATOMS packet for now !!
+
+How make it load automatically in scilab :
+- cp jit_ocaml dir into SCI/modules
+- edit SCI/etc/modules.xml and add jit_ocaml to the list
+- edit SCI/configure.ac and add modules/jit_ocaml/Makefile to AC_CONFIG_FILES
+- edit SCI/modules/Makefile.am and add jit_ocaml to SUBDIRS 
+- ./configure
+- autoconf
+- automake
+- make
