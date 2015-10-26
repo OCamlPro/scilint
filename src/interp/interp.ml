@@ -65,8 +65,8 @@ let rec interpret (state : state) (lib : lib) ast =
           State.put state ans res ;
           message (Result ("ans", res)) ;
         end else begin
-          State.clear state ans ;
-          messages [ Located (exp.loc, Warning ScilintWarning.(P (Variable_cleared "ans"))) ]
+          State.clear state ans
+	(* messages [ Located (exp.loc, Warning ScilintWarning.(P (Variable_cleared "ans"))) ] *)
         end
       | Assign (lexps, exp) -> (* TODO: argn, resume, etc. *)
         let lhs = List.length lexps in

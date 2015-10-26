@@ -1,9 +1,9 @@
 <html>
   <head>
     <title>Sciweb</title>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8"/>
     <style>
-    textarea.scilab-input {
+      textarea.scilab-input {
 	    padding: 2px;
 	    background-color: #CCC;
 	    color: #000;
@@ -24,12 +24,13 @@
     textarea.scilab-input:hover:focus {
 	    background-color: #CEF;
     }
-    .scilab-output {
+    .scilab-result {
 	    padding: 5px;
 	    background-color: #8D8;
 	    color: #000;
 	    margin: 0;
 	    white-space: pre;
+      overflow: auto; <!-- for table overflow -->
     }
     .scilab-error {
 	    padding: 5px;
@@ -45,6 +46,28 @@
 	    margin: 0;
 	    white-space: pre;
     }
+    
+    .scilab-hint { color: red; }
+    .scilab-output { 
+	    padding: 5px;
+	    background-color: #FFF;
+	    color: #000;
+	    margin: 0;
+	    white-space: pre;
+      <!-- width:95%; -->
+      <!-- display:block; -->
+      <!-- margin-left:auto; -->
+      <!-- margin-right:auto; -->
+    }
+    
+    table.scilab-matrix { 
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            display : inline-table;
+    }
+    td { padding: 4px; }
+    ul { display : inline-block }
+
     #scilab-tty {
 	    margin: 0;
 	    padding: 5px;
@@ -55,28 +78,109 @@
     #scilab-tty h1 {
 	    margin: 0;
     }
-    #scilab-tty button {
-	    position: fixed;
-	    right: 10px;
-	    top: 10px;
-	    font-size: 150%;
+
+    button {
+	    font-size: 160%;
 	    border: 5px #333 solid;
     }
+    
+    ul.scilab-sessions {
+    	    list-style-type:none;
+    }
+    ul > li { white-space:nowrap; }
+    .onclick-button {
+    	    position: relative;
+    	    display: inline-block;
+    }
+    .onclick-button:focus {
+    	    pointer-events: none;
+    }
+    .onclick-list {
+    	    position: absolute;
+    	    z-index: 1;
+    	    opacity:0;
+    	    visibility: hidden;
+    	    transition: visibility 0.5s;
+    	    background-color: #300;
+    	    
+    	    margin-top: 19px;
+    	    margin-left: 0px;
+    	    padding: 5px;
+    }
+    .onclick-button:focus > .onclick-list {
+    	    opacity:1;
+    	    visibility: visible;
+    	    pointer-events: auto;
+    }
+    
+    .onclick-list button {
+    	    background: transparent none repeat scroll 0% 0%;
+    	    border: medium none;
+    	    color: inherit;
+    	    outline: 0px none;
+    	    cursor: pointer;
+    	    font-size: 150%;
+    }
+    .onclick-list button:hover { color: red; }
+    .onclick-button::before {
+    	    content: " Load ";
+    	    font-size: 160%;
+	    border: 5px #333 solid;
+    	    background-color: #FFF;
+    	    color: #333;
+    padding-left: 5px;
+    padding-right: 5px;
+    }
+    
+    .onclick-list::before {
+    	    content: "";
+    	    width: 0px;
+    	    height: 0px;
+    	    border-bottom: 10px solid #300;
+    	    border-left: 10px solid transparent;
+    	    border-right: 10px solid transparent;
+    	    position: absolute;
+    	    top: -10px;
+    }
+
+    .input-session-name {
+    display:inline; 
+    padding:2px;
+    border: 5px #333 solid;
+    background: #333;
+    color:white;
+    font-size: 150%;
+    }
+
     .scilab-input:not(:first-child) {
 	    margin: 5px 0 0 0
     }
     .scilab-invalidated {
-	    border: 12px pink dotted;
+    border: 12px pink dotted;
     }
+     
+    .div-button {
+    position: absolute;
+    display: inline;
+    right: 1px;
+    }
+    
+      canvas {background-color:#FFF;  }
+
     body {
 	    margin: 0px;
 	    padding: 0px;
 	    background-color: #333;
     }
     </style>
+        
     <script src="sciweb.js"></script>
+    
   </head>
   <body>
-    <div id="scilab-tty"></div>
+    <div id="scilab-tty">  </div>
+    
   </body>
 </html>
+   
+

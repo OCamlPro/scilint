@@ -6,7 +6,7 @@ all: \
   sciweb.js
 
 OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
-OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats
+OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats 
 OCAMLYACC=menhir
 OCAMLLEX=ocamllex
 OCAMLDEP=ocamlfind ocamldep
@@ -95,13 +95,15 @@ OCAML_SCIWEB_MLS = \
   src/interp/interpMathLib.ml \
   src/interp/interp.ml \
   src/common/tyxml_js_manip.ml \
+  src/third_party/c3.ml \
   src/interp/interpWebLib.ml \
   src/interp/interpWebMain.ml
 
 OCAML_SCIWEB_MLIS = \
   src/interp/interpState.mli \
   src/interp/interpValues.mli \
-  src/common/tyxml_js_manip.mli
+  src/common/tyxml_js_manip.mli \
+  src/third_party/c3.mli
 
 OCAML_SCILINT_DOC_GEN_MLS = \
   src/docgen/scilintDocGenMain.ml
@@ -218,9 +220,9 @@ SCILINT_DOC_GEN_CMXS = $(SCILINT_DOC_GEN_MLS:.ml=.cmx)
 SCILINT_DOC_GEN_CMOS = $(SCILINT_DOC_GEN_MLS:.ml=.cmo)
 
 ########## COMMON FLAGS
-
+ ############ ajoute pour archimedes ##########	
 OCAML_INCL= \
-  -package 'unix,uutf,pprint,re,re.pcre,re.posix' \
+  -package 'archimedes,unix,uutf,pprint,re,re.pcre,re.posix' \
   -I src/common -I src/input \
   -I src/ast -I src/parser/scilab_five \
   -I src/third_party \
@@ -243,9 +245,14 @@ scifind.asm : $(SCIFIND_CMXS)
 	$(OCAMLOPT) $(OPTFLAGS) $(OCAML_INCL) -linkpkg \
           -o $@ $(SCIFIND_CMXS)
 
-sciweb.byte: $(SCIWEB_CMOS)
+###### ajoute pour archimedes ######
+archimedes_canvas.cmo: archimedes_canvas.ml
+	$(OCAMLC) -c -package 'archimedes,js_of_ocaml.tyxml,js_of_ocaml.syntax' -syntax camlp4o archimedes_canvas.ml
+
+
+sciweb.byte: archimedes_canvas.cmo $(SCIWEB_CMOS) 
 	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) \
-          -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' -linkpkg -o $@ $^
+          -package 'archimedes, js_of_ocaml.tyxml,js_of_ocaml.syntax' -linkpkg -o $@ $^
 
 sciweb.js: sciweb.byte
 	js_of_ocaml +weak.js $< -o $@
@@ -253,6 +260,8 @@ sciweb.js: sciweb.byte
 src/common/tyxml_js_manip.cmo \
 src/common/tyxml_js_manip.cmi \
 src/interp/interpWebLib.cmo \
+src/third_party/c3.cmi \
+src/third_party/c3.cmo \
 src/interp/interpWebMain.cmo: \
         OCAML_INCL += \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
@@ -304,6 +313,8 @@ scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
 	$(OCAMLDEP) $(OCAML_INCL) \
           src/common/tyxml_js_manip.ml \
           src/common/tyxml_js_manip.mli \
+          src/third_party/c3.ml \
+          src/third_party/c3.mli \
           src/interp/interpWebLib.ml \
           src/interp/interpWebMain.ml \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
