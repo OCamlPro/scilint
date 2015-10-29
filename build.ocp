@@ -91,11 +91,11 @@ end
 
 begin program "scilint"
   dirname += [ "src/scilint" ]
-  files = [
+    files = [
     "scilabUtils.ml"
     "scilintProject.ml"
-    "scilintPassExpandEval.ml"
     "scilabFiveFunctionAnalyze.ml"
+    "scilintPassExpandEval.ml"
     "scilintMain.ml"
    ]
 
@@ -123,7 +123,8 @@ begin program "scilob"
   requires = [
     "scilab_parser"
     "unix"
-    "re.pcre"
+      "re.pcre"
+      "archimedes"
   ]
 end
 

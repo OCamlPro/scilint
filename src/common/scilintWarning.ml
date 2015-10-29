@@ -129,45 +129,45 @@ and format_loc ppf ?(inline = false) loc =
 let rec format_local_warning ppf descr =
   match descr with
   | Uninitialized_var s ->
-    Format.fprintf ppf "variable %s not initialized" s
+    Format.fprintf ppf "variable %S not initialized" s
   | Unused_arg s  ->
-    Format.fprintf ppf "variable %s not used" s
+    Format.fprintf ppf "variable %S not used" s
   | Duplicate_arg s  ->
-    Format.fprintf ppf "argument %s appears several times" s
+    Format.fprintf ppf "argument %S appears several times" s
   | Duplicate_return s  ->
-    Format.fprintf ppf "return variable %s appears several times" s
+    Format.fprintf ppf "return variable %S appears several times" s
   | Var_arg_ret s  ->
-    Format.fprintf ppf "return variable %s is also an argument" s
+    Format.fprintf ppf "return variable %S is also an argument" s
   | Unset_ret s  ->
-    Format.fprintf ppf "return variable %s is not set" s
+    Format.fprintf ppf "return variable %S is not set" s
   | Return_as_var s  ->
-    Format.fprintf ppf "return variable %s is used as a local variable" s
+    Format.fprintf ppf "return variable %S is used as a local variable" s
   | For_var_modif  ->
     Format.fprintf ppf "modifying variable of for loop does not change loop behavior"
   | Primitive_with_too_many_arguments (fun_name, i) ->
-    Format.fprintf ppf "primitive %s called with too many arguments (>= %d)" fun_name i
+    Format.fprintf ppf "primitive %S called with too many arguments (>= %d)" fun_name i
   | Overriding_primitive fun_name ->
-    Format.fprintf ppf "overriding primitive %s" fun_name
+    Format.fprintf ppf "overriding primitive %S" fun_name
   | Overriding_declared_function (fun_name, fun_loc) ->
-    Format.fprintf ppf "overriding function %s already declared at %a"
+    Format.fprintf ppf "overriding function %S already declared at %a"
       fun_name (format_loc ~inline:true) fun_loc
   | Overriding_toplevel_function (fun_name, file) ->
-    Format.fprintf ppf "overriding toplevel function %s of file %S" fun_name file
+    Format.fprintf ppf "overriding toplevel function %S of file %S" fun_name file
   | Unexpected_string_argument (fun_name, i, s, possible) ->
-    Format.fprintf ppf "Function %s does not expect %S as argument %d. \
-             Should be one of: %s"
+    Format.fprintf ppf "Function %S does not expect %S as argument %d. \
+             Should be one of: %S"
       fun_name s (succ i) (String.concat ", " possible)
   | Unexpected_argument_type (fun_name, i, expected_type) ->
-    Format.fprintf ppf "Function %s expects type %s as argument %d"
+    Format.fprintf ppf "Function %S expects type %S as argument %d"
       fun_name expected_type (succ i)
   | Int_argument_out_of_range (fun_name, i, v, min, max) ->
-    Format.fprintf ppf "Function %s does not expect %.1f as argument %d. \
+    Format.fprintf ppf "Function %S does not expect %.1f as argument %d. \
                         Should be between %d and %d"
       fun_name v (succ i) min max
   | Var_def_not_used var_name ->
-    Format.fprintf ppf "variable %s defined but not used" var_name
+    Format.fprintf ppf "variable %S defined but not used" var_name
   | Var_redef_not_used var_name ->
-    Format.fprintf ppf "variable %s redefined before being used" var_name
+    Format.fprintf ppf "variable %S redefined before being used" var_name
   | Break_outside_loop ->
     Format.fprintf ppf "break outside of loop"
   | Continue_outside_loop ->
@@ -251,7 +251,7 @@ and format_style_warning ppf descr =
   | Keyword_as_shell_arg ->
     Format.fprintf ppf "keywords in shell args should be quoted"
   | Deprecated arg ->
-    Format.fprintf ppf "deprecated %s" arg
+    Format.fprintf ppf "deprecated %S" arg
   | Ambiguous_dot_left_of_oper ->
     Format.fprintf ppf "ambiguous decimal dot before operator"
   | Ambiguous_dot_right_of_oper ->
@@ -263,7 +263,7 @@ and format_style_warning ppf descr =
 and format_program_warning ppf descr =
   match descr with
   | Variable_cleared n ->
-    Format.fprintf ppf "variable %s cleared" n
+    Format.fprintf ppf "variable %S cleared" n
   | Null_result ->
     Format.fprintf ppf "this expression returns a null result"
   | Too_few_arguments 1 ->
@@ -287,11 +287,11 @@ and format_program_warning ppf descr =
   | Unused_results nb ->
     Format.fprintf ppf "%d results of this expression are ignored" nb
   | Unused_argument_label n ->
-    Format.fprintf ppf "argument name %s unused" n
+    Format.fprintf ppf "argument name %S unused" n
   | Duplicate_argument_label lbl ->
-    Format.fprintf ppf "argument name %s provided twice" lbl
+    Format.fprintf ppf "argument name %S provided twice" lbl
   | Unbound_argument_label lbl ->
-    Format.fprintf ppf "argument name %s unknown to the function" lbl
+    Format.fprintf ppf "argument name %S unknown to the function" lbl
 
 (** Builds a displayable version of a location *)
 let string_of_loc loc =
@@ -402,7 +402,7 @@ let format_messages format messages ppf =
       List.iter (fun (n, v) -> Format.fprintf ppf " %s=%S" n v)
     in
     let markup n a c =
-      let c ppf () = c ppf in 
+      let c ppf () = c ppf in
       Format.fprintf ppf "@[<hv 2><%s%a>@,%a@;<0 -2>@]</%s>" n attrs a c () n
     and ocmarkup n a =
       Format.fprintf ppf "<%s%a/>" n attrs a
@@ -507,7 +507,7 @@ let format_messages format messages ppf =
             markup "results" [] (fun _ ->
                 let rec sep = function
                   | [] -> ()
-                  | [ m ] -> message m 
+                  | [ m ] -> message m
                   | m :: ms -> message m ; br () ; sep ms
                 in
                 sep messages))) ;

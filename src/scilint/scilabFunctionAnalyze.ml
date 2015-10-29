@@ -97,7 +97,7 @@ let array_forall f t =
 let function_call_analysis = Hashtbl.create 113
 
 let loc ast_loc =
-  ((ast_loc.first_line, ast_loc.first_column), 
+  ((ast_loc.first_line, ast_loc.first_column),
    (ast_loc.last_line, ast_loc.last_column))
 
 let local_warning (file, ast_loc) descr =
@@ -302,10 +302,10 @@ and analyze_ast st e = match e.exp_desc with
   | Dec dec -> analyze_dec st dec
 
 and analyze_cntrl loc st = function
-  | BreakExp -> 
+  | BreakExp ->
       if st.level_for = 0 && st.level_while = 0
       then local_warning (!file, loc) (Break_outside_loop)
-  | ContinueExp -> 
+  | ContinueExp ->
       if st.level_for = 0 && st.level_while = 0
       then local_warning (!file, loc) (Continue_outside_loop)
   | ForExp forExp ->
@@ -449,7 +449,7 @@ and analyze_dec st = function
       (* W016 *)
       SetSyWithLoc.iter (fun (sy, loc) ->
         if sy <> fun_sy
-          && not (SetSyWithLoc.mem (sy, loc) new_st.args_sy) 
+          && not (SetSyWithLoc.mem (sy, loc) new_st.args_sy)
           && not (SetSyWithLoc.mem (sy, loc) ret_vars)
           && not (SetSyWithLoc.mem (sy, loc) new_st.used_sy) then
           local_warning (!file, loc) (Var_def_not_used sy.symbol_name)
