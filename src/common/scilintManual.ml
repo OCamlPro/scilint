@@ -382,9 +382,9 @@ let style_warnings_info =
 ]
 
 let style_warnings = [
- 601, "Function names should start with lowercase", [0;4], [] ;
- 602, "Function names should not contain digits", [0;4], [] ;
- 603, "Inconsistent string delimiters", [0;4], [
+ 001, "Function names should start with lowercase", [0;4], [] ;
+ 002, "Function names should not contain digits", [0;4], [] ;
+ 003, "Inconsistent string delimiters", [0;4], [
    PAR [
      S "A string starting with a " ;
      SCODE "\"" ;
@@ -402,7 +402,7 @@ let style_warnings = [
      SCODE "\"this is a quote: ''\""
    ]
  ] ;
- 604, "Inconsistent matrix delimiters", [0;4], [
+ 004, "Inconsistent matrix delimiters", [0;4], [
    PAR [
      S "A string starting with a " ;
      SCODE "[" ;
@@ -415,7 +415,7 @@ let style_warnings = [
      S ")."
    ]
  ] ;
- 605, "Inconsistent matrix separators", [], [
+ 005, "Inconsistent matrix separators", [], [
    PAR [
      S "This warning is issued when spaces and comas are both used to \
         separate the cells of a single matrix litteral which can lead to misreadings." ;
@@ -428,11 +428,11 @@ let style_warnings = [
         all semicolons by line breaks."
    ]
  ] ;
- 606, "Spaces in operator", [0 ;4], [
+ 006, "Spaces in operator", [0 ;4], [
    PAR [ S "Scilab's interpreter accepts spaces inside some operators, such as " ;
          SCODE ". * ." ; S " which is not a good idea." ]
  ] ;
- 607, "Spaces around dot", [0 ;4], [
+ 007, "Spaces around dot", [0 ;4], [
    PAR [ S "In some cases, a space before the dot of a field access gives a different \
            sense to the code line. For instance, " ;
          SCODE "v.f = 3" ;
@@ -442,32 +442,32 @@ let style_warnings = [
          S "It is thus a good idea to avoid spaces around all dots."
    ]
  ] ;
- 608, "Missing function parameters", [0 ;4], [
+ 008, "Missing function parameters", [0 ;4], [
    PAR [ S "It is recommended to make explicit an empty list of arguments by writing " ;
          SCODE "()" ;
          S " instead of just breaking the line after the function name."
    ]
  ] ;
- 609, "Missing catch", [0 ;4], [
+ 009, "Missing catch", [0 ;4], [
    PAR [ S "A try block without a catch statement is probably useless." ]
  ] ;
- 610, "Misused keyword", [0 ;4], [
+ 010, "Misused keyword", [0 ;4], [
    PAR [ S "Using a language keyword as a variable, field name or anything but a keyword \
             makes code difficult to read." ] ;
    PAR [ S "To correct this, rename the variable." ]
  ] ;
- 611, "Keyword as shell arg", [0 ;4], [
+ 011, "Keyword as shell arg", [0 ;4], [
    PAR [ S "Using a language keyword unquoted inside a shell call such as in " ;
          SCODE "disp end";
          S " makes code difficult to read." ] ;
    PAR [ S "To correct this, surround the keyword with quotes, such as " ;
          SCODE "disp 'end'" ]
  ] ;
- 612, "Deprecated", [0 ;4], [
+ 012, "Deprecated", [0 ;4], [
    PAR [ S "This warning is issued when a deprecated function, operator or \
             construct is encountered." ]
  ] ;
- 613, "Ambiguous dot at left of operator", [0 ;4], [
+ 013, "Ambiguous dot at left of operator", [0 ;4], [
    PAR [ S "This warning is issued when a sequence similar to " ;
          SCODE "3./2" ;
          S " is encountered, which is interpreted as " ;
@@ -477,7 +477,7 @@ let style_warnings = [
    PAR [ S "To correct it, just insert a space if you meant a dotted operator \
             or remove the dot otherwise." ]
  ] ;
- 614, "Ambiguous dot at right of operator", [0 ;4], [
+ 014, "Ambiguous dot at right of operator", [0 ;4], [
    PAR [ S "This warning is issued when a sequence similar to " ;
          SCODE "3/.2" ;
          S " is encountered, which is interpreted as " ;
@@ -493,23 +493,28 @@ let style_warnings = [
 let warnings = [
   "Function Warnings",
   function_warnings_info,
-  function_warnings;
+  function_warnings,
+  'L';
 
   "File Warnings",
   file_warnings_info,
-  file_warnings;
+  file_warnings,
+  'F';
 
   "Global Warnings",
   global_warnings_info,
-  global_warnings;
+  global_warnings,
+  'G';
 
   "Typing Warnings",
   typing_warnings_info,
-  typing_warnings;
+  typing_warnings,
+  'T';
 
   "Style Warnings",
   style_warnings_info,
-  style_warnings;
+  style_warnings,
+  'S';
 
 ]
 
@@ -560,20 +565,21 @@ let changelog = [
       ];
     ];
 
+    "0.4", "Oct 29, 2015", [
     (* To insert for next release:
-       "Warning W601: function names should start with lowercase";
-       "Warning W602: function names should not contain digits";
-       "Warning W603: Inconsistent string delimiters";
-       "Warning W604: Inconsistent matrix delimiters";
-       "Warning W606: Spaces in operator";
-       "Warning W607: Spaces around dot";
-       "Warning W608: Missing function parameters";
-       "Warning W609: Missing catch";
+       "Warning S001: function names should start with lowercase";
+       "Warning S002: function names should not contain digits";
+       "Warning S003: Inconsistent string delimiters";
+       "Warning S004: Inconsistent matrix delimiters";
+       "Warning S006: Spaces in operator";
+       "Warning S007: Spaces around dot";
+       "Warning S008: Missing function parameters";
+       "Warning S009: Missing catch";
        "Warning W610: Misused keyword";
        "Warning W611: Keyword as shell arg";
        "Warning W612: Deprecated";
        "Warning W613: Ambiguous dot at left of operator";
        "Warning W614: Ambiguous dot at right of operator"; *)
-  ]
+    ]
 
-
+]

@@ -2,13 +2,14 @@
 open ScilintManual
 
 let warnings = List.map (fun
-    (warnings_title, warnings_info, warnings) ->
+    (warnings_title, warnings_info, warnings, warning_letter) ->
     (warnings_title, warnings_info,
      List.map (fun
        (number, name, version, info) ->
        (number, name, String.concat "." (List.map string_of_int version),
         info)
-     ) warnings)
+     ) warnings,
+     warning_letter)
   ) warnings
 
 let rec latex_of_format doc =
@@ -50,7 +51,7 @@ let warnings_to_latex filename =
 
   Printf.fprintf oc "\\section{Warning Tables}\n\n";
 
-  List.iter (fun (warnings_title, warnings_info, warnings) ->
+  List.iter (fun (warnings_title, warnings_info, warnings, warning_letter) ->
 
     Printf.fprintf oc "\\subsection{%s}\n" warnings_title;
     Printf.fprintf oc "\n%s\n\n" (latex_of_formats warnings_info);
@@ -59,19 +60,20 @@ let warnings_to_latex filename =
     Printf.fprintf oc "Identifier & Title & Implemented      \\\\ \\hline\n";
 
     List.iter (fun (number, name, version, info) ->
-      Printf.fprintf oc "W%03d & %s & %s \\\\ \\hline\n"
+      Printf.fprintf oc "%c%03d & %s & %s \\\\ \\hline\n"
+        warning_letter
         number name version
     ) warnings;
     Printf.fprintf oc "\\end{tabular}\n\n";
   ) warnings;
 
-  List.iter (fun (warnings_title, warnings_info, warnings) ->
+  List.iter (fun (warnings_title, warnings_info, warnings, warning_letter) ->
 
     Printf.fprintf oc "\\section{%s}\n" warnings_title;
     Printf.fprintf oc "\n%s\n\n" (latex_of_formats warnings_info);
 
     List.iter (fun (number, name, version, info) ->
-      Printf.fprintf oc "\\subsection{W%03d --- %s}\n\n" number name;
+      Printf.fprintf oc "\\subsection{%c%03d --- %s}\n\n" warning_letter number name;
       Printf.fprintf oc "\n%s\n\n" (latex_of_formats info);
     ) warnings;
 
@@ -144,7 +146,7 @@ let warnings_to_html filename =
 
   Printf.fprintf oc "<h2>Warning Tables</h2>";
 
-  List.iter (fun (warnings_title, warnings_info, warnings) ->
+  List.iter (fun (warnings_title, warnings_info, warnings, warning_letter) ->
 
     Printf.fprintf oc "<h3>%s</h3>\n" warnings_title;
     Printf.fprintf oc "%s\n" (html_of_formats warnings_info);
@@ -154,8 +156,8 @@ let warnings_to_html filename =
 
     List.iter (fun (number, name, version, info) ->
       if version <> "" then begin
-        Printf.fprintf oc "<tr><td class=\"id\"><a href=\"#W%03d\">W%03d</a></td>"
-          number number;
+        Printf.fprintf oc "<tr><td class=\"id\"><a href=\"#%c%03d\">%c%03d</a></td>"
+          warning_letter number warning_letter number;
         Printf.fprintf oc "<td class=\"title\">%s<td class=\"version\">%s</td></tr>\n"
           name version
       end
@@ -163,15 +165,15 @@ let warnings_to_html filename =
     Printf.fprintf oc "</table>\n";
   ) warnings;
 
-  List.iter (fun (warnings_title, warnings_info, warnings) ->
+  List.iter (fun (warnings_title, warnings_info, warnings, warning_letter) ->
 
     Printf.fprintf oc "<h2>%s</h2>\n" warnings_title;
     Printf.fprintf oc "%s\n" (html_of_formats warnings_info);
 
     List.iter (fun (number, name, version, info) ->
       if version <> "" then begin
-        Printf.fprintf oc "<a name=\"W%03d\"> </a>" number;
-        Printf.fprintf oc "<h3>W%03d --- %s</h3>\n" number name;
+        Printf.fprintf oc "<a name=\"%c%03d\"> </a>" warning_letter number;
+        Printf.fprintf oc "<h3>%c%03d --- %s</h3>\n" warning_letter number name;
         Printf.fprintf oc "%s\n" (html_of_formats info);
       end
     ) warnings;
