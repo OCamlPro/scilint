@@ -10,7 +10,6 @@
 open ScilabParserAst
 open ScilintWarning
 open ScilintOptions
-open Printf
 
 (** called by the main on each code source passed on th CLI *)
 let treat_source source =
@@ -22,24 +21,24 @@ let treat_source source =
   in
   let ast =
     if !print_time then begin
-      printf "Parsing %s ...%!" (string_of_source source) ;
+      Printf.printf "Parsing %s ...%!" (string_of_source source) ;
       let t0 = Sys.time () in
       let ast = parse () in
       let t1 = Sys.time () in
-      printf "\b\b\bdone in %gms.\n%!" ((t1 -. t0) *. 1000.) ;
+      Printf.printf "\b\b\bdone in %gms.\n%!" ((t1 -. t0) *. 1000.) ;
       ast
     end else parse ()
   in
   let ast = List.fold_left (fun r (name, anal) -> anal r) ast !passes in
   if !print_ast then begin
-    printf "Syntax tree:\n" ;
+    Printf.printf "Syntax tree:\n" ;
     Sexp.pretty_output stdout ast ;
-    printf "\n"
+    Printf.printf "\n"
   end ;
   if !pretty_print then begin
-    printf "Pretty printed:\n" ;
+    Printf.printf "Pretty printed:\n" ;
     Pretty.pretty_output stdout ast ;
-    printf "\n"
+    Printf.printf "\n"
   end ;
   if !print_messages then begin
     let messages = collect_messages ast in
@@ -50,7 +49,6 @@ let treat_source source =
 let interactive () =
   print_ast := true ;
   let rec interp acc nb =
-    let open Printf in
     Printf.printf "--> %!" ;
     let phrase =
       try input_line stdin
@@ -63,8 +61,8 @@ let interactive () =
       let acc = if acc = "" then acc else acc ^ "\n" in
       interp (acc ^ phrase) nb
   in
-  printf "Welcome to Scilint's interactive mode\n%!" ;
-  printf "Type your phrases, leave an empty line to submit, Ctrl-C to quit\n%!" ;
+  Printf.printf "Welcome to Scilint's interactive mode\n%!" ;
+  Printf.printf "Type your phrases, leave an empty line to submit, Ctrl-C to quit\n%!" ;
   interp "" 0
 
 (** where the args are passed and all the fun starts *)
@@ -84,4 +82,7 @@ let main () =
   List.iter treat_source (List.rev !sources) ;
   if !toplevel_mode then interactive ()
 
-let _ = main ()
+let _ =
+  ScilabFiveFunctionAnalyze.register ();
+  ScilintPassExpandEval.register ();
+  main ()

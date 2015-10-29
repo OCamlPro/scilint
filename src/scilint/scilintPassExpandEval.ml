@@ -84,11 +84,11 @@ let pass ast =
         begin match parse loc code with
           | { cstr = Assign (_, { cstr = Error })} :: _ ->
             exp
-          | [ { cstr = Assign (_, exp')} ]  -> 
+          | [ { cstr = Assign (_, exp')} ]  ->
             let str = Pretty.to_compact_string [ ghost (Exp exp') ] in
             let meta = (exp.loc, Replace str) :: exp.meta in
             { exp' with meta }
-          | { cstr = Assign (_, exp)} :: _ as instrs -> 
+          | { cstr = Assign (_, exp)} :: _ as instrs ->
             self # push (ghost (Defun { name = ghost (var ^ "_f") ;
                                         args = [] ; rets = [ ghost var ] ;
                                         body = ghost (Seq instrs) })) ;
@@ -153,7 +153,7 @@ let pass ast =
   end in
   rewriter # ast ast
 
-let _ = (* plug it in *)
+let register () = (* plug it in *)
   ScilintOptions.add_pass
     "expand-eval" pass
     "expansion of 'eval' and 'deff'"

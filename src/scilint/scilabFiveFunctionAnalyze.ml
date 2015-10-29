@@ -1,7 +1,7 @@
 open ScilabParserAst
 open ScilintWarning
 open ScilintProject
-open ScilabAst 
+open ScilabAst
 
 exception IdentExtractError
 
@@ -46,13 +46,13 @@ let new_state level_fun =
 let print_state st =
   Printf.printf "level_control = %i\n" st.level_control;
   Printf.printf "init :\n";
-  SetSy.iter (fun (sy, _, i) -> 
+  SetSy.iter (fun (sy, _, i) ->
     Printf.printf "  - %s(%i)\n" sy i) st.init_sy;
   Printf.printf "\nused :\n";
-  SetSy.iter (fun (sy, _, i) -> 
+  SetSy.iter (fun (sy, _, i) ->
     Printf.printf "  - %s(%i)\n" sy i) st.used_sy;
   Printf.printf "\nescaped :\n";
-  SetSy.iter (fun (sy, _, i) -> 
+  SetSy.iter (fun (sy, _, i) ->
     Printf.printf "  - %s(%i)\n" sy i) st.escaped_sy;
   Printf.printf "\n"
 
@@ -60,7 +60,7 @@ let is_in_control_level sy set control =
   SetSy.exists (fun (symb, loc, i) -> symb = sy && i = control) set
 
 let merge_state_ife st st1 st2 =
-  (* We can merge with intersection to be able to have warning 
+  (* We can merge with intersection to be able to have warning
      on variable init/used in only one branch *)
   st.used_sy <- SetSy.union st1.used_sy st2.used_sy;
   st.init_sy <- SetSy.union st1.init_sy st2.init_sy;
@@ -88,8 +88,8 @@ let function_call_analysis = Hashtbl.create 113
 let rec get_assign_ident state e = match e.cstr with
     | Call (name, args, Field) -> get_assign_ident state name
     | Call (name, args, Tuplified) ->
-        let state = 
-          List.fold_left (fun acc (_, arg) -> 
+        let state =
+          List.fold_left (fun acc (_, arg) ->
             analyze_exp acc arg) state args in
         begin match name.cstr with
           | Var sym -> (sym.cstr, sym.loc)
@@ -116,95 +116,95 @@ let rec get_assign_ident state e = match e.cstr with
 and analyze_stmt state stmt = match stmt.cstr with
   | Assign ([left], right) ->
       begin
-        try 
-          match left.cstr with 
+        try
+          match left.cstr with
             | Call (name, args, Tuplified) ->
                 let state = analyze_exp state right in
                 let sy_name, sy_loc = get_assign_ident state name in
                 if not (SetSy.mem (sy_name, sy_loc, 0) state.init_sy)
-                then state.init_sy <- 
+                then state.init_sy <-
                   SetSy.add (sy_name, sy_loc, state.level_control) state.init_sy;
-                List.fold_left (fun acc (_, arg) -> 
+                List.fold_left (fun acc (_, arg) ->
                   analyze_exp acc arg) state args
-            | _ -> 
+            | _ ->
                 let state = analyze_exp state right in
                 let (sy, loc) = get_assign_ident state left in
                 if state.level_for <> 0 && SetSy.mem (sy, loc, 0) state.for_sy
-                then left.meta <- (loc, Warning (L For_var_modif))::left.meta; 
+                then left.meta <- (loc, Warning (L For_var_modif))::left.meta;
                 if is_in_control_level sy state.init_sy state.level_control &&
                   not (SetSy.mem (sy, loc, 0) state.used_sy)
-                then left.meta <- 
-                  (loc, Warning (L (Var_redef_not_used sy)))::left.meta; 
+                then left.meta <-
+                  (loc, Warning (L (Var_redef_not_used sy)))::left.meta;
                 state.init_sy <- SetSy.remove (sy, loc, 0) state.init_sy;
-                state.init_sy <- 
+                state.init_sy <-
                   SetSy.add (sy, loc, state.level_control) state.init_sy;
                 state
         with IdentExtractError ->
-          stmt.meta <- 
-            (stmt.loc, Warning 
-              (W ("Not implemented", 
+          stmt.meta <-
+            (stmt.loc, Warning
+              (W ("Not implemented",
                   "Cannot find ident for this statement")))::stmt.meta;
           state
       end
-  | Assign (lefts, right) -> 
-      begin 
+  | Assign (lefts, right) ->
+      begin
         try
           let list_sy = List.map (get_assign_ident state) lefts in
           let state = analyze_exp state right in
           state.init_sy <-
             List.fold_left (fun acc (sy, loc) ->
               if state.level_for <> 0 && SetSy.mem (sy, loc, 0) state.for_sy
-              then stmt.meta <- (loc, Warning (L For_var_modif))::stmt.meta; 
+              then stmt.meta <- (loc, Warning (L For_var_modif))::stmt.meta;
               if is_in_control_level sy acc state.level_control &&
                 not (SetSy.mem (sy, loc, 0) state.used_sy)
-              then stmt.meta <- 
-                (loc, Warning (L (Var_redef_not_used sy)))::stmt.meta; 
+              then stmt.meta <-
+                (loc, Warning (L (Var_redef_not_used sy)))::stmt.meta;
               let acc = SetSy.remove (sy, loc, 0) acc in
-              SetSy.add (sy, loc, state.level_control) acc) 
+              SetSy.add (sy, loc, state.level_control) acc)
             state.init_sy list_sy;
           state
         with IdentExtractError ->
             (* TODO: we should always succeed at finding the assigned exp,
                even if we don't use the information afterwards. *)
-          stmt.meta <- 
-            (stmt.loc, Warning 
-              (W ("Not implemented", 
+          stmt.meta <-
+            (stmt.loc, Warning
+              (W ("Not implemented",
                   "Cannot find ident for this statement")))::stmt.meta;
           state
       end
   | Seq stmts -> List.fold_left (fun acc stmt -> analyze_stmt acc stmt) state stmts
-  | Defun { name ; args ; rets ; body } -> 
+  | Defun { name ; args ; rets ; body } ->
       let fun_state = new_state (state.level_fun + 1) in
-      let args_set = 
+      let args_set =
         List.fold_left (fun acc arg ->
-          if SetSy.mem (arg.cstr, arg.loc, 0) acc 
+          if SetSy.mem (arg.cstr, arg.loc, 0) acc
           (* W003 *)
-          then arg.meta <- 
+          then arg.meta <-
             (arg.loc, Warning (L (Duplicate_arg arg.cstr)))::arg.meta;
           SetSy.add (arg.cstr, arg.loc, state.level_control) acc
         ) SetSy.empty args in
-      let ret_set = 
+      let ret_set =
         List.fold_left (fun acc arg ->
           if SetSy.mem (arg.cstr, arg.loc, 0) args_set
           (* W005 *)
           then arg.meta <- (arg.loc, Warning (L (Var_arg_ret arg.cstr)))::arg.meta;
           if SetSy.mem (arg.cstr, arg.loc, 0) acc
           (* W004 *)
-          then arg.meta <- 
-            (arg.loc, Warning (L (Duplicate_return arg.cstr)))::arg.meta;  
+          then arg.meta <-
+            (arg.loc, Warning (L (Duplicate_return arg.cstr)))::arg.meta;
           SetSy.add (arg.cstr, arg.loc, state.level_control) acc
         ) SetSy.empty rets in
-      fun_state.init_sy <- 
+      fun_state.init_sy <-
         SetSy.add (name.cstr, name.loc, fun_state.level_control) args_set;
       fun_state.args_sy <- args_set;
-      
+
       begin match ScilintProject.find_function name.cstr with
           FunPrimitive ->
-            name.meta <- 
+            name.meta <-
               (name.loc, Warning (L (Overriding_primitive name.cstr)))::name.meta
 
         | FunDeclared fun_decl ->
-            name.meta <- 
+            name.meta <-
               (name.loc, Warning (L (Overriding_declared_function (name.cstr, fun_decl.fun_loc))))::name.meta
 
         | FunFile old_file ->
@@ -215,7 +215,7 @@ and analyze_stmt state stmt = match stmt.cstr with
             in
             if not is_current_file then
               name.meta <-
-                (name.loc, Warning 
+                (name.loc, Warning
                   (L (Overriding_toplevel_function (name.cstr, old_file))))::name.meta
 
         | FunUnknown -> ()
@@ -230,19 +230,19 @@ and analyze_stmt state stmt = match stmt.cstr with
         } in
         declare_function fun_decl
       end;
-      
+
       let fun_state = analyze_stmt fun_state body in
       (* W016 *)
       SetSy.iter (fun (sy, loc, i) ->
         if sy <> name.cstr
-          && not (SetSy.mem (sy, loc, i) fun_state.args_sy) 
+          && not (SetSy.mem (sy, loc, i) fun_state.args_sy)
           && not (SetSy.mem (sy, loc, i) ret_set)
           && not (SetSy.mem (sy, loc, i) fun_state.used_sy)
-          && not ((String.get sy 0) = '_') 
+          && not ((String.get sy 0) = '_')
         then body.meta <- (loc, Warning (L (Var_def_not_used sy)))::body.meta
       ) fun_state.init_sy;
       let unused = get_unused fun_state.args_sy fun_state.used_sy in
-      (* W006 and W007 *)      
+      (* W006 and W007 *)
       SetSy.iter (fun (sy, loc_ret, i) ->
         if SetSy.mem (sy, loc_ret, i) fun_state.used_sy
         then
@@ -282,16 +282,16 @@ and analyze_stmt state stmt = match stmt.cstr with
           state
         end
   | Exp exp -> analyze_exp state exp
-  | Break -> 
+  | Break ->
       if state.level_for = 0 && state.level_while = 0
-      then stmt.meta <- (stmt.loc, Warning (L Break_outside_loop))::stmt.meta; 
+      then stmt.meta <- (stmt.loc, Warning (L Break_outside_loop))::stmt.meta;
       state
-  | Continue -> 
+  | Continue ->
       if state.level_for = 0 && state.level_while = 0
-      then stmt.meta <- (stmt.loc, Warning (L Continue_outside_loop))::stmt.meta; 
+      then stmt.meta <- (stmt.loc, Warning (L Continue_outside_loop))::stmt.meta;
       state
   | Comment text -> state
-  | For (it, range, body) -> 
+  | For (it, range, body) ->
       let sy = it.cstr in
       let loc = it.loc in
       let state = analyze_exp state range in
@@ -304,23 +304,23 @@ and analyze_stmt state stmt = match stmt.cstr with
       state.level_control <- state.level_control - 1;
       state.for_sy <- SetSy.remove (sy, loc, 0) state.for_sy;
       state
-  | If (cond, tbody, Some fbody)  -> 
+  | If (cond, tbody, Some fbody)  ->
       let state = analyze_exp state cond in
       let stthen = { state with level_control = state.level_control + 1 } and
           stelse =  { state with level_control = state.level_control + 1 } in
       let stthen = analyze_stmt stthen tbody in
       let stelse = analyze_stmt stelse fbody in
       merge_state_ife state stthen stelse
-  | If (cond, tbody, None)  -> 
+  | If (cond, tbody, None)  ->
       let state = analyze_exp state cond in
       let stthen = { state with level_control = state.level_control + 1 } in
       let stelse =  { state with level_control = state.level_control + 1 } in
       let stthen = analyze_stmt stthen tbody in
       merge_state_ife state stthen stelse
   | Return  -> state
-  | Select { cond ; cases ; default = None }  -> 
+  | Select { cond ; cases ; default = None }  ->
       let state = analyze_exp state cond in
-      fst (List.fold_left (fun (acc, i) (exp,stm) -> 
+      fst (List.fold_left (fun (acc, i) (exp,stm) ->
         let acctest = analyze_exp acc exp in
         let accbody = analyze_stmt {acc with level_control = acc.level_control + i} stm in
         (merge_state acctest accbody, i + 1)
@@ -328,22 +328,22 @@ and analyze_stmt state stmt = match stmt.cstr with
   | Select { cond ; cases ; default = Some d }  ->
       let lvl = state.level_control in
       let state = analyze_exp state cond in
-      let new_state, i = List.fold_left (fun (acc, i) (exp,stm) -> 
+      let new_state, i = List.fold_left (fun (acc, i) (exp,stm) ->
         let acctest = analyze_exp acc exp in
         let accbody = analyze_stmt { acc with level_control = acc.level_control + i } stm in
         (merge_state acctest accbody, i + 1)
       ) (state, 1) cases in
-      let state = 
+      let state =
         analyze_stmt { new_state with level_control = new_state.level_control + i } d in
       state.level_control <- lvl;
       state
-  | Try (tbody, cbody)  -> 
+  | Try (tbody, cbody)  ->
       state.level_control <- state.level_control + 1;
       let state = analyze_stmt state tbody in
       let state = analyze_stmt state cbody in
       state.level_control <- state.level_control - 1;
       state
-  | While (cond, body, None)  -> 
+  | While (cond, body, None)  ->
       let state = analyze_exp state cond in
       state.level_while <- state.level_while + 1;
       state.level_control <- state.level_control + 1;
@@ -351,7 +351,7 @@ and analyze_stmt state stmt = match stmt.cstr with
       state.level_while <- state.level_while - 1;
       state.level_control <- state.level_control - 1;
       state
-  | While (cond, body, Some elsebody)  -> 
+  | While (cond, body, Some elsebody)  ->
       let state = analyze_exp state cond in
       state.level_while <- state.level_while + 1;
       state.level_control <- state.level_control + 1;
@@ -359,9 +359,9 @@ and analyze_stmt state stmt = match stmt.cstr with
       state.level_while <- state.level_while - 1;
       state.level_control <- state.level_control - 1;
       analyze_stmt state elsebody
-      
+
 and analyze_exp state exp = match exp.cstr with
-  | Call (name, args, _) -> 
+  | Call (name, args, _) ->
       begin
         match name.cstr with
           | Var sym ->
@@ -370,8 +370,8 @@ and analyze_exp state exp = match exp.cstr with
                   FunUnknown -> add_used state sym.cstr sym.loc
                 |  _ -> ()
               end;
-              let state = 
-                List.fold_left (fun acc (_, arg) -> 
+              let state =
+                List.fold_left (fun acc (_, arg) ->
                   analyze_exp acc arg) state args in
               begin try
                   List.iteri (fun i (_, arg) ->
@@ -379,47 +379,47 @@ and analyze_exp state exp = match exp.cstr with
                         None -> ()
                       | Some spec ->
                         match spec, arg.cstr with
-                            
+
                           | StrEnum list, String s  ->
                               if not (List.mem s list) then
-                                arg.meta <- 
-                                  (arg.loc, Warning 
-                                    (L (Unexpected_string_argument 
+                                arg.meta <-
+                                  (arg.loc, Warning
+                                    (L (Unexpected_string_argument
                                           (fun_name, i, s, list))))::arg.meta
                           | StrEnum _, _ -> ()
-                              
+
                           | Type TString, String _ -> ()
                           | Type TString, Bool _ | Type TString, Num _ ->
-                              arg.meta <- 
-                                (arg.loc, Warning 
-                                  (L (Unexpected_argument_type 
+                              arg.meta <-
+                                (arg.loc, Warning
+                                  (L (Unexpected_argument_type
                                           (fun_name, i, "string"))))::arg.meta
                           | Type TString, _ -> ()
-                            
+
                           | Type TInt, Num _ -> ()
                           | Type TInt, Bool _ | Type TInt, String _ ->
-                              arg.meta <- 
-                                (arg.loc, Warning 
-                                  (L (Unexpected_argument_type 
+                              arg.meta <-
+                                (arg.loc, Warning
+                                  (L (Unexpected_argument_type
                                         (fun_name, i, "int"))))::arg.meta
                           | Type TInt, _ -> ()
-                              
+
                           | IntEnum (min, max), Num v  ->
                               let v' = int_of_float (v +. 0.1) in
                               if v' < min || v' > max then
-                                arg.meta <- 
-                                  (arg.loc, Warning 
-                                    (L (Int_argument_out_of_range 
+                                arg.meta <-
+                                  (arg.loc, Warning
+                                    (L (Int_argument_out_of_range
                                           (fun_name, i, v, min, max))))::arg.meta
                           | IntEnum _, _ -> ()
-                              
+
                           | TooMany, _ ->
-                              arg.meta <- 
-                                (arg.loc, Warning 
-                                  (L (Primitive_with_too_many_arguments 
+                              arg.meta <-
+                                (arg.loc, Warning
+                                  (L (Primitive_with_too_many_arguments
                                         (fun_name, i))))::arg.meta;
                               raise Exit
-                                
+
                     end;
                   ) args;
               with Exit -> ()
@@ -463,37 +463,37 @@ and analyze_exp state exp = match exp.cstr with
   | Var sym when sym.cstr = "$" -> state
   | Var sym -> add_used state sym.cstr sym.loc; state
   | Unop (op, exp) -> analyze_exp state exp
-  | Op (op, lexp, rexp) -> 
+  | Op (op, lexp, rexp) ->
       let state = analyze_exp state lexp in
       analyze_exp state rexp
   | Identity args -> List.fold_left (fun acc arg -> analyze_exp acc arg) state args
-  | Matrix contents -> 
-      List.fold_left (fun acc list -> 
-        List.fold_left (fun st itm -> 
+  | Matrix contents ->
+      List.fold_left (fun acc list ->
+        List.fold_left (fun st itm ->
           analyze_exp st itm) acc list.cstr) state contents
-  | Range (e1, Some e2, e3) -> 
+  | Range (e1, Some e2, e3) ->
       let state = analyze_exp state e1 in
       let state = analyze_exp state e2 in
       analyze_exp state e3
   | Range (e1, None, e3) ->
       let state = analyze_exp state e1 in
       analyze_exp state e3
-  | Cell_array contents -> 
-      List.fold_left (fun acc list -> 
-        List.fold_left (fun st itm -> 
+  | Cell_array contents ->
+      List.fold_left (fun acc list ->
+        List.fold_left (fun st itm ->
           analyze_exp st itm) acc list.cstr) state contents
   | Bool _ -> state
   | Num _ -> state
   | String _ -> state
   | Colon -> state
   | Error -> state
-      
+
 let analyze_ast ast =
   let st = new_state 0 in
   ignore (List.fold_left (fun acc stm -> analyze_stmt acc stm) st ast);
   ast
 
-let _ = (* plug it in *)
+let register () = (* plug it in *)
   ScilintOptions.add_pass
     "analyzes" analyze_ast
     "local warnings generation"
