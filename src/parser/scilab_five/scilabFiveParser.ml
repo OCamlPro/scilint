@@ -142,7 +142,7 @@ end = struct
     state.position <- state.position - n
 
   let skip state n =
-    if state.position + n >= state.limit then
+    if state.position + n > state.limit then
       invalid_arg "ScilabFiveParser.StreamReader.skip" ;
     state.position <- state.position + n
 
@@ -260,6 +260,7 @@ end = struct
     | '.' | ' ' ->
       StreamReader.skip state.reader_state 1 ;
       eol_dots state
+    | '\000' -> true
     | '\n' ->
       StreamReader.write state.reader_state '\002' ;
       true
@@ -278,10 +279,10 @@ end = struct
   let rec patch_eol state =
     (* See {!read} for explanation. *)
     match StreamReader.peek state.reader_state with
-    | '\002' -> () (* stop at line stop *)
+    | '\002' | '\000' -> () (* stop at line stop *)
     | '/'
-      (* TODO: accept or drop in-expression / in-word comments as in
-         "1 + ..//x\n 2" or "12..//x\n34" *)
+    (* TODO: accept or drop in-expression / in-word comments as in
+       "1 + ..//x\n 2" or "12..//x\n34" *)
     | _ ->
       StreamReader.write state.reader_state '\001' ;
       column_feed state ;
@@ -294,7 +295,7 @@ end = struct
        skippable line break and '\003' for meaningful dots that have
        already been scanned as such. *)
     match StreamReader.read state.reader_state with
-    | '.' when StreamReader.peek state.reader_state = '.' -> 
+    | '.' when StreamReader.peek state.reader_state = '.' ->
       StreamReader.rewind state.reader_state 1 ;
       let spos = StreamReader.pos state.reader_state in
       if eol_dots state then begin
@@ -470,7 +471,7 @@ end = struct
   let char char state =
     if peek state = char then (advance_1 state ; true) else false
 
-  let but_char char state = 
+  let but_char char state =
     match peek state with
     | c when char = c -> false
     | '\000' -> false
@@ -609,7 +610,7 @@ end = struct
       "~", (4, Not) ; "@", (4, Not) ]
   and infix_table =
     [ "+", (6, `Left, Plus) ; "-", (6, `Left, Minus) ;
-      "\\", (7, `Right,  Ldivide) ; ".\\"  , (7, `Left, Dot_ldivide) ; 
+      "\\", (7, `Right,  Ldivide) ; ".\\"  , (7, `Left, Dot_ldivide) ;
       ".\\.", (7, `Left, Kron_ldivide) ; "\\.", (7, `Left, Control_ldivide) ;
       "*", (8, `Left, Times) ; "/", (8, `Left, Rdivide) ;
       ".*", (8, `Left, Dot_times) ; "./", (8, `Left, Dot_rdivide) ;
@@ -620,7 +621,7 @@ end = struct
       "==", (5, `Left, Eq) ; "<>", (5, `Left, Ne) ;
       "~=", (5, `Left, Ne) ; "<", (5, `Left, Lt) ;
       "<=", (5, `Left, Le) ; ">", (5, `Left, Gt) ;
-      ">=", (5, `Left, Ge) ; "=", (5, `Left, Eq) ; 
+      ">=", (5, `Left, Ge) ; "=", (5, `Left, Eq) ;
       "&", (3, `Left, And) ; "|", (2, `Left, Or) ;
       (* Scilab 6 only *)
       "&&", (3, `Left, Seq_and) ; "||", (2, `Left, Seq_or) ]
@@ -830,7 +831,7 @@ end = struct
     | 'e',"expression" -> ";"
     | 'f', "function" -> "endfunction"
     | 'p', "program" -> "\000"
-    | _ -> "end" 
+    | _ -> "end"
 
   let closing_keyword str =
     if String.length str = 0 then false else
@@ -948,32 +949,28 @@ end = struct
     discard spaces ctx.st ;
     let cp = checkpoint ctx.st in
     let default id =
-      (* TODO: Ambiguous_toplevel_expression *)
+      let msg = Warning (S Ambiguous_toplevel_expression) in
       restore ctx.st cp ;
       if id then
 	if ctx.in_function || not ctx.allow_toplevel_exprs then
-	  (* nothing worked: parse as a shell call *)
-	  `Stmt (parse_shell_call ctx)
-      else
-        (* if we're at toplevel, it could also be an expr *)
-        let as_expr = parse_toplevel_expr ctx in
-        match as_expr.cstr with
-        | Error -> `Stmt (parse_shell_call ctx)
-        | Var { cstr } ->
-          let cp' = checkpoint ctx.st in
-          restore ctx.st cp ;
-          if exec shell_call_start ctx.st then begin
+          (* nothing worked: parse as a shell call *)
+          `Stmt (parse_shell_call ctx)
+        else
+          (* if we're at toplevel, it could also be an expr *)
+          let as_expr = parse_toplevel_expr ctx in
+          match as_expr.cstr with
+          | Error -> `Stmt (parse_shell_call ctx)
+          | _ ->
+            let cp' = checkpoint ctx.st in
             restore ctx.st cp ;
-            `Stmt (parse_shell_call ctx)
-          end else begin
-            restore ctx.st cp' ;
-            `Stmt (descr_exp as_expr)
-          end
-        | _ ->
-          (* it's a bit ugly: we try to parse the line as a shell call
-             to issue an ambiguity warning *)
-          `Stmt (descr_exp as_expr)
-      else  `Stmt (descr_exp (parse_toplevel_expr ctx))
+            if exec shell_call_start ctx.st then begin
+              restore ctx.st cp' ;
+              `Stmt (descr_exp { as_expr with meta = (as_expr.loc, msg) :: as_expr.meta })
+            end else begin
+              restore ctx.st cp' ;
+              `Stmt (descr_exp as_expr)
+            end
+      else `Stmt (descr_exp (parse_toplevel_expr ctx))
     in
     match peek ctx.st with
     | '\n' | ',' | ';' -> advance_1 ctx.st ; parse_statement ctx
@@ -1150,59 +1147,59 @@ end = struct
     : 'a. context -> var ->
       (context -> string -> (int -> unit) -> 'a) ->
       (exp -> 'a) -> 'a
-     = fun pctx var seq_cb wrap_cb ->
-    let cp = checkpoint pctx.st in
-    if not pctx.in_matrix then discard spaces pctx.st ;
-    if read pctx.st = '{' then
-      let ctx = push ("pattern", here pctx.st) pctx in
-      let rec drop_end nb =
-        match fst (drop_token ctx) with
-        | "{" -> drop_end (succ nb)
-        | "}" when nb > 0 -> drop_end (pred nb)
-        | "}" | "\000" | "\n" -> ()
-        | _ -> drop_end nb
-      in
-      try
-        if var.cstr.[String.length var.cstr - 2] = '?' then
-          failwith "sequence wilcards do not take arguments" ;
-        discard spaces ctx.st ;
-        let cp = checkpoint ctx.st in
-        if not (exec ident ctx.st) then failwith "expecting a pattern specifier" ;
-        match fst (extract_from ctx.st cp) with
-        | "var" | "str" as spec ->
+    = fun pctx var seq_cb wrap_cb ->
+      let cp = checkpoint pctx.st in
+      if not pctx.in_matrix then discard spaces pctx.st ;
+      if read pctx.st = '{' then
+        let ctx = push ("pattern", here pctx.st) pctx in
+        let rec drop_end nb =
+          match fst (drop_token ctx) with
+          | "{" -> drop_end (succ nb)
+          | "}" when nb > 0 -> drop_end (pred nb)
+          | "}" | "\000" | "\n" -> ()
+          | _ -> drop_end nb
+        in
+        try
+          if var.cstr.[String.length var.cstr - 2] = '?' then
+            failwith "sequence wilcards do not take arguments" ;
           discard spaces ctx.st ;
-          if not (exec (char ',') ctx.st) then failwith "bad pattern parameters" ;
-          discard spaces ctx.st ;
-          let regexp =
-            match (parse_string ctx).cstr with
-            | String s -> s
-            | _ -> failwith "bad pattern parameter, expecting a regexp"
-          in
-          discard spaces ctx.st ;
-          (match peek ctx.st with
-           | '}' -> discard any ctx.st
-           | _ -> failwith "too many pattern parameters") ;
-          let cstr = 
-            if spec = "var" then
-              Var { var with cstr = var.cstr ^ regexp ; id = UUID.make () }
-            else
-              String (var.cstr ^ regexp)
-          in
-          wrap_cb (descr cstr (from ctx.st cp) ctx)
-        | "rep" | "group" | "or" as kind ->
-          discard spaces ctx.st ;
-          if not (exec (char ',') ctx.st) then failwith "bad pattern parameters" ;
-          discard spaces ctx.st ;
-          seq_cb ctx kind drop_end
-        | unknown -> failwith ("unknown pattern specifier " ^ unknown)
-      with Failure message -> 
-        drop_end 0 ;
-        let warns = [ from ctx.st cp, Recovered message ] in
-        wrap_cb (descr ~warns (Var var) (from ctx.st cp) ctx)
-    else begin
-      restore pctx.st cp ;
-      wrap_cb (descr (Var var) (snd var.loc) pctx)
-    end
+          let cp = checkpoint ctx.st in
+          if not (exec ident ctx.st) then failwith "expecting a pattern specifier" ;
+          match fst (extract_from ctx.st cp) with
+          | "var" | "str" as spec ->
+            discard spaces ctx.st ;
+            if not (exec (char ',') ctx.st) then failwith "bad pattern parameters" ;
+            discard spaces ctx.st ;
+            let regexp =
+              match (parse_string ctx).cstr with
+              | String s -> s
+              | _ -> failwith "bad pattern parameter, expecting a regexp"
+            in
+            discard spaces ctx.st ;
+            (match peek ctx.st with
+             | '}' -> discard any ctx.st
+             | _ -> failwith "too many pattern parameters") ;
+            let cstr =
+              if spec = "var" then
+                Var { var with cstr = var.cstr ^ regexp ; id = UUID.make () }
+              else
+                String (var.cstr ^ regexp)
+            in
+            wrap_cb (descr cstr (from ctx.st cp) ctx)
+          | "rep" | "group" | "or" as kind ->
+            discard spaces ctx.st ;
+            if not (exec (char ',') ctx.st) then failwith "bad pattern parameters" ;
+            discard spaces ctx.st ;
+            seq_cb ctx kind drop_end
+          | unknown -> failwith ("unknown pattern specifier " ^ unknown)
+        with Failure message ->
+          drop_end 0 ;
+          let warns = [ from ctx.st cp, Recovered message ] in
+          wrap_cb (descr ~warns (Var var) (from ctx.st cp) ctx)
+      else begin
+        restore pctx.st cp ;
+        wrap_cb (descr (Var var) (snd var.loc) pctx)
+      end
 
   and parse_wildcard_params_for_stmt pctx var =
     parse_wildcard_params pctx var
@@ -1257,7 +1254,7 @@ end = struct
                                              id = UUID.make () })) in
            ghost (Call (name, exps, Tuplified)))
       (fun d -> d)
-    
+
   and parse_shell_call ctx =
     let parse_args var =
       let args = parse_shell_args ctx in
@@ -1548,13 +1545,13 @@ end = struct
             | ';' ->
 	      let sloc = point ctx.st in
 	      advance_1 ctx.st ;
-       let loc = ctx.src, (sloc, point ctx.st) in
+              let loc = ctx.src, (sloc, point ctx.st) in
               let meta = (loc, Replace ",")
                          :: (loc, Recovered "bad separator \";\"") :: var.meta in
               let var = { var with meta } in
 	      loop (var :: acc)
             | 'a'..'z' | 'A'..'Z' ->
-       let loc = ctx.src, here ctx.st in
+              let loc = ctx.src, here ctx.st in
               let meta = (loc, Insert ",")
                          :: (loc, Recovered "missing separator") :: var.meta in
               let var = { var with meta } in
@@ -1702,12 +1699,12 @@ end = struct
   and parse_while ctx =
     let cond, _ = parse_cond_expr [ "do" ; "then" ] ctx in
     let phrases, term = parse_seq ctx in
-      match term with
-      | "else" ->
-        let else_phrases, _ = parse_seq ctx in
-        descr (While (cond, phrases, Some else_phrases)) (from_last "while" ctx) ctx
-      | _ (* "end" *) ->
-        descr (While (cond, phrases, None)) (from_last "while" ctx) ctx
+    match term with
+    | "else" ->
+      let else_phrases, _ = parse_seq ctx in
+      descr (While (cond, phrases, Some else_phrases)) (from_last "while" ctx) ctx
+    | _ (* "end" *) ->
+      descr (While (cond, phrases, None)) (from_last "while" ctx) ctx
 
 
   and parse_for ctx =
@@ -1729,7 +1726,7 @@ end = struct
     in
     let msg = "for iterator cannot be a ':'" in
     let warns = if n = ":" then (n_bounds, Recovered msg) :: warns else warns in
-    let var = descr ~warns n n_bounds ctx in    
+    let var = descr ~warns n n_bounds ctx in
     let warns =
       if not (exec (seq [ spaces ; char '=' ; spaces ]) ctx.st) then
         [ here ctx.st, Recovered "missing = after for iterator" ]
@@ -1895,7 +1892,7 @@ end = struct
 	else if exec wildcard ctx.st then
           let var = string_descr (extract_from ctx.st cp) ctx in
           let var = parse_wildcard_params_for_exp ctx var in
-          if exec (before_field_dot ||| before_lax_paren ctx.in_matrix) ctx.st then 
+          if exec (before_field_dot ||| before_lax_paren ctx.in_matrix) ctx.st then
             (* TODO: warn about spaces *)
             let expr = parse_extraction var ctx in
             transpose loc expr eacc
@@ -1903,7 +1900,7 @@ end = struct
             transpose loc var eacc
 	else if exec ident ctx.st then
           let var = var_descr (extract_from ctx.st cp) ctx in
-          if exec (before_field_dot ||| before_lax_paren ctx.in_matrix) ctx.st then 
+          if exec (before_field_dot ||| before_lax_paren ctx.in_matrix) ctx.st then
             (* TODO: warn about spaces *)
             let expr = parse_extraction var ctx in
             transpose loc expr eacc
@@ -1975,7 +1972,7 @@ end = struct
           | '/' when peek_ahead ctx.st 1 = '/' -> after_spaces ()
           | _ ->
             let cp = checkpoint ctx.st in
-            if exec binop ctx.st then          
+            if exec binop ctx.st then
               let op, op_bounds = extract_from ctx.st cp in
               let op, warns = drop_spaces op op_bounds in
               prefix (`Infix ((op, op_bounds),warns) :: eacc)
@@ -2023,7 +2020,7 @@ end = struct
             if op_lvl < lvl then
               acc, prest
             else
-              let op_lvl = if op_assoc = `Left then op_lvl + 1 else op_lvl in 
+              let op_lvl = if op_assoc = `Left then op_lvl + 1 else op_lvl in
               let right, rest = infix op_lvl rest in
 	      let expr = Op (op, acc, right) in
               let expr = descr_for_seq ~warns expr [ acc ; right ] in
@@ -2048,7 +2045,7 @@ end = struct
           let ws = List.map (fun (l, w) -> (ctx.src, l), w) ws in
           { exp with meta = ws @ exp.meta }
       in
-      match tt, tn with 
+      match tt, tn with
       | `Fake, ":" ->
         discard colon_op ctx.st ;
         parse_range (exp :: acc)
@@ -2063,7 +2060,7 @@ end = struct
       descr_for_seq (Range (l, Some m, r)) [ l ; r ], term
     | l :: m :: r :: seq, term ->
       let loc = (descr_for_seq Error seq).loc in
-      let warns = [ snd loc, Drop ; snd loc, Recovered ("too many ':'") ] in 
+      let warns = [ snd loc, Drop ; snd loc, Recovered ("too many ':'") ] in
       descr_for_seq ~warns (Range (l, Some m, r)) [ l ; r ], term
 
   let parse ?(allow_patterns = false) ?(allow_toplevel_exprs = false) state src =
