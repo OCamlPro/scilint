@@ -3,7 +3,7 @@
 all: \
   scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm scilob.asm \
   scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte scilob.byte \
-  sciweb.js
+  sciweb.js scilint.cmxa
 
 OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
 OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats 
