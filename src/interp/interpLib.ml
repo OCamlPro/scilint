@@ -13,44 +13,6 @@ open InterpCore.Dispatcher
 open InterpMessages
 open ScilintWarning
 
-type kind = [ `L | `B ]
-type one_plot = {
-  kind: kind;
-  mutable x_label: string option;
-  mutable y_label: string option;
-  mutable title: string option;
-  points: (float * float) list }
-(*type type_plots = {
-  mutable liste : one_plot list ;
-  mutable updated : bool }
-
-let plots = {liste = []; updated = false} *)
-let sessions : string list ref = ref []
-
-(*** for canvas***)
-type canv_plot = {
-  mutable xvalues : float list;
-  mutable yvalues : float list }
-type canvas_plots = {
-  mutable liste : canv_plot list ;
-  mutable updated : bool }
-let plots_in_canvas = {liste = []; updated = false}
-
-
-(*** archimedes canvas ***)
-type archi_plot = {
-  mutable style : Archimedes.style;
-  mutable xvalues : float list;
-  mutable yvalues : float list;
-  mutable title : string option;
-  mutable xlabel : string option;
-  mutable ylabel : string option;
-  mutable grid : bool}
-type archi_plots = {
-  mutable plots : archi_plot list;
-  mutable updated : bool }
-let all_plots = { plots = []; updated = false}
-
 (** A global store for registering libraries or primitives, simply
     encoded as functions that transform the interpreter's state *)
 let libraries : (state -> lib -> unit) list ref =

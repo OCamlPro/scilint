@@ -77,13 +77,6 @@ type 'a step =
     mutable updated: bool;
     mutable liste: (*Html5_types.div*) 'a D.elt list; }
 
-
-let update_tty contents =
-  Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-tty"))
-    (fun () -> failwith "scilab-tty element not found")
-    (fun tty -> M.replaceChildren (Tyxml_js.Of_dom.of_element tty) contents)
-
-
 type montype =
 | Tab of float array
 | Func of (float -> float);;
@@ -171,39 +164,8 @@ let coerceCanvasToNode : Dom_html.canvasElement Js.t -> Dom.node Js.t = Js.Unsaf
 let coerceEltToNode : Dom_html.element Js.t -> Dom.node Js.t = Js.Unsafe.coerce
 let coerceEltToDiv : Dom.node Js.t -> Dom_html.divElement Js.t = Js.Unsafe.coerce
 
-let plot points =
-  let open InterpLib in
-  let bindto = D.( div ~a:[ a_class [ "scilab-output" ]; a_id "thesvg"] [ ] ) in
-  let hd = List.hd points in
-  let x_label, y_label = match hd.x_label, hd.y_label with
-    | None, None -> "", ""
-    | Some xlab, Some ylab -> xlab, ylab in
-  let graph_title = match hd.title with
-    | None -> ""
-    | Some t -> t in
-  let init = C3.Line.make ~x_label:x_label ~y_label:y_label ~kind:`XY () in
-  let rec tmp d l cpt = match l with
-    | [] -> d
-    | hd :: tl -> 
-      (*let hd = [ 1., 1. ; 3., 3. ; 5., 5. ] in*)
-      let kin = match hd.kind with
-	| `L -> `Line
-	| `B -> `Bar in
-      let d =  C3.Line.add ~segment:(C3.Segment.make ~kind:kin ~points:hd.points ~label:((C3.Segment.string_of_kind kin)^(string_of_int cpt)) ()) d in
-      tmp d tl (cpt+1)
-  in
-  let res = tmp init points 1 in
-  ignore (C3.Line.render_in_tyxml_elt ~bindto:bindto res) ;
-  let savepng = D.(button ~a:[a_style "display:block"] [pcdata "png"]) in
-  let link = Dom_html.createA(Dom_html.document) in
-  M.Ev.onclick savepng (fun _ev -> Js.Unsafe.fun_call (Js.Unsafe.variable "saveaspng") [| Js.Unsafe.inject "thesvg"|];);
-  D.(div ~a:[a_class["c3-title"]; a_id "graphe"] [ pcdata graph_title; bindto; savepng ])
-    
-
-
-
-
 let archimedes_plot plots nb =
+  let open InterpPlotLib in
   let w = Js.Opt.case (Dom_html.document##getElementById(Js.string "blabla"))
     (fun () -> failwith "no div blabla")
     (fun d -> Js.Opt.case (Dom_html.CoerceTo.div(d))
@@ -610,229 +572,246 @@ let rec render ?(eval = true) step =
     Buffer.clear buf ;
     InterpMessages.message_hook :=
       (fun msg -> 
-	let localBuf = Buffer.create 1000 in 
-	let msgs = format (ScilabLocations.Nowhere, ((0, 0), (0, 0))) msg in
-	Buffer.add_string localBuf (ScilintWarning.string_of_messages !ScilintOptions.format msgs);
-	let myBuf = Buffer.create 1000 in
-	let ppf = Format.formatter_of_buffer myBuf in
-	let rec func msg =
-	  match msg with
-	  | Hint (x) -> ("scilab-hint", D.([ pcdata (Buffer.contents localBuf) ]))
-	  | Result (s, v) -> 
-	    begin
-	      let open InterpCore.Values in
-	      let matrix_to_table m f =
-		let w, h = matrix_size m in
-		let td_list = ref [] and tr_list = ref [] in
-		for i=1 to h do
-		  for j=1 to w do
-		    td_list := !td_list @ [(D.td [ D.pcdata (f (matrix_get m j i)) ])] 
-		  done;
-		  tr_list := !tr_list @ [D.(tr !td_list)] ;
-		  td_list := [];
-		done;
-		D.([table ~a:[a_class ["scilab-matrix"] ] !tr_list]) in
+	       let localBuf = Buffer.create 1000 in 
+	       let msgs = format (ScilabLocations.Nowhere, ((0, 0), (0, 0))) msg in
+	       Buffer.add_string localBuf (ScilintWarning.string_of_messages !ScilintOptions.format msgs);
+	       let myBuf = Buffer.create 1000 in
+	       let ppf = Format.formatter_of_buffer myBuf in
+	       let rec func msg =
+	         match msg with
+	         | Hint (x) -> ("scilab-hint", D.([ pcdata (Buffer.contents localBuf) ]))
+	         | Result (s, v) -> 
+	           begin
+	             let open InterpCore.Values in
+	             let matrix_to_table m f =
+		             let w, h = matrix_size m in
+		             let td_list = ref [] and tr_list = ref [] in
+		             for i=1 to h do
+		               for j=1 to w do
+		                 td_list := !td_list @ [(D.td [ D.pcdata (f (matrix_get m j i)) ])] 
+		               done;
+		               tr_list := !tr_list @ [D.(tr !td_list)] ;
+		               td_list := [];
+		             done;
+		             D.([table ~a:[a_class ["scilab-matrix"] ] !tr_list]) in
 
-	      let format_vlist l =
-		let res = ref [] in
-		for i=1 to vlist_length l do
-		  (match view (vlist_get l i) with
-		  | V (Matrix (Number Real), m) -> res := !res @ (matrix_to_table m (string_of_float))
-		  | _ -> Buffer.clear myBuf ;
-			 InterpMessages.print_value ppf (vlist_get l i) ;
-			 Format.fprintf ppf "%!" ;
-			 res := !res @ D.([ pcdata (Buffer.contents myBuf) ]));
-		  if i <> vlist_length l then res := !res @ D.([ pcdata ", " ]);
-		done;
-	        D.([ pcdata "( " ]) @ !res @ D.([ pcdata " )"]) in
-	      
-	      let format_tlist l =
-		let res = ref [] in
-	     	res := D.([li [a D.([pcdata "type = " ; pcdata (tlist_label l)])]]);
-		let tab = Array.of_list (tlist_fields l) in
-		for ind=0 to Array.length tab -1 do
-		  let valeur = match view (tlist_get l tab.(ind)) with
-		    | V (Matrix (Number Real), m) -> (matrix_to_table m (string_of_float))
-		    | _ -> Buffer.clear myBuf;
-			   InterpMessages.print_value ppf (tlist_get l tab.(ind)) ;
-			   Format.fprintf ppf "%!" ;
-			   D.([ pcdata (Buffer.contents myBuf) ])
-		  in 
-		  res := !res @ D.([li [a (D.([pcdata tab.(ind) ; pcdata " = "] ) @ valeur) ] ]) ;
-		done;
-		D.([ul !res ])
-	      in 
+	             let format_vlist l =
+		             let res = ref [] in
+		             for i=1 to vlist_length l do
+		               (match view (vlist_get l i) with
+		                | V (Matrix (Number Real), m) -> res := !res @ (matrix_to_table m (string_of_float))
+		                | _ -> Buffer.clear myBuf ;
+			                InterpMessages.print_value ppf (vlist_get l i) ;
+			                Format.fprintf ppf "%!" ;
+			                res := !res @ D.([ pcdata (Buffer.contents myBuf) ]));
+		               if i <> vlist_length l then res := !res @ D.([ pcdata ", " ]);
+		             done;
+	               D.([ pcdata "( " ]) @ !res @ D.([ pcdata " )"]) in
 
-	      let formatted_result = match view v with
-		| V (Matrix (Number Real), m) -> (matrix_to_table m (string_of_float))
-		| V (Matrix (Int8), m) -> (matrix_to_table m (string_of_int))
-		| V (Matrix (Int16), m) -> (matrix_to_table m (string_of_int))
-		| V (Matrix (Int32), m) -> (matrix_to_table m (string_of_int))
-		| V (Matrix (Uint8), m) -> (matrix_to_table m (string_of_int))
-		| V (Matrix (Uint16), m) -> (matrix_to_table m (string_of_int))
-		| V (Matrix (Uint32), m) -> (matrix_to_table m (string_of_int))
-		| V (Matrix (Bool), m) -> (matrix_to_table m (string_of_bool))
-		| V (Matrix (String), m) ->  (matrix_to_table m (fun x -> x))
-		| V (Matrix (Number Complex), m) ->  
-		  (matrix_to_table m (fun x -> 
-		    Buffer.clear myBuf;
-		    InterpMessages.print_value ppf (inject (Single (Number Complex)) x); 
-		    Format.fprintf ppf "%!" ; 
-		    Buffer.contents myBuf ; ))
-		| V (Vlist, l) -> (format_vlist l)
-		| V (Tlist(lab), l) -> (format_tlist l)
-		| _ -> D.([ pcdata (Buffer.contents localBuf)]) in
-	      ("scilab-result", D.([ pcdata s ; pcdata " = " ]) @ formatted_result)
-	    end
-	  | Warning (w) -> ("scilab-warning", D.([ pcdata (Buffer.contents localBuf)]))
-	  | Located (loc, m) -> func m
-	  | _ -> ("scilab-error", D.([ pcdata (Buffer.contents localBuf)]))
-	in 
-	let (cl, data ) = func msg in  
-	let x_values = Array.make 10 0. in
-	x_values.(9) <- 15.; x_values.(0) <- -15.;
-	liste := D.([ div ~a:[ a_class [ cl ] ] data ])  @ !liste );
+	             let format_tlist l =
+		             let res = ref [] in
+	     	         res := D.([li [a D.([pcdata "type = " ; pcdata (tlist_label l)])]]);
+		             let tab = Array.of_list (tlist_fields l) in
+		             for ind=0 to Array.length tab -1 do
+		               let valeur = match view (tlist_get l tab.(ind)) with
+		                 | V (Matrix (Number Real), m) -> (matrix_to_table m (string_of_float))
+		                 | _ -> Buffer.clear myBuf;
+			                 InterpMessages.print_value ppf (tlist_get l tab.(ind)) ;
+			                 Format.fprintf ppf "%!" ;
+			                 D.([ pcdata (Buffer.contents myBuf) ])
+		               in 
+		               res := !res @ D.([li [a (D.([pcdata tab.(ind) ; pcdata " = "] ) @ valeur) ] ]) ;
+		             done;
+		             D.([ul !res ])
+	             in 
+
+	             let formatted_result = match view v with
+		             | V (Matrix (Number Real), m) -> (matrix_to_table m (string_of_float))
+		             | V (Matrix (Int8), m) -> (matrix_to_table m (string_of_int))
+		             | V (Matrix (Int16), m) -> (matrix_to_table m (string_of_int))
+		             | V (Matrix (Int32), m) -> (matrix_to_table m (string_of_int))
+		             | V (Matrix (Uint8), m) -> (matrix_to_table m (string_of_int))
+		             | V (Matrix (Uint16), m) -> (matrix_to_table m (string_of_int))
+		             | V (Matrix (Uint32), m) -> (matrix_to_table m (string_of_int))
+		             | V (Matrix (Bool), m) -> (matrix_to_table m (string_of_bool))
+		             | V (Matrix (String), m) ->  (matrix_to_table m (fun x -> x))
+		             | V (Matrix (Number Complex), m) ->  
+		               (matrix_to_table m (fun x -> 
+		                    Buffer.clear myBuf;
+		                    InterpMessages.print_value ppf (inject (Single (Number Complex)) x); 
+		                    Format.fprintf ppf "%!" ; 
+		                    Buffer.contents myBuf ; ))
+		             | V (Vlist, l) -> (format_vlist l)
+		             | V (Tlist(lab), l) -> (format_tlist l)
+		             | _ -> D.([ pcdata (Buffer.contents localBuf)]) in
+	             ("scilab-result", D.([ pcdata s ; pcdata " = " ]) @ formatted_result)
+	           end
+	         | Warning (w) -> ("scilab-warning", D.([ pcdata (Buffer.contents localBuf)]))
+	         | Located (loc, m) -> func m
+	         | _ -> ("scilab-error", D.([ pcdata (Buffer.contents localBuf)]))
+	       in 
+	       let (cl, data ) = func msg in  
+	       let x_values = Array.make 10 0. in
+	       x_values.(9) <- 15.; x_values.(0) <- -15.;
+	       liste := D.([ div ~a:[ a_class [ cl ] ] data ])  @ !liste );
     treat_source state lib (String ("input-" ^ string_of_int nb, cstep.phrase)) ;
     cstep.answer <- Buffer.contents buf ;
     cstep.updated <- false ;
     cstep.liste <- !liste ;
     (*let xval = Array.make 20 0. in
-    for i=0 to 19 do
+      for i=0 to 19 do
       xval.(i) <- float_of_int (i-10);(***************************************)
-    done; 
-    cstep.liste <- !liste @ [ plot_canvas xval (fun v -> sin(v))  ] ;*)
+      done; 
+      cstep.liste <- !liste @ [ plot_canvas xval (fun v -> sin(v))  ] ;*)
 
- 
-    if InterpLib.all_plots.updated = true then 
+
+    if InterpPlotLib.all_plots.updated = true then 
       (*cstep.liste <- cstep.liste @ [ plot_canvas2 (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).xvalues) (Array.of_list (List.hd InterpLib.plots_in_canvas.liste).yvalues) ] ; InterpLib.plots_in_canvas.updated <- false;*) 
       (*cstep.liste <- cstep.liste @ [ plot InterpLib.plots.liste ] ; InterpLib.plots.updated <- false;*)
-      (cstep.liste <- cstep.liste @ [ archimedes_plot InterpLib.all_plots nb ];
-       InterpLib.all_plots.updated <- false);
+      (cstep.liste <- cstep.liste @ [ archimedes_plot InterpPlotLib.all_plots nb ];
+       InterpPlotLib.all_plots.updated <- false);
     (match cstep.next with 
-      | None ->
-      if cstep.phrase <> "" then
-	cstep.next <- Some { phrase = "" ; answer = "" ; next = None ; updated = false; liste = [] };
-      | Some next -> update_results next (nb+1) ; ); in
+     | None ->
+       if cstep.phrase <> "" then
+	       cstep.next <- Some { phrase = "" ; answer = "" ; next = None ; updated = false; liste = [] };
+     | Some next -> update_results next (nb+1) ; ); in
 
   let rec format_result cstep nb invalidated = 
     let invalidated = invalidated || cstep.updated in
-    let textarea = D.(textarea ~a:[ a_class [ "scilab-input" ] ] (pcdata cstep.phrase)) in
-    M.Ev.onchange_textarea textarea (fun _ev ->
-      cstep.phrase <- M.value textarea ;
-      cstep.updated <- true ;
-      render ~eval:false step ;
-      true) ;
+    let ar = D.(textarea ~a:[ a_class [ "scilab-input" ] ] (pcdata cstep.phrase)) in
+    M.Ev.onchange_textarea ar (fun _ev ->
+        cstep.phrase <- M.value ar ;
+        cstep.updated <- true ;
+        true) ;
     let invalidated_class =
-      if invalidated then [ "scilab-invalidated" ] else [] in
-    let results = D.([div ~a:[ a_class invalidated_class ] cstep.liste ]) @ (if cstep.answer <> "" then 
-	D.([ p ~a:[ a_class ([ "scilab-output" ] @ invalidated_class) ] [ pcdata cstep.answer ] ])
-      else []) in
-    (*let results = D.([div ~a:[ a_class invalidated_class ] cstep.liste ]) in *)
-    textarea :: results @ match cstep.next with
+      if invalidated then [ "scilab-invalidated" ; "scilab-block" ] else [ "scilab-block" ] in
+    D.(div ~a:[ a_class invalidated_class ]
+         (ar :: cstep.liste @
+          (if cstep.answer <> "" then 
+	           D.([ p ~a:[ a_class ([ "scilab-output" ]) ] [ pcdata cstep.answer ] ])
+           else [])))
+    :: match cstep.next with
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in
-  
-  if eval then ( InterpLib.all_plots.plots <- [] ; InterpLib.all_plots.updated <- false; update_results step 1 ; ());
-  let run_button = D.(button ~a:[a_class ["button-run"]] [ entity "#9881" ] ) in
+
+  if eval then (InterpPlotLib.all_plots.plots <- [] ; InterpPlotLib.all_plots.updated <- false; update_results step 1 ; ());
+
+
+  let toolbar_button icon leg =
+    D.(button
+         ~a:[a_class ["scilab-toolbar-button"]]
+         [ span ~a:[a_class ["icon"]] [ D.entity icon ] ;
+           span ~a:[a_class ["legend"]] [ D.pcdata leg ] ]) in
+  let toolbar_popover_button icon leg ctns =
+    let popover = D.(span ~a:[a_class [ "popover" ]] ctns) in
+    D.(span
+         ~a:[a_class ["scilab-toolbar-button"]]
+         [ span ~a:[a_class ["icon"]] [ D.entity icon ] ;
+           popover ;
+           span ~a:[a_class ["legend"]] [ D.pcdata leg ] ]) in
+  let run_button = toolbar_button "#127744" "RUN ALL" in
   M.Ev.onclick run_button (fun _ev -> render step ; true) ;
 
   let input_session_name = D.(input ~a:[a_class ["input-session-name"] ; a_placeholder "untitled"; a_value !current_session; a_size (12) ] ()) in
-  let save_button = D.(button ~a:[a_class ["button-save"]] [entity "#58532"])  in
+  let save_button = toolbar_button "#128209" "SAVE" in
   M.Ev.onclick save_button (fun _ev -> 
-    let name = M.value input_session_name in
-    match name with
-    | "" -> Dom_html.window##alert(Js.string "Please pick a name for your current session before saving."); true;
-    | x -> save_session step x; true;);
-  
-  let list_sessions step =
-  let res = ref [] in
-  match Js.Optdef.to_option (Dom_html.window##localStorage) with
-  | None -> D.(div [pcdata "no sessions"])
-  | Some locStorage ->
-    for i=0 to (locStorage##length -1) do
-      match Js.Opt.to_option (locStorage##key(i)) with
-      | None -> ()
-      | Some key -> let bu = D.(button [entity "#10007"]) in
-		    M.Ev.onclick bu (fun _ev -> 
-		      let r = Dom_html.window##confirm(Js.string ("Are you sure you want to delete session \""^(Js.to_string key)^"\" ?")) in
-		      match Js.to_bool r with
-		      | true -> delete_session step (Js.to_string key); true
-		      | _ -> true);
-		    let b = D.(li ~a:[a_class ["scilab-sessions"]] [D.(button [pcdata (Js.to_string key)] ) ; bu ] ) in
-		    M.Ev.onclick b (fun _ev -> load_session step (Js.to_string key); current_session := (Js.to_string key); 
-		     (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value <- key;
-		     render ~eval:true step;
-		     true); 
-		    res := !res @ [b] 
-    done;
-   D.(div ~a:[a_tabindex (0) ; a_class [ "onclick-button"]] [ D.(ul ~a:[a_class ["onclick-list"; "scilab-sessions"] ] !res) ]) in
+      let name = M.value input_session_name in
+      match name with
+      | "" -> Dom_html.window##alert(Js.string "Please pick a name for your current session before saving."); true;
+      | x -> save_session step x; true;);
+
+  let load_button step =
+    let res = ref [] in
+    match Js.Optdef.to_option (Dom_html.window##localStorage) with
+    | None -> D.(div [pcdata "no sessions"])
+    | Some locStorage ->
+      for i=0 to (locStorage##length -1) do
+        match Js.Opt.to_option (locStorage##key(i)) with
+        | None -> ()
+        | Some key -> let bu = D.(button [entity "#10007"]) in
+		      M.Ev.onclick bu (fun _ev -> 
+		          let r = Dom_html.window##confirm(Js.string ("Are you sure you want to delete session \""^(Js.to_string key)^"\" ?")) in
+		          match Js.to_bool r with
+		          | true -> delete_session step (Js.to_string key); true
+		          | _ -> true);
+		      let b = D.(span ~a:[a_class ["scilab-sessions"]] [D.(button [pcdata (Js.to_string key)] ) ; bu ] ) in
+		      M.Ev.onclick b (fun _ev -> load_session step (Js.to_string key); current_session := (Js.to_string key); 
+		                       (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value <- key;
+		                       render ~eval:true step;
+		                       true); 
+		      res := !res @ [b] 
+      done;
+      toolbar_popover_button "#128209" "LOAD" !res in
 
   let link = Dom_html.createA(Dom_html.document) in
   (*Dom_html.document##body##appendChild (coerceToNode(link));*)
   let tyxlink = Tyxml_js.Of_dom.of_anchor(link) in
   link##onclick <- Dom_html.handler (fun e -> Js.bool ((fun _ev ->
-    let var = jsnew blob ( session_to_array step) in
-    let url =  url##createObjectURL(var) in
-    let link = coerceanchor(link) in
-    link##href <- url;
-    link##download <-
-      (let name = M.value input_session_name in match name with
-	| "" -> Js.string "sciweb-file.sci"
-	| x -> Js.string (match Regexp.string_match (Regexp.regexp ".*.sci") x 0 with
-	  | None -> name^".sci"
-	  | _ -> x));		   
-    Js.Unsafe.meth_call link "click" [||]; true) e));
-  
+      let var = jsnew blob ( session_to_array step) in
+      let url =  url##createObjectURL(var) in
+      let link = coerceanchor(link) in
+      link##href <- url;
+      link##download <-
+        (let name = M.value input_session_name in match name with
+	        | "" -> Js.string "sciweb-file.sci"
+	        | x -> Js.string (match Regexp.string_match (Regexp.regexp ".*.sci") x 0 with
+	            | None -> name^".sci"
+	            | _ -> x));		   
+      Js.Unsafe.meth_call link "click" [||]; true) e));
+
   let input_files_load = D.(input ~a:[(D.(a_input_type `File)); a_id "files"; a_name "files[]"; a_style "diplay:none"] ()) in 
   M.Ev.onchange input_files_load (fun _ev -> 
-    match Js.Opt.to_option _ev##target with
-    | None ->  raise No_input_elt
-    | Some t -> match Js.Opt.to_option (Dom_html.CoerceTo.input(t)) with
-      | None -> raise No_input_elt
-      | Some inp -> match Js.Optdef.to_option inp##files with
-	| None -> raise No_input_elt
-	| Some files -> 
-	  match Js.Opt.to_option files##item(0) with
-	  | None -> raise No_input_elt
-	  | Some file ->
-	    current_session := Js.to_string file##name;
-	    let fileReader = jsnew File.fileReader() in 
-	    
-	    let f _ev = match Js.Opt.to_option _ev##target with
-	      | None -> false
-	      | Some t -> match Js.Opt.to_option (File.CoerceTo.string(t##result)) with
-		| None -> false
-		| Some s -> download_session step s ; render ~eval:false step; true in
-	    fileReader##onload <- Dom.handler (fun e -> Js.bool (f e)) ;
-	    fileReader##readAsText(file); true);
-  
-  let load_file_button = D.(button [pcdata "Open file"]) in
+      match Js.Opt.to_option _ev##target with
+      | None ->  raise No_input_elt
+      | Some t -> match Js.Opt.to_option (Dom_html.CoerceTo.input(t)) with
+        | None -> raise No_input_elt
+        | Some inp -> match Js.Optdef.to_option inp##files with
+	        | None -> raise No_input_elt
+	        | Some files -> 
+	          match Js.Opt.to_option files##item(0) with
+	          | None -> raise No_input_elt
+	          | Some file ->
+	            current_session := Js.to_string file##name;
+	            let fileReader = jsnew File.fileReader() in 
+
+	            let f _ev = match Js.Opt.to_option _ev##target with
+	              | None -> false
+	              | Some t -> match Js.Opt.to_option (File.CoerceTo.string(t##result)) with
+		              | None -> false
+		              | Some s -> download_session step s ; render ~eval:false step; true in
+	            fileReader##onload <- Dom.handler (fun e -> Js.bool (f e)) ;
+	            fileReader##readAsText(file); true);
+
+  let load_file_button = toolbar_button "#128190" "IMPORT" in
   M.Ev.onclick load_file_button (fun _ev -> Js.Unsafe.meth_call input_files_load "click" [||]);
-  let save_file_button = D.(button [(*entity "#10514"*) pcdata "Save as file" ]) in
+  let save_file_button = toolbar_button "#128190" "DOWNLOAD" in
   M.Ev.onclick save_file_button (fun _ev -> Js.Unsafe.meth_call link "click" [||]; true);
-  let clear_button = D.(button [pcdata "Clear"]) in
+  let clear_button = toolbar_button "#128293" "CLEAR" in
   M.Ev.onclick clear_button (fun _ev -> 
-    let r = Dom_html.window##confirm(Js.string ("Are you sure you want to erase the page ?")) in
-    match Js.to_bool r with
-    | true -> step.phrase <- ""; step.phrase <- ""; step.next <- None; current_session := ""; render step; true
-    | _ -> true);
-  let button_box = D.(div ~a:[a_class ["div-button"]] [run_button ; save_button; list_sessions step; save_file_button; load_file_button; clear_button]) in
-  let contents = D.(h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb  -  "; tyxlink]) :: [input_session_name] @ [button_box] @ [D.(div ~a:[a_id "blabla"] [])] @ format_result step 1 false in
-  update_tty contents;
-  (*Js.Unsafe.fun_call (Js.Unsafe.variable "inline") [||];*)
-  (* prevent C3.js bug *)
-   Js.Unsafe.meth_call Dom_html.window "onresize" [||]
+      let r = Dom_html.window##confirm(Js.string ("Are you sure you want to erase the page ?")) in
+      match Js.to_bool r with
+      | true -> step.phrase <- ""; step.phrase <- ""; step.next <- None; current_session := ""; render step; true
+      | _ -> true);
+  let buttons = [run_button ; save_button; load_button step; save_file_button; load_file_button; clear_button] in
+  let title = D.([ h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb  -  "; tyxlink ] ; input_session_name]) in
+  let toolbar = title @ buttons in
+  let contents = format_result step 1 false in
+  Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-toolbar"))
+    (fun () -> failwith "scilab-toolbar element not found")
+    (fun tb -> M.replaceChildren (Tyxml_js.Of_dom.of_element tb) toolbar) ;
 
-  
-
+  Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-tty"))
+    (fun () -> failwith "scilab-tty element not found")
+    (fun tty -> M.replaceChildren (Tyxml_js.Of_dom.of_element tty) contents) ;
+  Js.Unsafe.meth_call Dom_html.window "onresize" [||]
 
 (** where the args are passed and all the fun starts *)
 let main () =
   let open  Lwt in
   Lwt_js_events.onload () >>= fun _ ->
-  let step = { phrase = "m = [ 3 4 ; 5 6 ] * 3" ;
-             answer = "" ; next = None ; updated = false; liste=[] } in
-  render step ;
+  render
+    { phrase = "m = [ 3 4 ; 5 6 ] * 3" ;
+      answer = "" ; next = None ; updated = false; liste=[] } ;
   Lwt.return ()
 
 let () =

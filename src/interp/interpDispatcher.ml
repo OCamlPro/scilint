@@ -208,7 +208,7 @@ module Make (Values : InterpValues.S)
     | Print, [ rtt ] ->
       "%" ^ char_code rtt ^ "_p"
     | Function name, rtt :: _ ->
-      "%" ^ char_code rtt ^ "_name"
+      "%" ^ char_code rtt ^ "_" ^ name
     | Binary Plus, [ rttl ; rttr ] ->
       "%" ^ char_code rttl ^ "_a_" ^ char_code rttr
     | Binary Minus, [ rttl ; rttr ] ->

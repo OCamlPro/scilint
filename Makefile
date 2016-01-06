@@ -76,6 +76,7 @@ OCAML_SCILOB_MLS = \
   src/interp/interpCore.ml \
   src/interp/interpMessages.ml \
   src/interp/interpLib.ml \
+  src/interp/interpPlotLib.ml \
   src/interp/interpMathLib.ml \
   src/interp/interp.ml \
   src/interp/interpMain.ml
@@ -92,6 +93,7 @@ OCAML_SCIWEB_MLS = \
   src/interp/interpCore.ml \
   src/interp/interpMessages.ml \
   src/interp/interpLib.ml \
+  src/interp/interpPlotLib.ml \
   src/interp/interpMathLib.ml \
   src/interp/interp.ml \
   src/common/tyxml_js_manip.ml \
