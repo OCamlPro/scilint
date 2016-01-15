@@ -77,73 +77,12 @@ type 'a step =
     mutable updated: bool;
     mutable liste: (*Html5_types.div*) 'a D.elt list; }
 
-type montype =
-  | Tab of float array
-  | Func of (float -> float);;
-
-
-let plot2 x_values y_values =
-  let canvas = Tyxml_js.To_dom.of_canvas ( D.(canvas ~a:[a_class ["scilab-output"] ; a_width 1000 ; a_height 400] [] ) ) in
-  let context = canvas##getContext (Dom_html._2d_) in
-  let h = float_of_int (canvas##height) and  w = float_of_int (canvas##width) in
-  context##beginPath ();
-  context##moveTo(0., h/.2.); context##lineTo(w, h/.2.);
-  context##moveTo(w/.2., 0.); context##lineTo(w/.2., h);
-  begin
-    match y_values with
-    | Func f ->
-      let x_start = x_values.(0) and x_end = x_values.(Array.length x_values -1)
-      and y_start = 0. and y_end = 225. in
-      let w_scale = w /. ( x_end -. x_start) in
-      let h_scale = h /. ( y_end -. y_start) in
-      let first = ref true in
-      for i=0 to int_of_float w do
-	      let x = ((float_of_int i) /. w_scale) +. x_start in
-	      let y = (f(x) -. y_start )*. h_scale in
-	      let y2 = h -. y in
-	      if !first=true then ( context##moveTo(float_of_int i, y2); first := false; )
-	      else
-	        context##lineTo(float_of_int i, y2);
-      done;
-    | Tab t ->
-      let x_start = x_values.(0) and x_end = x_values.(Array.length x_values -1)
-      and y_start = t.(0) and y_end = t.(Array.length t -1) in
-      let w_scale = w /. ( x_end -. x_start) in
-      let h_scale = h /. ( y_end -. y_start) in
-      let first = ref true in
-      for i=0 to Array.length x_values -1 do
-	      let x = (x_values.(i) /. w_scale) -. x_start in
-	      let y = (t.(i) -. y_start) *. h_scale in
-	      let y2 = h -. y in
-	      if !first=true then ( context##moveTo(w -. w/. (float_of_int(Array.length x_values)), y2); first := false; )
-	      else
-	        context##lineTo(x, y2);
-      done;
-  end;
-  context##stroke ();
-  context##closePath ();
-  Tyxml_js.Of_dom.of_canvas (canvas)
-
-let plot3 liste =
-  let first = List.hd liste in
-  let xval = Array.make (List.length first) 0. in
-  let yval = Array.make (List.length first) 0. in
-  let rec sep i = function
-    | [] -> ()
-    | (x,y) :: tl -> xval.(i) <- x ; yval.(i) <- y ; sep (i+1) tl
-  in sep 0 first ;
-  plot2 xval (Tab(yval)) ;;
-
-let matrix_to_list m =
-  let open InterpCore.Values in
-  let h, w = matrix_size m in
-  let l = ref [] in
-  for i=1 to h do
-    for j=1 to w do
-      l := (matrix_get m j i) :: !l
-    done;
-  done;
-  !l
+let empty_session () =
+  { phrase = "" ;
+    answer = "" ;
+    next = None ;
+    updated = false ;
+    liste = [] }
 
 class type xmlSerializer = object
   method serializeToString : Dom_html.element Js.t -> Js.js_string Js.t Js.meth
@@ -259,208 +198,6 @@ let archimedes_plot plots nb =
   Dom_html.window##onresize <- (Dom_html.handler (fun e -> Js.bool (f e)));
   D.(div [ canv ; zoomin ; zoomout ])
 
-
-type attr = {
-  minX: float;
-  minY: float;
-  maxX: float;
-  maxY: float;
-  unitsPerTick: float;
-  (* constants *)
-  axisColor: string;
-  font: string;
-  tickSize: float;
-  (* relationships *)
-  rangeX: float;
-  rangeY: float;
-  unitX: float;
-  unitY: float;
-  centerY : float;
-  centerX : float;
-  iteration : float;
-  scaleX : float;
-  scaleY : float;
-}
-
-
-let drawXAxis context width attr =
-  context##save();
-  context##beginPath();
-  context##moveTo(0., attr.centerY);
-  context##lineTo(width, attr.centerY);
-  context##strokeStyle <- Js.string attr.axisColor;
-  context##lineWidth <- 2. ;
-  context##stroke();
-
-  (* draw tick marks *)
-  let xPosIncrement = attr.unitsPerTick *. attr.unitX in
-  context##font <- Js.string attr.font;
-  context##textAlign <- Js.string "center";
-  context##textBaseline <-Js.string "top";
-
-  (* draw left tick marks *)
-  let xPos = ref ( attr.centerX -. xPosIncrement ) in
-  let unit = ref ( -1. *. attr.unitsPerTick ) in
-  while !xPos > 0. do
-    context##moveTo(!xPos, attr.centerY -. attr.tickSize /. 2.);
-    context##lineTo(!xPos, attr.centerY +. attr.tickSize /. 2.);
-    context##stroke();
-    context##fillText(Js.string (string_of_float !unit), !xPos, attr.centerY +. attr.tickSize /. 2. +. 3.);
-    unit := !unit -. attr.unitsPerTick;
-    xPos := ceil (!xPos -. xPosIncrement);
-  done;
-
-  (* draw right tick marks *)
-  let xPos = ref ( attr.centerX +. xPosIncrement ) in
-  let unit = ref ( attr.unitsPerTick ) in
-  while !xPos < width do
-    context##moveTo(!xPos, attr.centerY -. attr.tickSize /. 2.);
-    context##lineTo(!xPos, attr.centerY +. attr.tickSize /. 2.);
-    context##stroke();
-    context##fillText(Js.string (string_of_float !unit), !xPos, attr.centerY +. attr.tickSize /. 2. +. 3.);
-    unit := !unit +. attr.unitsPerTick;
-    xPos := ceil (!xPos +. xPosIncrement);
-  done;
-  context##restore()
-
-let drawYAxis context height attr =
-  context##save();
-  context##beginPath();
-  context##moveTo(attr.centerX, 0.);
-  context##lineTo(attr.centerX, height);
-  context##strokeStyle <- Js.string attr.axisColor;
-  context##lineWidth <- 2. ;
-  context##stroke();
-
-  (* draw tick marks *)
-  let yPosIncrement = attr.unitsPerTick *. attr.unitY in
-  context##font <- Js.string attr.font;
-  context##textAlign <- Js.string "right";
-  context##textBaseline <- Js.string "middle";
-
-  (* draw left tick marks *)
-  let yPos = ref ( attr.centerY -. yPosIncrement ) in
-  let unit = ref ( attr.unitsPerTick ) in
-  while !yPos > 0. do
-    context##moveTo(attr.centerX -. attr.tickSize /. 2., !yPos);
-    context##lineTo(attr.centerX +. attr.tickSize /. 2., !yPos);
-    context##stroke();
-    context##fillText(Js.string (string_of_float !unit), attr.centerX -. attr.tickSize /. 2. -. 3., !yPos);
-    unit := !unit +. attr.unitsPerTick;
-    yPos := ceil (!yPos -. yPosIncrement);
-  done;
-
-  (* draw right tick marks *)
-  let yPos = ref ( attr.centerY +. yPosIncrement ) in
-  let unit = ref ( -1. *. attr.unitsPerTick ) in
-  while !yPos < height do
-    context##moveTo(attr.centerX -. attr.tickSize /. 2., !yPos);
-    context##lineTo(attr.centerX +. attr.tickSize /. 2., !yPos);
-    context##stroke();
-    context##fillText(Js.string (string_of_float !unit), attr.centerX -. attr.tickSize /. 2. -. 3., !yPos);
-    unit := !unit -. attr.unitsPerTick;
-    yPos := ceil (!yPos +. yPosIncrement);
-  done;
-  (***********************)
-  context##textAlign <- Js.string "start";
-  context##fillText(Js.string "xlabeloijojojijojpmk", 10., attr.centerY -. 30.);
-
-  context##restore()
-
-let init minX minY maxX maxY unitsPerTick iteration =
-  let canvas = Tyxml_js.To_dom.of_canvas ( D.(canvas ~a:[a_class ["scilab-output"] ; a_width 1000 ; a_height 400] [] ) ) in
-  let context = canvas##getContext (Dom_html._2d_) in
-  let h = float_of_int (canvas##height) and  w = float_of_int (canvas##width) in
-  let rangeX = maxX -. minX and rangeY = maxY -. minY in
-  let myattr = {
-    minX = minX; maxX = maxX;
-    minY = minY; maxY = maxY;
-    unitsPerTick = unitsPerTick;
-    axisColor = "#000";
-    font = "8pt Sans-serif";
-    tickSize = 12.;
-    rangeX = rangeX;
-    rangeY = rangeY;
-    unitX = w /. rangeX;
-    unitY = h /. rangeY;
-    centerY = ceil (abs_float(maxY /. rangeY) *. h);
-    centerX = ceil (abs_float(minX /. rangeX) *. w);
-    iteration = (*iteration;*) (maxX -. minX) /. 1000.;
-    scaleX = w /. rangeX;
-    scaleY = h /. rangeY; } in
-  drawXAxis context w myattr;
-  drawYAxis context h myattr;
-  (canvas, myattr)
-
-let drawEquation canvas attr equation xvalues =
-  let context = canvas##getContext (Dom_html._2d_) in
-  context##save();
-  context##translate(attr.centerX, attr.centerY);
-  context##scale(attr.scaleX, -.attr.scaleY);
-  context##beginPath();
-  context##moveTo(attr.minX, equation(attr.minX));
-  (*let x = ref ( attr.minX +. attr.iteration) in
-    while !x <= attr.maxX do
-    context##lineTo(!x, equation(!x));
-    x := !x +. attr.iteration;
-    done;*)
-  for i=0 to Array.length xvalues -1 do
-    context##lineTo(xvalues.(i), equation(xvalues.(i)));
-  done;
-  context##restore();
-  context##lineJoin <- Js.string "round";
-  context##lineWidth <- 2.;
-  context##strokeStyle <- Js.string "green";
-  context##stroke();
-  context##restore();
-  Tyxml_js.Of_dom.of_canvas (canvas)
-
-let plot_canvas xvalues y =
-  let minX = xvalues.(0) and maxX = xvalues.(Array.length xvalues -1) in
-  let minY = ref 0. and maxY = ref 0. in
-  minY := y(xvalues.(0)) ; maxY := y(xvalues.(0)) ;
-  for i=1 to Array.length xvalues -1 do
-    if !minY > y(xvalues.(i)) then
-      minY := y(xvalues.(i));
-    if !maxY < y(xvalues.(i)) then
-      maxY := y(xvalues.(i));
-  done;
-  let initial, attr = init minX !minY maxX !maxY 1. 1. in
-  let canvas = drawEquation initial attr y xvalues in
-  canvas
-
-let drawEquation2 canvas attr yvalues xvalues =
-  let context = canvas##getContext (Dom_html._2d_) in
-  context##save();
-  context##translate(attr.centerX, attr.centerY);
-  context##scale(attr.scaleX, -.attr.scaleY);
-  context##beginPath();
-  context##moveTo(attr.minX, yvalues.(0));
-  for i=0 to Array.length xvalues -1 do
-    context##lineTo(xvalues.(i), yvalues.(i));
-  done;
-  context##restore();
-  context##lineJoin <- Js.string "round";
-  context##lineWidth <- 2.;
-  context##strokeStyle <- Js.string "green";
-  context##stroke();
-  context##restore();
-  Tyxml_js.Of_dom.of_canvas (canvas)
-
-let plot_canvas2 xvalues y =
-  let minX = xvalues.(0) and maxX = xvalues.(Array.length xvalues -1) in
-  let minY = ref 0. and maxY = ref 0. in
-  minY := y.(0) ; maxY := y.(0) ;
-  for i=1 to Array.length xvalues -1 do
-    if !minY > y.(i) then
-      minY := y.(i);
-    if !maxY < y.(i) then
-      maxY := y.(i);
-  done;
-  let initial, attr = init minX !minY maxX !maxY 1. 1. in
-  let canvas = drawEquation2 initial attr y xvalues in
-  canvas
-
 let save_session step name =
   match Js.Optdef.to_option (Dom_html.window##localStorage) with
   | None -> ()
@@ -470,33 +207,25 @@ let save_session step name =
       match next with
       | None -> ()
       | Some s ->
-	      if s.phrase <>"" then res := !res ^ "@" ^ s.phrase; save s.next;
+	      if s.phrase <>"" then res := !res ^ "\000" ^ s.phrase; save s.next;
     in save step.next;
     locStorage##setItem (Js.string name, Js.string !res)
 
-
-let load_session step name =
+let load_session name =
   match Js.Optdef.to_option (Dom_html.window##localStorage) with
-  | None -> ()
+  | None -> empty_session ()
   | Some locStorage ->
-    let liste =
+    let phrases =
       match Js.Opt.to_option locStorage##getItem (Js.string name) with
       | None ->  []
-      | Some phrase -> Regexp.split (Regexp.regexp "@") (Js.to_string phrase);
-    in
-    step.phrase <- List.hd liste;
-    step.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
-    let liste = List.tl liste in
-    let rec show s l =
-      match l with
-      | [] -> ()
-      | hd :: tl ->
-	      match s with
-	      | None -> ()
-	      | Some n -> n.phrase <- hd;
-	        n.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
-	        show n.next tl
-    in show step.next liste
+      | Some phrase -> Regexp.split (Regexp.regexp "\000") (Js.to_string phrase); in
+    let rec init = function
+      | [] -> None
+      | phrase :: rest ->
+	      Some { (empty_session ()) with phrase ; next = init rest }  in
+    match init phrases with
+    | None -> empty_session ()
+    | Some session -> session
 
 let delete_session step name =
   match Js.Optdef.to_option (Dom_html.window##localStorage) with
@@ -512,7 +241,7 @@ let delete_session step name =
 let download_session step file_content =
   let str = Regexp.split (Regexp.regexp "\n") (Js.to_string file_content) in
   step.phrase <- List.hd str;
-  step.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
+  step.next <- Some (empty_session ()) ;
   let str = List.tl str in
   let rec dl cstep l =
     match l with
@@ -523,7 +252,7 @@ let download_session step file_content =
       | _ -> match cstep with
 	      | None -> ()
 	      | Some s -> s.phrase <- hd; (match s.next with
-	          | None -> s.next <- Some {phrase = ""; answer = ""; next = None; updated = false; liste = []};
+	          | None -> s.next <- Some (empty_session ())
 	          | Some next -> ());
 	        dl s.next tl
   in dl step.next str
@@ -674,42 +403,54 @@ let rec render ?(eval = true) step =
         cstep.updated <- true ;
         render ~eval: true step ;
         true) ;
-    let buttons =
-      let close_button = D.(button [ entity "#10005" ]) in
-      let insert_button = D.(button [ entity "#8648" ]) in
-      M.Ev.onclick close_button (fun _ev ->
-          let step =
-            if step == cstep then match step.next with
-              | Some nstep -> nstep
-              | None -> { phrase = "" ; answer = "" ; next = None ; updated = false; liste = [] }
-            else
-              let rec del pstep = match pstep.next with
-                | None -> step
-                | Some nstep when nstep == cstep ->
-                  pstep.next <- nstep.next ;
-                  step
-                | Some nstep -> del nstep in
-              del step in
-          render ~eval: true step ;
-          true) ;
-      M.Ev.onclick insert_button (fun _ev ->
-          let rec ins step =
+    let close_button = D.(button [ entity "#10005" ]) in
+    let insert_before_button = D.(button [ entity "#8648" ]) in
+    let insert_after_button = D.(button [ entity "#8650" ]) in
+    M.Ev.onclick close_button (fun _ev ->
+        let step =
+          if step == cstep then match step.next with
+            | Some nstep -> nstep
+            | None -> (empty_session ())
+          else
+            let rec del pstep = match pstep.next with
+              | None -> step
+              | Some nstep when nstep == cstep ->
+                pstep.next <- nstep.next ;
+                step
+              | Some nstep -> del nstep in
+            del step in
+        render ~eval: true step ;
+        true) ;
+    M.Ev.onclick insert_before_button (fun _ev ->
+        let rec ins step =
+          match step.next with
+          | None -> step
+          | Some nstep when nstep == cstep ->
+            { step with next = Some { (empty_session ()) with next = Some nstep } }
+          | Some nstep -> { step with next = Some (ins nstep) } in
+        let step =
+          if cstep == step then
+            { (empty_session ()) with next = Some step }
+          else ins step in
+        render ~eval: true step ;
+        true) ;
+    M.Ev.onclick insert_after_button (fun _ev ->
+        let rec ins step =
+          if step == cstep then
+            { step with next = Some { (empty_session ()) with next = step.next } }
+          else
             match step.next with
-            | None ->
-              { phrase = "" ; answer = "" ; next = Some step ; updated = false; liste = [] }
-            | Some nstep when nstep == cstep ->
-              { step with next = Some { phrase = "" ; answer = "" ; next = Some nstep ; updated = false; liste = [] } }
+            | None -> step
             | Some nstep -> { step with next = Some (ins nstep) } in
-          render ~eval: true (ins step) ;
-          true) ;
-      [ insert_button ; close_button ] in
+        render ~eval: true (ins step) ;
+        true) ;
     D.([div ~a:[ a_class [ "scilab-block" ] ]
-          (code_input ::
+          ([ D.(div ~a:[ a_class [ "buttons" ; "top" ]] [ insert_before_button ; close_button ]) ;
+             D.(div ~a:[ a_class [ "buttons" ; "bottom" ]] [ insert_after_button ]) ; code_input ] @
            cstep.liste @
            (if cstep.answer <> "" then
 	            D.([ p ~a:[ a_class [ "scilab-output" ]] [ pcdata cstep.answer ] ])
-            else []) @
-           [ D.(div ~a:[ a_class [ "buttons" ]] buttons) ])]) @
+            else []))]) @
     match cstep.next with
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in
@@ -720,9 +461,9 @@ let rec render ?(eval = true) step =
     Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-menu"))
       (fun () -> failwith "scilab-menu element not found")
       (fun menu -> Tyxml_js.Of_dom.of_element menu) in
-  let menu_opened = ref None in
+  let menu_opened = ref false in
   let hide_menu () =
-    menu_opened := None ;
+    menu_opened := false ;
     M.removeClass menu "scilab-menu-open" in
   let toolbar_button icon leg cb =
     let button =
@@ -730,57 +471,82 @@ let rec render ?(eval = true) step =
            ~a:[a_class ["scilab-toolbar-button"]]
            [ span ~a:[a_class ["icon"]] [ D.entity icon ] ;
              span ~a:[a_class ["legend"]] [ D.pcdata leg ] ]) in
-    M.Ev.onclick button (fun _ev -> hide_menu () ; cb () ; true) ;
+    M.Ev.onclick button (fun _ev -> cb () ; true) ;
     button in
   let toolbar_menu_button icon leg ctns =
     toolbar_button icon leg @@ fun () ->
-    match !menu_opened with
-    | Some prev when prev = leg ->
-      menu_opened := None ;
+    let ctns = ctns () in
+    if ctns = [] then begin
+      menu_opened := false ;
       M.removeClass menu "scilab-menu-open"
-    | _ ->
-      menu_opened := Some leg ;
+    end else begin
+      menu_opened := true ;
       M.addClass menu "scilab-menu-open" ;
-      M.replaceChildren menu (ctns ()) in
+      M.replaceChildren menu ctns
+    end in
 
   let input_session_name =
-    D.(input ~a:[a_class ["input-session-name"] ; a_placeholder "untitled"; a_value !current_session; a_size (12) ] ()) in
+    D.(input ~a:[a_class ["input-session-name"] ; a_placeholder "enter a title"; a_value !current_session; a_size (12) ] ()) in
 
-  let save_button =
-    toolbar_button "#128209" "SAVE" @@ fun () ->
-    let name = M.value input_session_name in
-    match name with
-    | "" -> Dom_html.window##alert(Js.string "Please pick a name for your current session before saving.")
-    | x -> save_session step x in
-
-  let load_button step =
-    toolbar_menu_button "#128209" "LOAD" @@ fun () ->
+  let sessions_menu () =
     match Js.Optdef.to_option (Dom_html.window##localStorage) with
     | None -> D.[div [pcdata "No sessions saved."]]
     | Some locStorage ->
       let ul = D.(ul ~a:[a_class ["scilab-menu-sessions"]] []) in
+      let current = ref None in
+      let unselect () =
+        match !current with
+        | None -> ()
+        | Some li ->
+          M.removeClass li "current" ;
+          current := None in
+      let select li =
+        unselect () ;
+        M.addClass li "current" ;
+        current := Some li in
       for i = 0 to locStorage##length - 1 do
         match Js.Opt.to_option (locStorage##key(i)) with
         | None -> ()
         | Some key ->
           let button_del = D.(button [ entity "#10005" ]) in
 		      let li = D.(li [ pcdata (Js.to_string key) ; button_del ] ) in
-		      M.Ev.onclick button_del (fun _ev ->
+          if Js.to_string (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value = Js.to_string key then begin
+            select li
+          end ;
+          M.Ev.onclick button_del (fun _ev ->
 		          let r = Dom_html.window##confirm(Js.string ("Are you sure you want to delete session \""^(Js.to_string key)^"\" ?")) in
 		          match Js.to_bool r with
 		          | true ->
-                delete_session step (Js.to_string key);
+                delete_session step (Js.to_string key) ;
+                select li ; unselect () ;
                 M.removeChild ul li ;
                 true
 		          | _ -> true) ;
-		      M.Ev.onclick li
-            (fun _ev -> load_session step (Js.to_string key); current_session := (Js.to_string key);
-		          (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value <- key;
-		          render ~eval:true step;
-		          true);
+          M.Ev.onclick li
+            (fun _ev ->
+               let step = load_session (Js.to_string key) in
+               current_session := (Js.to_string key);
+		           (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value <- key;
+               select li ;
+		           render ~eval:true step;
+		           true);
           M.appendChild ul li
       done ;
       [ ul ] in
+
+  let load_button step =
+    toolbar_menu_button "#128209" "LOAD" sessions_menu in
+
+  let save_button =
+    toolbar_menu_button "#128209" "SAVE" @@ fun () ->
+    let name = M.value input_session_name in
+    match name with
+    | "" ->
+      Dom_html.window##alert(Js.string "Please pick a name for your current session before saving.") ;
+      []
+    | name ->
+      save_session step name ;
+      sessions_menu () in
 
   let save_file_button =
     let link = Dom_html.createA(Dom_html.document) in
@@ -833,7 +599,7 @@ let rec render ?(eval = true) step =
     toolbar_button "#128293" "CLEAR" @@ fun () ->
     let r = Dom_html.window##confirm(Js.string ("Are you sure you want to erase the page ?")) in
     match Js.to_bool r with
-    | true -> step.phrase <- ""; step.phrase <- ""; step.next <- None; current_session := ""; render step
+    | true -> render (empty_session ())
     | _ -> () in
 
   let buttons = [save_button; load_button step; save_file_button; load_file_button; clear_button] in
@@ -856,7 +622,7 @@ let main () =
   let open  Lwt in
   Lwt_js_events.onload () >>= fun _ ->
   render
-    { phrase = "m = [ 3 4 ; 5 6 ] * 3" ;
+    { phrase = "m = 1 : 2 : 8\nr = m' * m" ;
       answer = "" ; next = None ; updated = false; liste=[] } ;
   Lwt.return ()
 

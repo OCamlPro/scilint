@@ -9,13 +9,14 @@
 	     background-color: #666 ;
        overflow: hidden;
        font-family: sans;
+       font-size: 12px;
      }
 
      #scilab-toolbar {
 	     margin: 0;
 	     padding: 0 0 10px 0;
 	     background-color: #333;
-       background: linear-gradient(to bottom, #444 0%, #222 46px, rgba(0,0,0,0.5) 46px, rgba(0,0,0,0) 100%) ;
+       background: linear-gradient(to bottom, #444 0%, #222 46px, #444 0%, #222 46px, #FFF 0%, #FFF 47px, rgba(0,0,0,0.5) 47px, rgba(0,0,0,0) 100%) ;
        height: 46px;
        width: 100%;
        position: absolute ;
@@ -25,18 +26,23 @@
 
      #scilab-toolbar > h1,
      #scilab-toolbar > .input-session-name {
-       margin: 4px ;
+       margin: 8px 4px 8px 0 ;
        padding: 0px ;
        display:inline;
        border: none;
        background: transparent;
        color:white;
        font-size: 20px;
-       line-height: 38px;
+       line-height: 30px;
      }
      #scilab-toolbar > .input-session-name:hover {
        background: rgba(255,255,255,0.2);
        box-shadow: 0px 0px 2px 2px rgba(255,255,255,0.5);
+     }
+     #scilab-toolbar > .input-session-name {
+       margin-left: -10px;
+       padding: 0 10px 0 10px;
+       border-radius: 5px;
      }
      #scilab-toolbar > h1 {
        margin-left: 10px;
@@ -48,39 +54,41 @@
        background: none ;
        border: none ;
        padding: 2px ;
-       margin: 4px 4px 4px 0 ;
+       margin: 5px ;
        min-width: 60px ;
+       border-radius: 5px;
      }
      #scilab-toolbar > .scilab-toolbar-button:hover {
        background: rgba(255,255,255,0.2);
        box-shadow: 0px 0px 2px 2px rgba(255,255,255,0.5);
      }
      #scilab-toolbar > .scilab-toolbar-button .icon {
-       margin: 2px ;
+       margin: 0 0 2px 0 ;
        padding: 0px ;
        font-size: 16px ;
        line-height: 16px;
        display: block ;
      }
      #scilab-toolbar > .scilab-toolbar-button .legend {
-       margin: 2px ;
+       margin: 2px 0 0 0 ;
        padding: 0px ;
-       font-size: 10px ;
-       line-height: 10px;
+       font-size: 12px ;
+       line-height: 12px;
        display: block ;
      }
-
      #scilab-menu {
        font-family: sans;
 	     margin: 0;
-	     padding: 10px 10px 10px 30px ;
+	     padding: 10px 10px 10px 20px ;
 	     background-color: #333;
-       background: linear-gradient(to right, rgba(0,0,0,0) 0px, rgba(0,0,0,0.5) 20px, rgba(230,230,230,0.95) 20px, rgba(200,200,200,0.95) 300px) ;
+       background: linear-gradient(to right, rgba(0,0,0,0) 0px, rgba(0,0,0,0.5) 10px, rgba(230,230,230,0.95) 10px, rgba(200,200,200,0.95) 300px) ;
        top: 46px; bottom: 0px; left: 100%;
        opacity: 0;
        position: absolute ;
        z-index: 1000;
        transition: opacity .2s ease-in-out;
+       overflow-x: hidden;
+       overflow-y: auto;
      }
      #scilab-menu.scilab-menu-open {
        left: unset;
@@ -102,12 +110,21 @@
        background: #333;
        color: white;
      }
+     #scilab-menu ul.scilab-menu-sessions li.current {
+       background: #8e6 ;
+     }
+     #scilab-menu ul.scilab-menu-sessions li.current:hover {
+       background: #333;
+       color: #8e6 ;
+     }
      #scilab-menu ul.scilab-menu-sessions > * > button {
        margin-left: 10px;
+       padding: 0;
        position: absolute;
-       right: 0px;
-       top: 0px; bottom: 0px;
+       right: 2px;
+       top: 2px; bottom: 2px;
        border: none;
+       border-radius: 10px;
        background: none;
        color: inherit;
      }
@@ -120,7 +137,7 @@
        position: absolute;
 	     top: 46px; bottom: 0; left: 0 ; right: 0 ;
        margin: 0;
-	     padding: 0px 15px 15px 10px ;
+	     padding: 0px 10px 10px 10px ;
        overflow: auto;
 	     background-color: #aaa;
 	     font-family: monospace;
@@ -137,11 +154,40 @@
        background: linear-gradient(to top, #bbb 0px, #eee 20px);
        box-shadow: 5px 5px 10px -2px rgba(0,0,0,0.86);
        position: relative;
+       border-radius: 5px;
      }
-     #scilab-tty .scilab-block > .buttons {
+     #scilab-tty .scilab-block > .scilab-input {
+       border-top-left-radius: 5px;
+       border-top-right-radius: 5px;
+     }
+     #scilab-tty .scilab-block > :last-child {
+       border-bottom-left-radius: 5px;
+       border-bottom-right-radius: 5px;
+     }
+     #scilab-tty .scilab-block:last-child {
+       margin-bottom: 10px;
+     }
+     #scilab-tty .scilab-block > .buttons.top {
        position: absolute;
        top:0;
        right: 0;
+     }
+     #scilab-tty .scilab-block > .buttons.top :last-child {
+       border-top-right-radius: 5px;
+     }
+     #scilab-tty .scilab-block > .buttons.top :first-child {
+       border-bottom-left-radius: 5px;
+     }
+     #scilab-tty .scilab-block > .buttons.bottom {
+       position: absolute;
+       bottom:0;
+       right: 0;
+     }
+     #scilab-tty .scilab-block > .buttons.bottom :last-child {
+       border-bottom-right-radius: 5px;
+     }
+     #scilab-tty .scilab-block > .buttons.bottom :first-child {
+       border-top-left-radius: 5px;
      }
      #scilab-tty .scilab-block > .buttons > button {
        border: none;
@@ -152,6 +198,7 @@
        margin: 0;
        vertical-align: middle;
        text-align: center;
+       text-shadow: 0 0 2px white;
      }
      #scilab-tty .scilab-block > .buttons > button:hover {
        background: rgba(0, 0, 0, 0.7);
@@ -177,7 +224,7 @@
      }
      #scilab-tty .scilab-result {
 	     padding: 5px;
-	     background-color: rgba(0, 255, 0, 0.5);
+	     background-color: rgba(120, 255, 50, 0.5);
        color: #000;
 	     margin: 0;
 	     white-space: pre;
@@ -208,6 +255,7 @@
        border-left: 1px solid black;
        border-right: 1px solid black;
        display : inline-table;
+       border-radius: 8px;
      }
      td { padding: 4px; }
      ul { display : inline-block }
