@@ -21,7 +21,7 @@
        width: 100%;
        position: absolute ;
        top: 0;
-       z-index: 1001;
+       z-index: 1002;
      }
 
      #scilab-toolbar > h1,
@@ -102,7 +102,7 @@
      }
      #scilab-menu ul.scilab-menu-sessions > li {
        padding: 5px 50px 5px 10px;
-       margin: 0 -10px; 0 -10px;
+       margin: 0 -10px 0 -10px;
        cursor: default;
        position: relative;
      }
@@ -153,7 +153,6 @@
        background: white;
        background: linear-gradient(to top, #bbb 0px, #eee 20px);
        box-shadow: 5px 5px 10px -2px rgba(0,0,0,0.86);
-       position: relative;
        border-radius: 5px;
      }
      #scilab-tty .scilab-block > .scilab-input {
@@ -168,9 +167,13 @@
        margin-bottom: 10px;
      }
      #scilab-tty .scilab-block > .buttons.top {
-       position: absolute;
        top:0;
        right: 0;
+       margin: 0 0 -20px 0;
+       width: 100%;
+       text-align: right;
+       z-index: 10005;
+       opacity: 0.999;
      }
      #scilab-tty .scilab-block > .buttons.top :last-child {
        border-top-right-radius: 5px;
@@ -179,9 +182,13 @@
        border-bottom-left-radius: 5px;
      }
      #scilab-tty .scilab-block > .buttons.bottom {
-       position: absolute;
-       bottom:0;
+       top:0;
        right: 0;
+       margin: -20px 0 0 0;
+       width: 100%;
+       text-align: right;
+       z-index: 10005;
+       opacity: 0.999;
      }
      #scilab-tty .scilab-block > .buttons.bottom :last-child {
        border-bottom-right-radius: 5px;
@@ -251,6 +258,46 @@
 	     margin: 0;
 	     white-space: pre;
      }
+     .tooltip {
+       position: absolute;
+       margin: 0 0 0 -250px;
+       background:
+         linear-gradient(to top, #ffd 0px, #eec 20px);
+       box-shadow:2px 5px 5px rgba(0, 0, 0, 0.3);
+       color: black;
+       z-index: 1001;
+       padding: 4px;
+       display: block;
+       transition: transform 0.1s ease-out;
+       transform-origin: 0 0;
+       transform: rotateX(90deg);
+     }
+
+     #scilab-toolbar .tooltip {
+       background:
+         linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 9px),
+         linear-gradient(to top, #ffd 0px, #eec 20px);
+       top: 47px;
+       left: 50%;
+       width: 500px;
+     }
+
+     #scilab-tty .tooltip {
+       left: 50%;
+       width: 500px;
+       top: 0px;
+     }
+
+     #scilab-menu .tooltip {
+       top: 20px;
+       right: 20px;
+     }
+
+     button:hover > .tooltip,
+     span:hover > .tooltip {
+       transform: rotateX(0deg);
+     }
+
      table.scilab-matrix {
        border-left: 1px solid black;
        border-right: 1px solid black;

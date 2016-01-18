@@ -403,9 +403,12 @@ let rec render ?(eval = true) step =
         cstep.updated <- true ;
         render ~eval: true step ;
         true) ;
-    let close_button = D.(button [ entity "#10005" ]) in
-    let insert_before_button = D.(button [ entity "#8648" ]) in
-    let insert_after_button = D.(button [ entity "#8650" ]) in
+    let close_button =
+      D.(button [ entity "#10005" ; span ~a:[a_class ["tooltip"]] [ D.pcdata "Delete this box." ] ]) in
+    let insert_before_button =
+      D.(button [ entity "#8648" ; span ~a:[a_class ["tooltip"]] [ D.pcdata "Insert a new box before this one." ] ]) in
+    let insert_after_button =
+      D.(button [ entity "#8650" ; span ~a:[a_class ["tooltip"]] [ D.pcdata "Insert a new box after this one." ] ]) in
     M.Ev.onclick close_button (fun _ev ->
         let step =
           if step == cstep then match step.next with
@@ -445,12 +448,12 @@ let rec render ?(eval = true) step =
         render ~eval: true (ins step) ;
         true) ;
     D.([div ~a:[ a_class [ "scilab-block" ] ]
-          ([ D.(div ~a:[ a_class [ "buttons" ; "top" ]] [ insert_before_button ; close_button ]) ;
-             D.(div ~a:[ a_class [ "buttons" ; "bottom" ]] [ insert_after_button ]) ; code_input ] @
+          ([ D.(div ~a:[ a_class [ "buttons" ; "top" ]] [ insert_before_button ; close_button ]) ; code_input ] @
            cstep.liste @
            (if cstep.answer <> "" then
 	            D.([ p ~a:[ a_class [ "scilab-output" ]] [ pcdata cstep.answer ] ])
-            else []))]) @
+            else []) @
+           [ D.(div ~a:[ a_class [ "buttons" ; "bottom" ]] [ insert_after_button ]) ])]) @
     match cstep.next with
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in
@@ -465,16 +468,17 @@ let rec render ?(eval = true) step =
   let hide_menu () =
     menu_opened := false ;
     M.removeClass menu "scilab-menu-open" in
-  let toolbar_button icon leg cb =
+  let toolbar_button icon leg help cb =
     let button =
       D.(button
            ~a:[a_class ["scilab-toolbar-button"]]
            [ span ~a:[a_class ["icon"]] [ D.entity icon ] ;
-             span ~a:[a_class ["legend"]] [ D.pcdata leg ] ]) in
+             span ~a:[a_class ["legend"]] [ D.pcdata leg ] ;
+             span ~a:[a_class ["tooltip"]] [ D.pcdata help ] ]) in
     M.Ev.onclick button (fun _ev -> cb () ; true) ;
     button in
-  let toolbar_menu_button icon leg ctns =
-    toolbar_button icon leg @@ fun () ->
+  let toolbar_menu_button icon leg help ctns =
+    toolbar_button icon leg help @@ fun () ->
     let ctns = ctns () in
     if ctns = [] then begin
       menu_opened := false ;
@@ -508,7 +512,9 @@ let rec render ?(eval = true) step =
         match Js.Opt.to_option (locStorage##key(i)) with
         | None -> ()
         | Some key ->
-          let button_del = D.(button [ entity "#10005" ]) in
+          let button_del =
+            D.(button [ entity "#10005" ;
+                        span ~a:[a_class ["tooltip"]] [ D.pcdata "Delete this session." ]]) in
 		      let li = D.(li [ pcdata (Js.to_string key) ; button_del ] ) in
           if Js.to_string (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value = Js.to_string key then begin
             select li
@@ -535,10 +541,10 @@ let rec render ?(eval = true) step =
       [ ul ] in
 
   let load_button step =
-    toolbar_menu_button "#128209" "LOAD" sessions_menu in
+    toolbar_menu_button "#128209" "LOAD" "Open the session menu." sessions_menu in
 
   let save_button =
-    toolbar_menu_button "#128209" "SAVE" @@ fun () ->
+    toolbar_menu_button "#128209" "SAVE" "Save the current session." @@ fun () ->
     let name = M.value input_session_name in
     match name with
     | "" ->
@@ -551,7 +557,7 @@ let rec render ?(eval = true) step =
   let save_file_button =
     let link = Dom_html.createA(Dom_html.document) in
     let tyxlink = Tyxml_js.Of_dom.of_anchor(link) in
-    let button = toolbar_button "#128190" "DOWNLOAD" @@ fun () ->
+    let button = toolbar_button "#128190" "DOWNLOAD" "Download the current session as a .sci file." @@ fun () ->
       link##onclick <- Dom_html.handler (fun e -> Js.bool ((fun _ev ->
           let var = jsnew blob ( session_to_array step) in
           let url =  url##createObjectURL(var) in
@@ -592,11 +598,11 @@ let rec render ?(eval = true) step =
 		                | Some s -> download_session step s ; render ~eval:false step; true in
 	              fileReader##onload <- Dom.handler (fun e -> Js.bool (f e)) ;
 	              fileReader##readAsText(file); true);
-    toolbar_button "#128190" "IMPORT" @@ fun () ->
+    toolbar_button "#128190" "IMPORT" "Load a .sci file from your computer." @@ fun () ->
     Js.Unsafe.meth_call input_files_load "click" [||] in
 
   let clear_button =
-    toolbar_button "#128293" "CLEAR" @@ fun () ->
+    toolbar_button "#128293" "CLEAR" "Open a fresh session." @@ fun () ->
     let r = Dom_html.window##confirm(Js.string ("Are you sure you want to erase the page ?")) in
     match Js.to_bool r with
     | true -> render (empty_session ())
