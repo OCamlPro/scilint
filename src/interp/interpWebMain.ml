@@ -479,7 +479,10 @@ let rec render ?(eval = true) step =
     button in
   let toolbar_menu_button icon leg help ctns =
     toolbar_button icon leg help @@ fun () ->
-    let ctns = ctns () in
+    let close_button =
+      D.(button ~a: [ a_class [ "close" ] ] [ pcdata "Close menu" ]) in
+    M.Ev.onclick close_button (fun _ev -> hide_menu () ; true) ;
+    let ctns = [ close_button ; D.(div ~a: [ a_class [ "contents" ] ]) (ctns ()) ]  in
     if ctns = [] then begin
       menu_opened := false ;
       M.removeClass menu "scilab-menu-open"
@@ -515,7 +518,7 @@ let rec render ?(eval = true) step =
           let button_del =
             D.(button [ entity "#10005" ;
                         span ~a:[a_class ["tooltip"]] [ D.pcdata "Delete this session." ]]) in
-		      let li = D.(li [ pcdata (Js.to_string key) ; button_del ] ) in
+		      let li = D.(li [ span [ pcdata (Js.to_string key) ] ; button_del ] ) in
           if Js.to_string (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value = Js.to_string key then begin
             select li
           end ;
@@ -608,9 +611,13 @@ let rec render ?(eval = true) step =
     | true -> render (empty_session ())
     | _ -> () in
 
-  let buttons = [save_button; load_button step; save_file_button; load_file_button; clear_button] in
-  let title = D.([ h1 ~a:[a_style "display:inline"] [ pcdata "Sciweb -" ] ; input_session_name]) in
-  let toolbar = title @ buttons in
+  let buttons =
+    D.(div ~a:[a_class [ "buttons" ]]
+         [save_button; load_button step; save_file_button; load_file_button; clear_button]) in
+  let title =
+    D.(div ~a:[a_class [ "title" ]]
+         [ h1 [ pcdata "SciWeb -" ] ; input_session_name]) in
+  let toolbar = [ title ; buttons ] in
   let contents = format_result step 1 false in
   Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-toolbar"))
     (fun () -> failwith "scilab-toolbar element not found")
@@ -619,7 +626,6 @@ let rec render ?(eval = true) step =
   Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-tty"))
     (fun () -> failwith "scilab-tty element not found")
     (fun tty ->
-       M.Ev.onclick (Tyxml_js.Of_dom.of_element tty) (fun _ev -> hide_menu () ; true) ;
        M.replaceChildren (Tyxml_js.Of_dom.of_element tty) contents) ;
   Js.Unsafe.meth_call Dom_html.window "onresize" [||]
 
