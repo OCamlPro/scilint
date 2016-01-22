@@ -468,6 +468,7 @@ let rec render ?(eval = true) step =
   let hide_menu () =
     menu_opened := false ;
     M.removeClass menu "scilab-menu-open" in
+  M.Ev.onclick menu (fun _ev -> hide_menu () ; true) ;
   let toolbar_button icon leg help cb =
     let button =
       D.(button
@@ -479,16 +480,14 @@ let rec render ?(eval = true) step =
     button in
   let toolbar_menu_button icon leg help ctns =
     toolbar_button icon leg help @@ fun () ->
-    let close_button =
-      D.(button ~a: [ a_class [ "close" ] ] [ pcdata "Close menu" ]) in
-    M.Ev.onclick close_button (fun _ev -> hide_menu () ; true) ;
-    let ctns = [ close_button ; D.(div ~a: [ a_class [ "contents" ] ]) (ctns ()) ]  in
+    let ctns = ctns () in
     if ctns = [] then begin
       menu_opened := false ;
       M.removeClass menu "scilab-menu-open"
     end else begin
       menu_opened := true ;
       M.addClass menu "scilab-menu-open" ;
+      let ctns = [ D.(div ~a: [ a_class [ "contents" ] ]) ctns ]  in
       M.replaceChildren menu ctns
     end in
 
@@ -516,8 +515,9 @@ let rec render ?(eval = true) step =
         | None -> ()
         | Some key ->
           let button_del =
-            D.(button [ entity "#10005" ;
-                        span ~a:[a_class ["tooltip"]] [ D.pcdata "Delete this session." ]]) in
+            D.(button
+                 [ entity "#10005" ;
+                   span ~a:[a_class ["tooltip"]] [ D.pcdata "Delete this session." ]]) in
 		      let li = D.(li [ span [ pcdata (Js.to_string key) ] ; button_del ] ) in
           if Js.to_string (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value = Js.to_string key then begin
             select li

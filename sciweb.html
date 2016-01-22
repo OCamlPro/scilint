@@ -88,27 +88,29 @@
        display: block ;
      }
 
-     #scilab-menu ul.scilab-menu-sessions li:hover {
+     #scilab-menu ul.scilab-menu-sessions > li:hover {
        background: #333;
        color: white;
      }
-     #scilab-menu ul.scilab-menu-sessions li.current {
+     #scilab-menu ul.scilab-menu-sessions > li.current {
        background: #8e6 ;
      }
-     #scilab-menu ul.scilab-menu-sessions li.current:hover {
+     #scilab-menu ul.scilab-menu-sessions > li.current:hover {
        background: #333;
        color: #8e6 ;
      }
-     #scilab-menu ul.scilab-menu-sessions > * > button {
+     #scilab-menu ul.scilab-menu-sessions > li > span {
+       flex: 10;
+     }
+     #scilab-menu ul.scilab-menu-sessions > li > button {
        margin: 0 0 0 20px;
        padding: 0;
-       float: right;
        border: none;
        border-radius: 5px;
        background: none;
        color: inherit;
      }
-     #scilab-menu ul.scilab-menu-sessions > * > button:hover {
+     #scilab-menu ul.scilab-menu-sessions > li > button:hover {
        background: red;
        color: pink;
      }
@@ -155,10 +157,10 @@
        z-index: 10005;
        opacity: 0.999;
      }
-     #scilab-tty .scilab-block > .buttons.top :last-child {
+     #scilab-tty .scilab-block > .buttons.top > :last-child {
        border-top-right-radius: 5px;
      }
-     #scilab-tty .scilab-block > .buttons.top :first-child {
+     #scilab-tty .scilab-block > .buttons.top > :first-child {
        border-bottom-left-radius: 5px;
      }
      #scilab-tty .scilab-block > .buttons.bottom {
@@ -168,10 +170,10 @@
        z-index: 10005;
        opacity: 0.999;
      }
-     #scilab-tty .scilab-block > .buttons.bottom :last-child {
+     #scilab-tty .scilab-block > .buttons.bottom > :last-child {
        border-bottom-right-radius: 5px;
      }
-     #scilab-tty .scilab-block > .buttons.bottom :first-child {
+     #scilab-tty .scilab-block > .buttons.bottom > :first-child {
        border-top-left-radius: 5px;
      }
      #scilab-tty .scilab-block > .buttons > button {
@@ -260,6 +262,7 @@
        border-radius: 0;
      }
 
+     #scilab-menu .tooltip,
      #scilab-tty .tooltip {
        background:
        linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 9px),
@@ -268,11 +271,6 @@
        width: 500px;
        top: 0px;
        border-radius: 0;
-     }
-
-     #scilab-menu .tooltip {
-       top: 20px;
-       right: 20px;
      }
 
      button:hover > .tooltip,
@@ -301,39 +299,38 @@
        #scilab-tty {
          top: 46px;
        }
+       #scilab-menu .tooltip,
        #scilab-toolbar .tooltip {
          top: 47px;
        }
-       #scilab-menu > .contents {
-         font-family: sans;
-	       margin: 0;
-	       padding: 10px 0 0 10px ;
-	       background-color: #333;
-         background:
-           linear-gradient(to bottom, rgba(0,0,0,0.75) 0, transparent 10px),
-           linear-gradient(to right, rgba(0,0,0,0) 0px, rgba(0,0,0,0.5) 10px, rgba(230,230,230,0.95) 10px, rgba(200,200,200,0.95) 300px) ;
-         top: 47px; bottom: 0px; left: 100%;
-         opacity: 0;
-         position: absolute ;
-         z-index: 1003;
-         transition: opacity .2s ease-in-out;
-         overflow: hidden;
-       }
-       #scilab-menu > .close {
-         z-index: 1002;
+       #scilab-menu {
          display: none;
-       }
-       #scilab-menu.scilab-menu-open > .close {
          position: absolute;
-         left: 0; top: 0;
-         width: 100%;
-         height: 100%;
-         display: block;
+         top: 0; left: 0; right: 0; bottom: 0;
+         margin: 0; padding: 0;
+         z-index: 1004;
+       }
+       #scilab-menu > .contents {
          opacity: 0;
+         float: right;
+         padding: 0 0 0 10px;
+         margin: 47px 0 0 0;
+         min-width: 33%;
+         background:
+           linear-gradient(to right, rgba(0,0,0,0) 0px, rgba(0,0,0,0.5) 10px, rgba(230,230,230,0.95) 10px, rgba(200,200,200,0.95) 300px) ;
+         overflow-y: auto;
+       }
+       #scilab-menu > .contents::after {
+         background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0, transparent 10px);
+         height: 10px;
+         position: absolute;
+         top: 47px; width: 100%;
+         content: " ";
+       }
+       #scilab-menu.scilab-menu-open {
+         display: block;
        }
        #scilab-menu.scilab-menu-open > .contents {
-         left: unset;
-         right: 0;
          opacity: 1;
        }
        #scilab-menu ul.scilab-menu-sessions {
@@ -341,15 +338,13 @@
          padding: 0px;
          margin: 0;
          display: block;
-         overflow-x: hidden;
-         overflow-y: scroll;
          height: 100%;
        }
        #scilab-menu ul.scilab-menu-sessions > li {
          padding: 5px 5px 5px 10px;
          cursor: default;
-         position: relative;
          line-height: 20px;
+         display: flex;
        }
      }
 
@@ -368,47 +363,50 @@
        }
        #scilab-menu {
          font-family: sans;
-	       margin: 47px 0 0 0;
-	       padding: 10px 0 0 0 ;
-	       background-color: #333;
-         background:
-           linear-gradient(to bottom, rgba(0,0,0,0.75) 0, transparent 10px),
-           linear-gradient(to right, rgba(230,230,230,0.95) 0%, rgba(200,200,200,0.95) 100%) ;
+	       margin: 0;
+	       padding: 0 ;
          top: 0px; bottom: 0px; left: 0; right: 0;
-         opacity: 0;
          display: none;
          position: absolute ;
          z-index: 1003;
+       }
+       #scilab-menu > .contents {
+         font-family: sans;
+	       margin: 0;
+	       padding: 0 ;
+         background:
+           linear-gradient(to right, rgba(230,230,230,0.95) 0%, rgba(200,200,200,0.95) 100%) ;
+         top: 47px; bottom: 0px; left: 0; right: 0;
+         opacity: 0;
+         position: absolute ;
          transition: opacity .2s ease-in-out;
        }
-       #scilab-menu > button.close {
-         position: absolute ;
-         width: 100%;
-         bottom: 100%;
-         height: 47px;
-         opacity: 0;
+       #scilab-menu > .contents::after {
+         background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0, transparent 10px);
+         height: 10px;
+         position: absolute;
+         top: 0; width: 100%;
+         content: " ";
        }
        #scilab-menu.scilab-menu-open {
-         left: 0;
-         right: 0;
-         opacity: 1;
          display: block;
+       }
+       #scilab-menu.scilab-menu-open > .contents{
+         opacity: 1;
        }
        #scilab-menu ul.scilab-menu-sessions {
          display: block;
          list-style-type: none;
          padding: 0px;
          margin: 0;
-         overflow-x: hidden;
-         overflow-y: scroll;
+         overflow-y: auto;
          height: 100%;
        }
        #scilab-menu ul.scilab-menu-sessions > li {
-         display: block;
+         display: flex;
          padding: 5px 5px 5px 10px;
          margin: 0;
          cursor: default;
-         position: relative;
          line-height: 20px;
        }
      }
