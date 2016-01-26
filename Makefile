@@ -1,9 +1,11 @@
 .PHONY: clean
 
+SCIWEB_DATA = $(patsubst src/sciweb/%, sciweb/%, $(wildcard src/sciweb/*))
+
 all: \
   scilint.asm scintax.asm scifind.asm scilint_doc_gen.asm scilob.asm \
   scilint.byte scintax.byte scifind.byte scilint_doc_gen.byte scilob.byte \
-  sciweb.js scilint.cmxa
+  sciweb/sciweb.js $(SCIWEB_DATA) scilint.cmxa
 
 OCAMLOPT=ocamlfind ocamlopt -g -safe-string -strict-formats
 OCAMLC=ocamlfind ocamlc -g -safe-string -strict-formats 
@@ -259,8 +261,14 @@ sciweb.byte: archimedes_canvas.cmo $(SCIWEB_CMOS)
 	$(OCAMLC) $(OCAML_INCL) $(OCAML_INCL) \
           -package 'archimedes, js_of_ocaml.tyxml,js_of_ocaml.syntax' -linkpkg -o $@ $^
 
-sciweb.js: sciweb.byte
+sciweb/sciweb.js: sciweb.byte sciweb
 	js_of_ocaml +weak.js $< -o $@
+
+sciweb/%: src/sciweb/% sciweb
+	cp $< $@
+
+sciweb:
+	-mkdir -p sciweb
 
 src/common/tyxml_js_manip.cmo \
 src/common/tyxml_js_manip.cmi \
@@ -368,6 +376,7 @@ ChangeLog.txt: scilint_doc_gen.asm
 
 clean:
 	rm -fr \
+	  sciweb \
 	  *.old _obuild \
 	  *~ */*~ */*/*~ */*/*/*~ \
 	  *.cm* */*.cm* */*/*.cm* */*/*/*.cm* \
