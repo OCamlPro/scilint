@@ -460,10 +460,7 @@ let rec render ?(eval = true) step =
 
   if eval then (InterpPlotLib.all_plots.plots <- [] ; InterpPlotLib.all_plots.updated <- false; update_results step 1 ; ());
 
-  let menu =
-    Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-menu"))
-      (fun () -> failwith "scilab-menu element not found")
-      (fun menu -> Tyxml_js.Of_dom.of_element menu) in
+  let menu = D.(div ~a: [ a_class [ "scilab-menu" ]]) [] in
   let menu_opened = ref false in
   let hide_menu () =
     menu_opened := false ;
@@ -473,7 +470,7 @@ let rec render ?(eval = true) step =
     let button =
       D.(button
            ~a:[a_class ["scilab-toolbar-button"]]
-           [ span ~a:[a_class ["icon"]] [ D.entity icon ] ;
+           [ span ~a:[a_class ["icon"]] [ D.img ~src:icon ~alt:leg () ] ;
              span ~a:[a_class ["legend"]] [ D.pcdata leg ] ;
              span ~a:[a_class ["tooltip"]] [ D.pcdata help ] ]) in
     M.Ev.onclick button (fun _ev -> cb () ; true) ;
@@ -490,6 +487,38 @@ let rec render ?(eval = true) step =
       let ctns = [ D.(div ~a: [ a_class [ "contents" ] ]) ctns ]  in
       M.replaceChildren menu ctns
     end in
+
+  let dialog = D.(div ~a: [ a_class [ "scilab-dialog" ]]) [] in
+  let dialog_opened = ref false in
+  let hide_dialog () =
+    dialog_opened := false ;
+    M.removeClass dialog "scilab-dialog-open" in
+  let open_dialog ?title ?buttons message =
+    dialog_opened := true ;
+    M.addClass dialog "scilab-dialog-open" ;
+    let ctns =
+      (match title with
+       | Some title -> [ D.(div ~a: [ a_class [ "title" ] ]) title ]
+       | None -> []) @
+      [ D.(div ~a: [ a_class [ "message" ] ]) message ] @
+      (match buttons with
+       | Some buttons ->
+         let buttons =
+           List.map
+             (fun (label, cb) ->
+                let button = D.button label in
+                M.Ev.onclick button (fun _ev -> cb () ; true) ;
+                button)
+             buttons in
+         [ D.(div ~a: [ a_class [ "buttons" ] ]) buttons ]
+       | None -> []) in
+    M.replaceChildren dialog [ D.(div ~a: [ a_class [ "contents" ] ]) ctns ] in
+
+  let guard_dialog message cb =
+    open_dialog
+      ~buttons: [ [ D.pcdata "Proceed" ], (fun () -> cb () ; hide_dialog ()) ;
+                  [ D.pcdata "Cancel" ], hide_dialog ]
+      [ D.pcdata message ] in
 
   let input_session_name =
     D.(input ~a:[a_class ["input-session-name"] ; a_placeholder "enter a title"; a_value !current_session; a_size (12) ] ()) in
@@ -518,20 +547,19 @@ let rec render ?(eval = true) step =
             D.(button
                  [ entity "#10005" ;
                    span ~a:[a_class ["tooltip"]] [ D.pcdata "Delete this session." ]]) in
-		      let li = D.(li [ span [ pcdata (Js.to_string key) ] ; button_del ] ) in
-          if Js.to_string (Js.Unsafe.coerce @@ (D.toelt input_session_name))##value = Js.to_string key then begin
+          let name = D.span [ D.pcdata (Js.to_string key) ] in
+		      let li = D.(li [ name ; button_del ] ) in
+          if Js.to_string (Js.Unsafe.coerce (D.toelt input_session_name))##value = Js.to_string key then begin
             select li
           end ;
           M.Ev.onclick button_del (fun _ev ->
-		          let r = Dom_html.window##confirm(Js.string ("Are you sure you want to delete session \""^(Js.to_string key)^"\" ?")) in
-		          match Js.to_bool r with
-		          | true ->
-                delete_session step (Js.to_string key) ;
-                select li ; unselect () ;
-                M.removeChild ul li ;
-                true
-		          | _ -> true) ;
-          M.Ev.onclick li
+              guard_dialog ("Are you sure you want to delete session "^(Js.to_string key)^" ?")
+                (fun () ->
+                   delete_session step (Js.to_string key) ;
+                   select li ; unselect () ;
+                   M.removeChild ul li) ;
+              true) ;
+          M.Ev.onclick name
             (fun _ev ->
                let step = load_session (Js.to_string key) in
                current_session := (Js.to_string key);
@@ -544,10 +572,10 @@ let rec render ?(eval = true) step =
       [ ul ] in
 
   let load_button step =
-    toolbar_menu_button "#128209" "LOAD" "Open the session menu." sessions_menu in
+    toolbar_menu_button "load.svg" "LOAD" "Open the session menu." sessions_menu in
 
   let save_button =
-    toolbar_menu_button "#128209" "SAVE" "Save the current session." @@ fun () ->
+    toolbar_menu_button "save.svg" "SAVE" "Save the current session." @@ fun () ->
     let name = M.value input_session_name in
     match name with
     | "" ->
@@ -560,7 +588,7 @@ let rec render ?(eval = true) step =
   let save_file_button =
     let link = Dom_html.createA(Dom_html.document) in
     let tyxlink = Tyxml_js.Of_dom.of_anchor(link) in
-    let button = toolbar_button "#128190" "DOWNLOAD" "Download the current session as a .sci file." @@ fun () ->
+    let button = toolbar_button "export.svg" "DOWNLOAD" "Download the current session as a .sci file." @@ fun () ->
       link##onclick <- Dom_html.handler (fun e -> Js.bool ((fun _ev ->
           let var = jsnew blob ( session_to_array step) in
           let url =  url##createObjectURL(var) in
@@ -601,32 +629,33 @@ let rec render ?(eval = true) step =
 		                | Some s -> download_session step s ; render ~eval:false step; true in
 	              fileReader##onload <- Dom.handler (fun e -> Js.bool (f e)) ;
 	              fileReader##readAsText(file); true);
-    toolbar_button "#128190" "IMPORT" "Load a .sci file from your computer." @@ fun () ->
+    toolbar_button "import.svg" "IMPORT" "Load a .sci file from your computer." @@ fun () ->
     Js.Unsafe.meth_call input_files_load "click" [||] in
 
   let clear_button =
-    toolbar_button "#128293" "CLEAR" "Open a fresh session." @@ fun () ->
-    let r = Dom_html.window##confirm(Js.string ("Are you sure you want to erase the page ?")) in
-    match Js.to_bool r with
-    | true -> render (empty_session ())
-    | _ -> () in
+    toolbar_button "clear.svg" "CLEAR" "Open a fresh session." @@ fun () ->
+    guard_dialog ("Are you sure you want to erase the page ?") @@ fun () ->
+    render (empty_session ()) in
 
   let buttons =
-    D.(div ~a:[a_class [ "buttons" ]]
-         [save_button; load_button step; save_file_button; load_file_button; clear_button]) in
+    D.(div ~a:[a_class [ "buttons" ]])
+      [save_button; load_button step; save_file_button; load_file_button; clear_button] in
   let title =
-    D.(div ~a:[a_class [ "title" ]]
-         [ h1 [ pcdata "SciWeb -" ] ; input_session_name]) in
-  let toolbar = [ title ; buttons ] in
-  let contents = format_result step 1 false in
-  Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-toolbar"))
-    (fun () -> failwith "scilab-toolbar element not found")
-    (fun tb -> M.replaceChildren (Tyxml_js.Of_dom.of_element tb) toolbar) ;
+    D.(div ~a:[a_class [ "title" ]])
+      [ D.h1 [ D.pcdata "SciWeb -" ] ;
+        input_session_name] in
 
-  Js.Opt.case (Dom_html.document##getElementById (Js.string "scilab-tty"))
-    (fun () -> failwith "scilab-tty element not found")
-    (fun tty ->
-       M.replaceChildren (Tyxml_js.Of_dom.of_element tty) contents) ;
+  let contents = format_result step 1 false in
+  let toolbar =
+    D.(div ~a: [ a_class [ "scilab-toolbar" ]])
+      [ title ; buttons ] in
+  let tty =
+    D.(div ~a: [ a_class [ "scilab-tty" ] ; a_id "blabla"])
+      contents in
+
+  M.replaceChildren
+    (Tyxml_js.Of_dom.of_element Dom_html.document##body)
+    [ toolbar ; tty ; menu ; dialog ] ;
   Js.Unsafe.meth_call Dom_html.window "onresize" [||]
 
 (** where the args are passed and all the fun starts *)
