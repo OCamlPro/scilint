@@ -650,7 +650,7 @@ let rec render ?(eval = true) step =
     D.(div ~a: [ a_class [ "scilab-toolbar" ]])
       [ title ; buttons ] in
   let tty =
-    D.(div ~a: [ a_class [ "scilab-tty" ]])
+    D.(div ~a: [ a_class [ "scilab-tty" ] ; a_id "blabla"])
       contents in
 
   M.replaceChildren
