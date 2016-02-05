@@ -287,18 +287,3 @@ let () =
 	done;
 	res)
   )
-
-
-let () =
-  register_library (fun state lib ->
-    register_function lib state "sin" (matrix real @-> matrix real)
-      (fun mat -> 
-	let w, h = matrix_size mat in
-	let res = matrix_create (Number Real) w h in
-	for i=1 to w do
-	  for j=1 to h do
-	    matrix_set res i j (sin ( matrix_get mat i j))
-	  done;
-	done;
-	res)
-  ) 

@@ -889,9 +889,21 @@ let stdlib state lib =
        done ;
        Bytes.unsafe_to_string m) ;
   (*----- trigonometry ----------------------------------------------------*)
+  let matrix_map ty f m =
+    let w, h = matrix_size m in
+    let r = matrix_create ty w h in
+    for i = 1 to w do
+      for j = 1 to h do
+        matrix_set r i j (f (matrix_get m i j))
+      done
+    done ;
+    r in
   register_function lib state "sin" (real @-> real) sin ;
   register_function lib state "cos" (real @-> real) cos ;
   register_function lib state "tan" (real @-> real) tan ;
+  register_function lib state "sin" (matrix real @-> matrix real) (matrix_map (Number Real) sin) ;
+  register_function lib state "cos" (matrix real @-> matrix real) (matrix_map (Number Real) cos) ;
+  register_function lib state "tan" (matrix real @-> matrix real) (matrix_map (Number Real) tan) ;
   (*----- polynomials -----------------------------------------------------*)
   register_function lib state "poly" (matrix real @* string @* seq string @-> poly real)
     (fun items name -> function
