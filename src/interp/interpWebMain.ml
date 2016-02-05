@@ -634,8 +634,12 @@ let main () =
   let open  Lwt in
   Lwt_js_events.onload () >>= fun _ ->
   render
-    { phrase = "m = 1 : 2 : 8\nr = m' * m" ;
-      answer = "" ; next = None ; updated = false; liste=[] } ;
+    { phrase = "help ()" ;
+      answer = "" ;
+      next = Some (
+          { phrase = "m = 1 : 2 : 8\nr = m' * m" ;
+            answer = "" ; next = None ; updated = false; liste=[] } ;
+      ) ; updated = false; liste=[] } ;
   Lwt.return ()
 
 let () =
