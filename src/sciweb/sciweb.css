@@ -127,17 +127,6 @@ body {
   z-index: 999;
 }
 
-.scilab-tty::after {
-  position: absolute;
-	bottom: 0; right: 0 ;
-	padding: 0 15px 5px 0 ;
-  overflow: hidden;
-	font-family: sans;
-  font-size: 10px;
-  content: "SciWeb is a product of OCamlPro.";
-	color: rgba(0,0,0, 0.5);
-}
-
 .scilab-tty .scilab-block {
   margin: 10px 0 0 0 ;
   background: white;
@@ -329,15 +318,6 @@ span:hover > .tooltip {
   transform: rotateX(0deg);
 }
 
-table.scilab-matrix {
-  border-left: 1px solid black;
-  border-right: 1px solid black;
-  display : inline-table;
-  border-radius: 8px;
-}
-td { padding: 4px; }
-ul { display : inline-block }
-
 canvas {
   background-color:#FFF;
 }
@@ -499,4 +479,29 @@ canvas {
     padding: 50px 0 0 0;
     content: "SciWeb";
   }
+}
+
+table.scilab-braces {
+  display: inline-table;
+  overflow: auto;
+  max-width: 80%;
+}
+div.scilab-braces {
+  display: inline-block;
+}
+ul.scilab-braces {
+  display: inline-block;
+  list-style-type: disc;
+  list-style-position: inside;
+}
+.scilab-braces {
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  border-radius: 8px;
+  display: inline-block;
+  padding: 4px;
+  vertical-align: middle;
+}
+div.scilab-value {
+  display: inline-block;
 }

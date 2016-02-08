@@ -66,7 +66,7 @@ let rec interpret (state : state) (lib : lib) ast =
           message (Result ("ans", res)) ;
         end else begin
           State.clear state ans
-	(* messages [ Located (exp.loc, Warning ScilintWarning.(P (Variable_cleared "ans"))) ] *)
+	        (* messages [ Located (exp.loc, Warning ScilintWarning.(P (Variable_cleared "ans"))) ] *)
         end
       | Assign (lexps, exp) -> (* TODO: argn, resume, etc. *)
         let lhs = List.length lexps in
@@ -549,78 +549,130 @@ let rec interpret (state : state) (lib : lib) ast =
   and interpret_macro_call
     : type res. loc -> defun_params -> res dest -> (var option * value) list -> value list
     = fun loc defun dest vargs ->
-    (* right to left name assignment *)
-    let rec assign_args acc args vargs =
-      match args, vargs with (* TODO: null () argument *)
-      | [], [] -> acc
-      | [ { cstr = var } ], rest when var == varargin ->
-        assign_varargin [] var rest :: acc
-      | rargs, [] -> assign_missing (List.length rargs) acc rargs
-      | arg :: rargs, (None, v) :: tvargs ->
-        assign_args  ((arg.cstr, v) :: acc) rargs tvargs
-      | _ :: rargs, (Some { cstr = n }, v) :: tvargs ->
-        assign_args  ((n, v) :: acc) rargs tvargs
-      | [], _ :: _ ->
-        let nb = List.length vargs in
-        error (Located (loc, (Werror (P (Too_many_arguments nb)))))
-    and assign_missing nb acc args =
-      match args with
-      | [ { cstr = var } ] when var == varargin -> acc
-      | _ :: args -> assign_missing nb acc args
-      | [] ->
-        message (Located (loc, (Warning (P (Too_few_arguments nb))))) ;
-        acc
-    and assign_varargin acc var vargs =
-      match vargs with
-      | [] ->
-        (var, Values.(inject Vlist (vlist_create (List.rev acc))))
-      | (None, v) :: rest ->
-        assign_varargin (v :: acc) var rest
-      | (Some lvar, v) :: rest ->
-        message
-          (Located (lvar.loc,
-                    (Warning (P (Unused_argument_label (State.name lvar.cstr)))))) ;
-        assign_varargin (v :: acc) var rest
-    in
-    let rec assign_rets acc rets =
-      match rets with
-      | [ { cstr = var } ] when var == varargout ->
-        begin match Values.(extract Vlist (State.get state var)) with
-          | l ->
-            let rec unroll acc i =
-              if i = 0 then acc else unroll (Values.vlist_get l i :: acc) (i - 1)
-            in List.rev_append acc (unroll [] (Values.vlist_length l))
-          | exception Not_found ->
-            error (Werror (L (Unset_ret "varargout")))
-          | exception Bad_type ->
-            raise (Interp_error (Generic "return variable varargout should be a list"))
-        end
-      | { cstr = var } :: rs ->
-        begin match State.get state var with
-          | v -> assign_rets (v :: acc) rs
-          | exception Not_found ->
-            error (Werror (L (Unset_ret (State.name var))))
-        end
-      | [] -> List.rev acc
-    in
-    let arg_assignments = assign_args [] defun.args vargs in
-    State.enter_scope state (expected dest, List.length vargs, defun) ;
-    let old_lib = !lib in
-    lib := Dispatcher.dup !lib ;
-    try
-      List.iter
-        (fun (n, v) -> State.put state n v)
-        arg_assignments ;
-      (try interpret_stmt defun.body with Exit_function -> ()) ;
-      let rets = assign_rets [] defun.rets in
-      State.exit_scope state ;
-      lib := old_lib ;
-      rets
-    with err ->
-      State.exit_scope state ;
-      lib := old_lib ;
-      match err with
-      | Interp_error err -> raise (Interp_error (Located (loc, err)))
-      | err -> raise err
+      (* right to left name assignment *)
+      let rec assign_args acc args vargs =
+        match args, vargs with (* TODO: null () argument *)
+        | [], [] -> acc
+        | [ { cstr = var } ], rest when var == varargin ->
+          assign_varargin [] var rest :: acc
+        | rargs, [] -> assign_missing (List.length rargs) acc rargs
+        | arg :: rargs, (None, v) :: tvargs ->
+          assign_args  ((arg.cstr, v) :: acc) rargs tvargs
+        | _ :: rargs, (Some { cstr = n }, v) :: tvargs ->
+          assign_args  ((n, v) :: acc) rargs tvargs
+        | [], _ :: _ ->
+          let nb = List.length vargs in
+          error (Located (loc, (Werror (P (Too_many_arguments nb)))))
+      and assign_missing nb acc args =
+        match args with
+        | [ { cstr = var } ] when var == varargin -> acc
+        | _ :: args -> assign_missing nb acc args
+        | [] ->
+          message (Located (loc, (Warning (P (Too_few_arguments nb))))) ;
+          acc
+      and assign_varargin acc var vargs =
+        match vargs with
+        | [] ->
+          (var, Values.(inject Vlist (vlist_create (List.rev acc))))
+        | (None, v) :: rest ->
+          assign_varargin (v :: acc) var rest
+        | (Some lvar, v) :: rest ->
+          message
+            (Located (lvar.loc,
+                      (Warning (P (Unused_argument_label (State.name lvar.cstr)))))) ;
+          assign_varargin (v :: acc) var rest
+      in
+      let rec assign_rets acc rets =
+        match rets with
+        | [ { cstr = var } ] when var == varargout ->
+          begin match Values.(extract Vlist (State.get state var)) with
+            | l ->
+              let rec unroll acc i =
+                if i = 0 then acc else unroll (Values.vlist_get l i :: acc) (i - 1)
+              in List.rev_append acc (unroll [] (Values.vlist_length l))
+            | exception Not_found ->
+              error (Werror (L (Unset_ret "varargout")))
+            | exception Bad_type ->
+              raise (Interp_error (Generic "return variable varargout should be a list"))
+          end
+        | { cstr = var } :: rs ->
+          begin match State.get state var with
+            | v -> assign_rets (v :: acc) rs
+            | exception Not_found ->
+              error (Werror (L (Unset_ret (State.name var))))
+          end
+        | [] -> List.rev acc
+      in
+      let arg_assignments = assign_args [] defun.args vargs in
+      State.enter_scope state (expected dest, List.length vargs, defun) ;
+      let old_lib = !lib in
+      lib := Dispatcher.dup !lib ;
+      try
+        List.iter
+          (fun (n, v) -> State.put state n v)
+          arg_assignments ;
+        (try interpret_stmt defun.body with Exit_function -> ()) ;
+        let rets = assign_rets [] defun.rets in
+        State.exit_scope state ;
+        lib := old_lib ;
+        rets
+      with err ->
+        State.exit_scope state ;
+        lib := old_lib ;
+        match err with
+        | Interp_error err -> raise (Interp_error (Located (loc, err)))
+        | err -> raise err
   in
   List.iter interpret_stmt_toplevel (from_parser state ast)
+
+(** To be called by the main on each code source passed on th CLI *)
+let treat_source state lib source =
+  let open ScilabParserAst in
+  let open ScilintOptions in
+  let parse () =
+    match source with
+    | File fn -> SelectedParser.parse_file fn
+    | String (name, str) -> SelectedParser.parse_string name str
+    | _ -> assert false in
+  let ast =
+    if !print_time then begin
+      Printf.printf "Parsing %s ...%!" (string_of_source source) ;
+      let t0 = Sys.time () in
+      let ast = parse () in
+      let t1 = Sys.time () in
+      Printf.printf "\b\b\bdone in %gms.\n%!" ((t1 -. t0) *. 1000.) ;
+      ast
+    end else parse () in
+  let ast = List.fold_left (fun r (name, anal) -> anal r) ast !passes in
+  if !print_ast then begin
+    Printf.printf "Syntax tree:\n" ;
+    Sexp.pretty_output stdout ast ;
+    Printf.printf "\n"
+  end ;
+  if !pretty_print then begin
+    Printf.printf "Pretty printed:\n" ;
+    Pretty.pretty_output stdout ast ;
+    Printf.printf "\n"
+  end ;
+  if !ScilintOptions.print_messages then begin
+    messages
+      (List.map (function
+           | (loc, ScilintWarning.Werror m) -> Located (loc, Werror m)
+           | (loc, ScilintWarning.Unrecovered m)
+           | (loc, ScilintWarning.Recovered m) -> Located (loc, Error m)
+           | (loc, ScilintWarning.Generic (_, None, f)) ->
+             Located (loc, Generic (Format.asprintf "%a" (fun ppf () -> f ppf) ()))
+           | (loc, ScilintWarning.Generic (_, Some n, f)) ->
+             Located (loc, Generic (Format.asprintf "%s: %a" n (fun ppf () -> f ppf) ()))
+           | (loc, ScilintWarning.Warning m) -> Located (loc, Warning m)
+           | (loc, ScilintWarning.Hint msg) -> Located (loc, Hint msg)
+           | (loc, ScilintWarning.Drop) -> Located (loc, Generic "drop token")
+           | (loc, ScilintWarning.Insert m) -> Located (loc, Generic ("insert token " ^ m))
+           | (loc, ScilintWarning.Replace m) -> Located (loc, Generic ("replace token by " ^ m)))
+          (collect_messages ast))
+  end ;
+  if ast = [] then
+    let w = Located ((source, ((1, 0), (1, 0))), Error "nothing to do") in
+    messages [ w ]
+  else
+    interpret state lib ast

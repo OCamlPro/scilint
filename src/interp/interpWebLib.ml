@@ -9,7 +9,7 @@ let help_lines = [
   "All functions are implemented in OCaml, translated to Javascript.";
   "";
   "The following standard functions are available: argn, clear, cos, disp, error, eye, global, inttype,";
-  "   list, mlist, null, poly, quit, sin, size, stacksize, string, tan, tlist, type, typeof, zeros";
+  "   list, mlist, null, poly, quit, sin, size, string, tan, tlist, type, typeof, zeros";
   "The following plotting functions are available: " ^ (String.concat ", " (List.sort compare [ "clf"; "plot"; "bar"; "xtitle"; "grid" ]));
   "";
   "Contact information:";
@@ -21,7 +21,7 @@ let help_lines = [
   "";
   "Basic help:";
   " - Use the arrow buttons to create boxes above or below a box.";
-  " - Click outside a box that you just modified to execute its content, and the content of the following boxes.";
+  " - Click out of box that you just modified or hit tab to update the results.";
   " - Use the cross button to remove a box.";
 ]
 

@@ -346,7 +346,7 @@ let register_matrix_extraction lib xt =
       [ inject (Single xt) (matrix_get_linear m i) ]
     | _ -> raise Bad_index in
   let extract_two lhs = function
-    | [ None, m ; None, i ; None, j ] ->
+    | [ None, m ; None, j ; None, i ] ->
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
       let j = Values.(extract (Single Int32) (cast j (T (Single Int32)))) in
       let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
@@ -392,7 +392,7 @@ let register_matrix_injection lib xt compatible =
       [ inject (Matrix xt) m ]
     | _ -> raise Bad_index in
   let inject_two lhs = function
-    | [ None, m ; None, v ; None, i ; None, j ] ->
+    | [ None, m ; None, v ; None, j ; None, i ] ->
       let m = Values.(extract (Matrix xt) (grab (cast m (T (Matrix xt))))) in
       let v = Values.(extract (Single xt) (cast v (T (Single xt)))) in
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
@@ -816,6 +816,29 @@ let stdlib state lib =
   register_matrix_injection lib Uint16 numbers ;
   register_matrix_injection lib Uint32 numbers ;
   register_matrix_injection lib String [ Typed (T (Single String)) ] ;
+  register_primitive lib ~more:true
+    (Injection, [ Typed (T Atom) ], 1)
+    (fun lhs -> function
+       | [ None, _ ; None, v ; None, j ; None, i ] ->
+         let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
+         let j = Values.(extract (Single Int32) (cast j (T (Single Int32)))) in
+         begin match view v with
+           | V (Single ty, v) ->
+             let res = matrix_create ty i j in
+             matrix_set res i j v ;
+             [ repr (V (Matrix ty, res)) ]
+           | _ -> raise Bad_type
+         end
+       | [ None, _ ; None, v ; None, j ] ->
+         let j = Values.(extract (Single Int32) (cast j (T (Single Int32)))) in
+         begin match view v with
+           | V (Single ty, v) ->
+             let res = matrix_create ty 1 j in
+             matrix_set res 1 j v ;
+             [ repr (V (Matrix ty, res)) ]
+           | _ -> raise Bad_type
+         end
+       | _ -> raise Bad_type) ;
   (*----- eye -------------------------------------------------------------*)
   register_function lib state "eye" (void @-> eye real) (fun () -> 1.) ;
   register_binop lib Ast.Plus (eye real) (eye real) (eye real) ( +. ) ;
