@@ -352,13 +352,47 @@ let register_range lib xt st yt rt f =
 (** Registers an extraction operator for standard matrices *)
 let register_matrix_extraction lib xt =
   let extract_nil lhs = function
-    | [ None, m ] -> [ m ]
+    | (None, m) :: _ -> [ m ]
+    | _ -> raise Bad_index in
+  let extract_flatten lhs = function
+    | (None, m) :: _ ->
+      let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
+      let w, h = matrix_size m in
+      let res = matrix_create xt 1 (w * h) in
+      for j = 1 to h do
+        for i = 1 to w do
+          matrix_set res 1 (j * w + i) (matrix_get m i j)
+        done
+      done ;
+      [ inject (Matrix xt) res ]
     | _ -> raise Bad_index in
   let extract_one lhs = function
     | [ None, m ; None, i ] ->
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
       let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
       [ inject (Single xt) (matrix_get_linear m i) ]
+    | _ -> raise Bad_index in
+  let extract_column lhs = function
+    | [ None, m ; None, _ ;  None, i ] ->
+      let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
+      let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
+      let w, h = matrix_size m in
+      let res = matrix_create xt 1 h in
+      for j = 1 to h do
+        matrix_set res 1 j (matrix_get m i j)
+      done ;
+      [ inject (Matrix xt) res ]
+    | _ -> raise Bad_index in
+  let extract_row lhs = function
+    | [ None, m ; None, j ; None, _] ->
+      let j = Values.(extract (Single Int32) (cast j (T (Single Int32)))) in
+      let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
+      let w, h = matrix_size m in
+      let res = matrix_create xt w 1 in
+      for i = 1 to w do
+        matrix_set res i 1 (matrix_get m i j)
+      done ;
+      [ inject (Matrix xt) res ]
     | _ -> raise Bad_index in
   let extract_two lhs = function
     | [ None, m ; None, j ; None, i ] ->
@@ -373,12 +407,46 @@ let register_matrix_extraction lib xt =
     Typed (T (Single Uint8)) ; Typed (T (Single Uint16)) ; Typed (T (Single Uint32)) ] in
   List.iter (fun overloading ->
       register_primitive lib ~more:false
+        (overloading, [ Typed (T (Matrix xt)) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_flatten ;
+      register_primitive lib ~more:false
+        (overloading, [ Typed (T (Single xt)) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_flatten ;
+      register_primitive lib ~more:false
+        (overloading, [ Typed (T (Matrix xt)) ;
+                        Typed (T (Eye (Number Real))) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_nil ;
+      register_primitive lib ~more:false
+        (overloading, [ Typed (T (Single xt)) ;
+                        Typed (T (Eye (Number Real))) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_nil ;
+      register_primitive lib ~more:false
         (overloading, [ Typed (T (Matrix xt)) ], 1)
         extract_nil ;
       register_primitive lib ~more:false
         (overloading, [ Typed (T (Single xt)) ], 1)
         extract_nil ;
       List.iter (fun ki ->
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Matrix xt)) ;
+                            Typed (T (Eye (Number Real))) ; ki ], 1)
+            extract_column ;
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Single xt)) ;
+                            Typed (T (Eye (Number Real))) ; ki ], 1)
+            extract_column ;
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Matrix xt)) ;
+                            ki ; Typed (T (Eye (Number Real))) ], 1)
+            extract_row ;
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Single xt)) ;
+                            ki ; Typed (T (Eye (Number Real))) ], 1)
+            extract_row ;
           register_primitive lib ~more:false
             (overloading, [ Typed (T (Matrix xt)) ; ki ], 1)
             extract_one ;
@@ -396,7 +464,7 @@ let register_matrix_extraction lib xt =
         indexes)
     [ Extraction ; Recursive_extraction]
 
-(** Registers an extraction operator for standard matrices *)
+(** Registers an injection operator for standard matrices *)
 let register_matrix_injection lib xt compatible =
   let inject_one lhs = function
     | [ None, m ; None, v ; None, i ] ->
