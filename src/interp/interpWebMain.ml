@@ -75,9 +75,9 @@ let archimedes_plot =
           end ;
           let xtics = A.Tics.(Equidistants ((Number 5), 0., 1., 0)) in
           let ytics = A.Tics.(Equidistants ((Number 5), 0., 1., 0)) in
-          A.Axes.y ~grid:hd.grid ~tics:ytics ~offset:(Relative 0.) vp;
-          A.Axes.x ~grid:hd.grid ~tics:xtics ~offset:(Relative 0.) vp;
-          A.Axes.y ~grid:false ~tics:ytics ~offset:(Relative 0.) vp;
+          A.Axes.y ~grid:hd.grid ~tics:ytics ~offset:(A.Axes.Relative 0.) vp;
+          A.Axes.x ~grid:hd.grid ~tics:xtics ~offset:(A.Axes.Relative 0.) vp;
+          A.Axes.y ~grid:false ~tics:ytics ~offset:(A.Axes.Relative 0.) vp;
           A.Viewport.set_color vp A.Color.blue;
           A.Array.xy  ~style:hd.style vp (Array.of_list hd.xvalues) (Array.of_list hd.yvalues);
           draw_all canvas tl vp in
@@ -170,14 +170,19 @@ end
 let url  = Js.Unsafe.global ## _URL
 
 
+let ignore_int (x : int) = ()
 
 let session_to_array step =
   let array = jsnew Js.array_empty () in
-  array##push( Js.string step.phrase); array##push(Js.string "\n");
+  ignore_int (array##push( Js.string step.phrase));
+  ignore_int (array##push(Js.string "\n"));
   let rec push_rest cstep =
     match cstep with
     | None -> ()
-    | Some n -> array##push(Js.string n.phrase); array##push(Js.string "\n"); push_rest n.next;
+    | Some n ->
+      ignore_int (array##push(Js.string n.phrase));
+      ignore_int (array##push(Js.string "\n"));
+      push_rest n.next;
   in push_rest step.next;
   array
 
@@ -264,9 +269,9 @@ let rec render ?(eval = true) step =
              formatted := D.(div ~a:[ a_class [ "scilab-error" ] ]) D.[ pcdata msgs ] :: !formatted in
          skip_locs msg)
       !messages ;
-    if InterpPlotLib.all_plots.updated = true then begin
+    if InterpPlotLib.all_plots.InterpPlotLib.updated = true then begin
       cstep.liste <- archimedes_plot InterpPlotLib.all_plots :: !formatted ;
-      InterpPlotLib.all_plots.updated <- false
+      InterpPlotLib.all_plots.InterpPlotLib.updated <- false
     end else begin
       cstep.liste <- !formatted
     end ;
@@ -339,7 +344,11 @@ let rec render ?(eval = true) step =
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in
 
-  if eval then (InterpPlotLib.all_plots.plots <- [] ; InterpPlotLib.all_plots.updated <- false; update_results step 1 ; ());
+  if eval then begin
+    InterpPlotLib.all_plots.InterpPlotLib.plots <- [] ;
+    InterpPlotLib.all_plots.InterpPlotLib.updated <- false;
+    update_results step 1
+  end;
 
   let menu = D.(div ~a: [ a_class [ "scilab-menu" ]]) [] in
   let menu_opened = ref false in
@@ -552,7 +561,7 @@ let main () =
     { phrase = "help ()" ; answer = "" ;
       next = Some phr2 ; updated = false; liste=[] } ;
   Lwt.return ()
-    
+
 
 
 let () =
