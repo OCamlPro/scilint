@@ -461,10 +461,6 @@ let rec interpret (state : state) (lib : lib) ast =
             filter dest loc (interpret_macro_call loc (defun : Ast.defun_params) dest vargs)
           | T Primitive ->
             let name = Values.extract Primitive f in
-            let rtts = match vargs with
-              | (_, v) :: _ -> [ typeof v ]
-              | [] -> []
-            in
             let overloading = Function name, rtts in
             interpret_overloading dest loc overloading vargs
           | t ->

@@ -103,17 +103,32 @@ let rec arg_matcher : type p. p argtag -> matcher = function
   | Pair (lt, _) -> arg_matcher lt
   | Arg at -> Typed (T at)
   | Flag _ -> Typed (T (Single String))
-  | Seq t -> arg_matcher t
-  | Opt t -> arg_matcher t
   | Any -> Any
+  | Seq t -> arg_matcher t
+  | Opt _ -> raise Not_found
   | Fake _ -> raise Not_found
 
-let rec first_arg_matcher : type a b r. (a, a -> b, r) funtag -> matcher = function
-  | Return (Fake _, _) -> raise Not_found
-  | Take (Fake _, (Take _ as r)) -> first_arg_matcher r
-  | Take (Fake _, (Return _ as r)) -> first_arg_matcher r
-  | Return (a, _) -> arg_matcher a
-  | Take (a, _) -> arg_matcher a
+let rec arg_matchers : type p. p argtag -> matcher list * bool = function
+  | Pair (lt, rt) ->
+    let l, lmore = arg_matchers lt in
+    let r, rmore = arg_matchers rt in
+    l @  r, lmore || rmore
+  | Arg at -> [ Typed (T at) ], false
+  | Flag _ -> [ Typed (T (Single String)) ], false
+  | Any -> [ Any ], false
+  | Seq t -> [], true
+  | Opt _ -> [], true
+  | Fake _ -> [], false
+
+let rec first_arg_matchers : type a b r. (a, a -> b, r) funtag -> matcher list * bool = function
+  | Return (Fake _, _) -> [],false
+  | Take (Fake _, (Take _ as r)) -> first_arg_matchers r
+  | Take (Fake _, (Return _ as r)) -> first_arg_matchers r
+  | Return (a, _) -> arg_matchers a
+  | Take (a, r) ->
+    let a, amore = arg_matchers a in
+    let r, rmore = first_arg_matchers r in
+    a @ r, amore || rmore
 
 let rec arity : type p. p argtag -> int = function
   | Pair (lt, rt) -> arity lt + arity rt
@@ -337,13 +352,47 @@ let register_range lib xt st yt rt f =
 (** Registers an extraction operator for standard matrices *)
 let register_matrix_extraction lib xt =
   let extract_nil lhs = function
-    | [ None, m ] -> [ m ]
+    | (None, m) :: _ -> [ m ]
+    | _ -> raise Bad_index in
+  let extract_flatten lhs = function
+    | (None, m) :: _ ->
+      let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
+      let w, h = matrix_size m in
+      let res = matrix_create xt 1 (w * h) in
+      for j = 1 to h do
+        for i = 1 to w do
+          matrix_set res 1 (j * w + i) (matrix_get m i j)
+        done
+      done ;
+      [ inject (Matrix xt) res ]
     | _ -> raise Bad_index in
   let extract_one lhs = function
     | [ None, m ; None, i ] ->
       let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
       let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
       [ inject (Single xt) (matrix_get_linear m i) ]
+    | _ -> raise Bad_index in
+  let extract_column lhs = function
+    | [ None, m ; None, _ ;  None, i ] ->
+      let i = Values.(extract (Single Int32) (cast i (T (Single Int32)))) in
+      let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
+      let w, h = matrix_size m in
+      let res = matrix_create xt 1 h in
+      for j = 1 to h do
+        matrix_set res 1 j (matrix_get m i j)
+      done ;
+      [ inject (Matrix xt) res ]
+    | _ -> raise Bad_index in
+  let extract_row lhs = function
+    | [ None, m ; None, j ; None, _] ->
+      let j = Values.(extract (Single Int32) (cast j (T (Single Int32)))) in
+      let m = Values.(extract (Matrix xt) (cast m (T (Matrix xt)))) in
+      let w, h = matrix_size m in
+      let res = matrix_create xt w 1 in
+      for i = 1 to w do
+        matrix_set res i 1 (matrix_get m i j)
+      done ;
+      [ inject (Matrix xt) res ]
     | _ -> raise Bad_index in
   let extract_two lhs = function
     | [ None, m ; None, j ; None, i ] ->
@@ -358,12 +407,46 @@ let register_matrix_extraction lib xt =
     Typed (T (Single Uint8)) ; Typed (T (Single Uint16)) ; Typed (T (Single Uint32)) ] in
   List.iter (fun overloading ->
       register_primitive lib ~more:false
+        (overloading, [ Typed (T (Matrix xt)) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_flatten ;
+      register_primitive lib ~more:false
+        (overloading, [ Typed (T (Single xt)) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_flatten ;
+      register_primitive lib ~more:false
+        (overloading, [ Typed (T (Matrix xt)) ;
+                        Typed (T (Eye (Number Real))) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_nil ;
+      register_primitive lib ~more:false
+        (overloading, [ Typed (T (Single xt)) ;
+                        Typed (T (Eye (Number Real))) ;
+                        Typed (T (Eye (Number Real))) ], 1)
+        extract_nil ;
+      register_primitive lib ~more:false
         (overloading, [ Typed (T (Matrix xt)) ], 1)
         extract_nil ;
       register_primitive lib ~more:false
         (overloading, [ Typed (T (Single xt)) ], 1)
         extract_nil ;
       List.iter (fun ki ->
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Matrix xt)) ;
+                            Typed (T (Eye (Number Real))) ; ki ], 1)
+            extract_column ;
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Single xt)) ;
+                            Typed (T (Eye (Number Real))) ; ki ], 1)
+            extract_column ;
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Matrix xt)) ;
+                            ki ; Typed (T (Eye (Number Real))) ], 1)
+            extract_row ;
+          register_primitive lib ~more:false
+            (overloading, [ Typed (T (Single xt)) ;
+                            ki ; Typed (T (Eye (Number Real))) ], 1)
+            extract_row ;
           register_primitive lib ~more:false
             (overloading, [ Typed (T (Matrix xt)) ; ki ], 1)
             extract_one ;
@@ -381,7 +464,7 @@ let register_matrix_extraction lib xt =
         indexes)
     [ Extraction ; Recursive_extraction]
 
-(** Registers an extraction operator for standard matrices *)
+(** Registers an injection operator for standard matrices *)
 let register_matrix_injection lib xt compatible =
   let inject_one lhs = function
     | [ None, m ; None, v ; None, i ] ->
@@ -446,10 +529,9 @@ let register_casted_homo_binop lib op (at1 : _ argtag) (at2 : _ argtag) (atr : _
 let register_function
   : type a b r. lib -> state -> string -> (a, a -> b, r) funtag -> (a -> b) -> unit
   = fun lib state name t f ->
-    register_primitive lib ~name
-      (Function name,
-       (try [ first_arg_matcher t ] with Not_found -> []), (* drop compat to be better? *)
-       return_arity t)
+    let args, more = first_arg_matchers t in
+    register_primitive lib ~name ~more
+      (Function name, args, (* More precise than Scilab *) return_arity t)
       (let cb = wrap_fun t f in fun lhs args -> cb args) ;
     let var = State.var state name in
     State.put state var (inject Primitive name)
@@ -758,31 +840,58 @@ let stdlib state lib =
     matrix_set res 1 1 w ;
     matrix_set res 2 1 h ;
     res in
-  register_function lib state "size" (eye real @* opt any @-> matrix real)
-    (fun _ _ -> size_matrix (-. 1.) (-. 1.)) ;
-  register_function lib state "size" (eye real @* opt any @-> real @+ real)
-    (fun _ _ -> (-. 1., -. 1.)) ;
-  register_function lib state "size" (atom @* opt any @-> matrix real)
-    (fun () _ -> size_matrix 0. 0.) ;
-  register_function lib state "size" (atom @* opt any @-> real @+ real)
-    (fun () _ -> (0., 0.)) ;
+  let size_flags =
+    flag [ "c", `C ; "r", `R ; "*", `T ] in
+  register_function lib state "size" (eye real @-> matrix real)
+    (fun _ -> size_matrix (-. 1.) (-. 1.)) ;
+  register_function lib state "size" (eye real @-> real @+ real)
+    (fun _ -> (-. 1., -. 1.)) ;
+  register_function lib state "size" (eye real @* size_flags @-> real)
+    (fun _ -> function `C | `R -> -. 1. | `T -> 1.) ;
+  register_function lib state "size" (atom @-> matrix real)
+    (fun () -> size_matrix 0. 0.) ;
+  register_function lib state "size" (atom @-> real @+ real)
+    (fun () -> (0., 0.)) ;
+  register_function lib state "size" (atom @* size_flags @-> real)
+    (fun _ _ -> 0.) ;
   List.iter
     (function
       | T (Matrix itag) ->
         register_function lib state "size"
-          (Arg (Single itag) @* opt any @-> matrix real)
-          (fun _ _ -> size_matrix 1. 1.) ;
+          (Arg (Single itag) @-> matrix real)
+          (fun _ -> size_matrix 1. 1.) ;
         register_function lib state "size"
-          (Arg (Single itag) @* opt any @-> real @+ real)
-          (fun _ _ -> (1., 1.)) ;
+          (Arg (Single itag) @-> real @+ real)
+          (fun _ -> (1., 1.)) ;
         register_function lib state "size"
-          (Arg (Matrix itag) @* opt any @-> matrix real)
-          (fun mat flag ->
+          (Arg (Single itag) @* size_flags @-> real)
+          (fun _ _ -> 1.) ;
+        register_function lib state "size"
+          (Arg (Matrix itag) @-> matrix real)
+          (fun mat ->
              let w, h = matrix_size mat in
              size_matrix (float w) (float h)) ;
         register_function lib state "size"
-          (Arg (Matrix itag) @* opt any @-> real @+ real)
+          (Arg (Matrix itag) @* size_flags @-> real)
           (fun mat flag ->
+             let w, h = matrix_size mat in
+             match flag with
+             | `C -> float w
+             | `R -> float h
+             | `T -> float (w * h)) ;
+        register_function lib state "size"
+          (Arg (Matrix itag) @* real @-> real)
+          (fun mat flag ->
+             let w, h = matrix_size mat in
+             match flag with
+             | 2. -> float w
+             | 1. -> float h
+             | n when floor n = n && n > 0. -> 1.
+             | _ ->
+               error (Generic ("invalid dimension, only positive integers are supported"))) ;
+        register_function lib state "size"
+          (Arg (Matrix itag) @-> real @+ real)
+          (fun mat ->
              let w, h = matrix_size mat in
              float h, float w)
       | _ -> assert false)
