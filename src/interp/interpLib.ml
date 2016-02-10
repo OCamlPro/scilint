@@ -752,10 +752,37 @@ let stdlib state lib =
       (fun v -> Printf.printf "%s\n%!" (string_of_value v))
       (List.rev l) in
   register_function lib state "disp" (seq any @-> null) disp ;
+
+
+  (*----- logical operations ----------------------------------------------*)
+  register_binop lib Ast.Or bool bool bool
+    (fun x y -> x || y);
+  register_binop lib Ast.And bool bool bool
+    (fun x y -> x && y);
+
+        (* use OCaml polymorphic comparisons to simplify *)
+  let register_comparisons tag =
+    (* comparisons *)
+      register_binop lib Ast.Ne tag tag (Arg (Single Bool))
+        (fun x y -> x <> y);
+      register_binop lib Ast.Eq tag tag (Arg (Single Bool))
+        (fun x y -> x = y);
+      register_binop lib Ast.Lt tag tag (Arg (Single Bool))
+        (fun x y -> x < y);
+      register_binop lib Ast.Gt tag tag (Arg (Single Bool))
+        (fun x y -> x > y);
+      register_binop lib Ast.Le tag tag (Arg (Single Bool))
+        (fun x y -> x <= y);
+      register_binop lib Ast.Ge tag tag (Arg (Single Bool))
+        (fun x y -> x >= y);
+      in
+
   (*----- string operations -----------------------------------------------*)
   register_binop lib Ast.Plus ~pw:true ~scl:true ~scr:true string string string ( ^ ) ;
   register_function lib state "string" (any @-> string) string_of_value ;
-  register_binop lib Ast.Eq string string bool (fun x y -> x = y) ;
+  (*  register_binop lib Ast.Eq string string bool (fun x y -> x = y) ; *)
+  register_comparisons string;
+
   (*----- int arithmetics -------------------------------------------------*)
   let rec intpow a p = match p with
     | 0 -> 1
@@ -768,18 +795,22 @@ let stdlib state lib =
       let bound = Values.icast Int32 itag in
       register_unop lib Ast.Unary_plus tag tag (fun x -> bound (~+ x)) ;
       register_unop lib Ast.Unary_minus tag tag (fun x -> bound (~- x)) ;
-      register_binop lib Ast.Eq tag tag bool (fun x y -> x = y) ;
+      (*      register_binop lib Ast.Eq tag tag bool (fun x y -> x = y) ; *)
       register_binop lib Ast.Plus tag tag tag (fun x y -> bound (x + y)) ;
       register_binop lib Ast.Minus tag tag tag (fun x y -> bound (x - y)) ;
       register_binop lib Ast.Times tag tag tag (fun x y -> bound (x * y)) ;
       register_binop lib Ast.Power tag tag tag (fun x y -> bound (intpow x y)) ;
       register_binop lib Ast.Rdivide tag tag tag (fun x y -> bound (x / y)) ;
-      register_binop lib Ast.Ldivide tag tag tag (fun x y -> bound (y / x)))
+      register_binop lib Ast.Ldivide tag tag tag (fun x y -> bound (y / x));
+      register_comparisons tag;
+      register_function lib state "double" (tag @-> real) float_of_int;
+  )
     [ Int8 ; Int16 ; Int32 ; Uint8 ; Uint16 ; Uint32 ] ;
   (*----- real arithmetics ------------------------------------------------*)
   register_unop ~pw:true lib Ast.Unary_plus real real ( ~+. ) ;
   register_unop ~pw:true lib Ast.Unary_minus real real ( ~-. ) ;
-  register_binop ~pw:true ~scl:true ~scr:true lib Ast.Eq real real bool ( = ) ;
+  (*  register_binop ~pw:true ~scl:true ~scr:true lib Ast.Eq real real bool ( = ) ; *)
+  register_comparisons real;
   register_binop ~pw:true ~scl:true ~scr:true lib Ast.Plus real real real ( +. ) ;
   register_binop ~pw:true ~scl:true ~scr:true lib Ast.Minus real real real ( -. ) ;
   register_binop ~scl:true ~scr:true lib Ast.Times real real real ( *. ) ;
@@ -992,6 +1023,10 @@ let stdlib state lib =
             (fun x y -> x * y |> bound))
         [ Int8 ; Int16 ; Int32 ; Uint8 ; Uint16 ; Uint32 ])
     [ Int8 ; Int16 ; Int32 ; Uint8 ; Uint16 ; Uint32 ] ;
+
+
+
+
   (*----- range operations ------------------------------------------------*)
   List.iter
     (fun k ->
@@ -1030,12 +1065,18 @@ let stdlib state lib =
       done
     done ;
     r in
-  register_function lib state "sin" (real @-> real) sin ;
-  register_function lib state "cos" (real @-> real) cos ;
-  register_function lib state "tan" (real @-> real) tan ;
-  register_function lib state "sin" (matrix real @-> matrix real) (matrix_map (Number Real) sin) ;
-  register_function lib state "cos" (matrix real @-> matrix real) (matrix_map (Number Real) cos) ;
-  register_function lib state "tan" (matrix real @-> matrix real) (matrix_map (Number Real) tan) ;
+  let register_unary_float_function (name, f) =
+    register_function lib state name (real @-> real) f ;
+    (* extend to a matrix *)
+    register_function lib state name (matrix real @-> matrix real)
+      (matrix_map (Number Real) f) ;
+  in
+  List.iter register_unary_float_function [
+    "int", floor;
+    "sin", sin;
+    "cos", cos;
+    "tan", tan
+  ];
   (*----- polynomials -----------------------------------------------------*)
   register_function lib state "poly" (matrix real @* string @* seq string @-> poly real)
     (fun items name -> function
