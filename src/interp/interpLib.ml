@@ -203,7 +203,7 @@ let rec get_arg
     let matrix_map ty f m =
       let w, h = matrix_size m in
       let r = matrix_create ty w h in
-      matrix_iter ty (matrix_set r) m;
+      matrix_iter ty (fun i j x -> matrix_set r i j (f x)) m;
       r
 
 let rec inject_result : type a. a argtag -> a -> value list = fun rt v ->
