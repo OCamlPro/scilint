@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="change_base" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>change_base</refname>
+
+    <refpurpose>transformation d'un nombre d'une base dans une autre
+    base</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>n = change_base(m,b1,b2)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>m</term>
+
+        <listitem>
+          <para>chaîne de caractères ou vecteur d'entiers positifs</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>b1</term>
+
+        <listitem>
+          <para>entier positif</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>b2</term>
+
+        <listitem>
+          <para>entier positif</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>n</term>
+
+        <listitem>
+          <para>chaîne de caractères ou vecteur d'entiers positifs</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>n=change_base(m,b1,b2)</literal> transforme le nombre
+    <literal>m</literal> écrit en base <literal>b1</literal> en le nombre
+    <literal>n</literal> écrit en base <literal>b2</literal>. Il y a deux
+    façons de représenter le nombre <literal>m</literal> en base
+    <literal>b1</literal> qui sont décrites ci-dessous.</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Pour des bases <literal>b1</literal> et <literal>b2</literal>
+        égales à 2,3,4,5,6,7,8,9 ou 16 on peut représenter le nombre
+        <literal>m</literal> sous la forme d'une chaîne de caractères dont
+        chaque caractère représente un nombre. Par exemple 210 en base 3 sera
+        représenté par la chaîne de caractères "210". Le résultat
+        <literal>n</literal> sera aussi donné sous la forme d'une chaîne de
+        caractères. Si la base b1 est égale à 16, on pourra utiliser dans la
+        représentation de <literal>m</literal> les lettres usuelles A, B, C,
+        D, E et F pour désigner les nombres 10, 11, 12, 13, 14 et 15. Si la
+        base b2 est égale à 16, <literal>n</literal> pourra aussi contenir ces
+        lettres en retour.</para>
+      </listitem>
+
+      <listitem>
+        <para>Pour des bases quelconques, on représente le nombre
+        <literal>m</literal> sous la forme d'un vecteur d'entiers positifs.
+        Par exemple 210 en base 3 sera rerpésenté par le vecteur [2,1,0]. Le
+        résultat <literal>n</literal> sera aussi donné sous la forme d'un
+        vecteur de nombre positifs. Cela permet d'utiliser des bases plus
+        grandes que 9 et différentes de 16. Par exemple le nombre
+        3*12^2+11*12+10 sera représenté par [3,11,10] en base 12.</para>
+      </listitem>
+    </itemizedlist>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">change_base("111111",2,10)
+change_base("255",10,16)
+change_base("1FF",16,10)
+change_base([3,11,10],12,10)</programlisting>
+  </refsection>
+</refentry>

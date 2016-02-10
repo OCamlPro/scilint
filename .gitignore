@@ -15,3 +15,13 @@ _obuild
 
 src/parser/scilabParser.ml
 src/parser/scilabParser.mli
+/*.asm
+/*.byte
+/sciweb
+/src/input/scilabTypedPrimitivesLexer.ml
+/src/input/scilabTypedPrimitivesParser.ml
+/src/input/scilabTypedPrimitivesParser.mli
+/src/interp/interpLycee.ml
+/src/parser/scilab_six/scilabSixGenParser.ml
+/src/parser/scilab_six/scilabSixGenParser.mli
+/src/parser/scilab_six/scilabSixLexer.ml

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2010 - DIGITEO
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="cercle" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>cercle</refname>
+
+    <refpurpose>tracé d'un cercle</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <synopsis>cercle(a,b,r,[c])</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>a</term>
+
+        <listitem>
+          <para>nombre réel</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>b</term>
+
+        <listitem>
+          <para>nombre réel</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>r</term>
+
+        <listitem>
+          <para>nombre réel positif</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>c</term>
+
+        <listitem>
+          <para>caractère, argument optionnel</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>cercle(a,b,r)</literal> trace le cercle de centre de coordonnées <literal>(a,b)</literal> et de rayon <literal>r</literal>.
+    </para>
+
+    <para><literal>cercle(a,b,r,c)</literal> trace le cercle de centre de coordonnées <literal>(a,b)</literal> et de rayon <literal>r</literal>
+	avec la couleur déterminée par le caractère <literal>c</literal>. Comme dans la fonction <literal>plot</literal>, la couleur
+	peut être <literal>"r"</literal>,<literal>"g"</literal>,<literal>"c"</literal>,<literal>"m"</literal>,<literal>"y"</literal>,
+	<literal>"k"</literal> ou <literal>"w"</literal>.
+    </para>
+
+	<para>Attention, par défaut le repère n'est pas orthonormé. Si l'on veut que les cercles n'apparaissent pas comme des ellipses, il faut
+	utiliser la commande <literal>orthonorme</literal>.
+    </para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">
+cercle(0,1,4)
+cercle(0,2,3,"r")
+orthonorme
+</programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+	
+    <simplelist type="inline">
+      <member><link
+      linkend="orthonorme">orthonorme</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

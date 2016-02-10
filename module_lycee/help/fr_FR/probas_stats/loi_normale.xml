@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="loi_normale" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>loi_normale</refname>
+
+    <refpurpose>loi normale</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>p = loi_normale(t,xbar,sigma)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>t</term>
+
+        <listitem>
+          <para>nombres réel</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>xbar</term>
+
+        <listitem>
+          <para>nombre réel</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>sigma</term>
+
+        <listitem>
+          <para>nombres réel positif</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>p</term>
+
+        <listitem>
+          <para>nombre réel</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>loi_normale(t,xbar,sigma)</literal> retourne la probabilité
+    <literal>p(X&lt;=t)</literal> lorsque <literal>X</literal> suit la loi
+    normale de paramètres <literal>xbar</literal>, moyenne de
+    <literal>X</literal>, et <literal>sigma</literal>, écart type de
+    <literal>X</literal>, avec <literal>sigma</literal> nombre réel
+    positif.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">loi_normale(4,3,1.5) </programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link linkend="loi_exp">loi_exp</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

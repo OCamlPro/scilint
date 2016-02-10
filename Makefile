@@ -100,6 +100,7 @@ OCAML_SCIWEB_MLS = \
   src/interp/interp.ml \
   src/common/tyxml_js_manip.ml \
   src/third_party/c3.ml \
+  src/interp/interpLycee.ml \
   src/interp/interpWebLib.ml \
   src/interp/interpWebMain.ml
 
@@ -226,7 +227,7 @@ SCILINT_DOC_GEN_CMOS = $(SCILINT_DOC_GEN_MLS:.ml=.cmo)
 ########## COMMON FLAGS
  ############ ajoute pour archimedes ##########	
 OCAML_INCL= \
-  -package 'archimedes,unix,uutf,pprint,re,re.pcre,re.posix' \
+  -package 'archimedes,unix,uutf,pprint,re,re.pcre,re.posix,ocplib-ocamlres' \
   -I src/common -I src/input \
   -I src/ast -I src/parser/scilab_five \
   -I src/third_party \
@@ -269,6 +270,12 @@ sciweb/%: src/sciweb/% sciweb
 
 sciweb:
 	-mkdir -p sciweb
+
+#Makefile module_lycee-1.4.2-1-src.zip
+#	rm -rf module_lycee
+#	unzip -x module_lycee-1.4.2-1-src.zip
+src/interp/interpLycee.ml: Makefile
+	ocp-ocamlres -ext sci module_lycee -o src/interp/interpLycee.ml
 
 src/common/tyxml_js_manip.cmo \
 src/common/tyxml_js_manip.cmi \
@@ -332,6 +339,9 @@ scilint_doc_gen.byte : $(SCILINT_DOC_GEN_CMOS)
           src/interp/interpWebMain.ml \
           -package 'js_of_ocaml.tyxml,js_of_ocaml.syntax' \
           -syntax camlp4o >> .depend_ocaml
+
+upload:
+	rsync -auv sciweb/. www-data@http.new:/var/www/sciweb.ocamlpro.com/.
 
 include .depend_ocaml
 

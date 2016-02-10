@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="ensemble" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>ensemble</refname>
+
+    <refpurpose>définition d'un ensemble</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>ens = ensemble(e1,e2,...)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>e1, e2,...</term>
+
+        <listitem>
+          <para>chaînes de caractères ou vecteurs de chaînes de
+          caractères</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>ens</term>
+
+        <listitem>
+          <para>ensemble</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para>La fonction <literal>ensemble</literal> permet de créer un ensemble.
+    <literal>e1</literal>, <literal>e2</literal>,... sont des chaînes de
+    caractères ou des vecteurs de chaînes de caractères. L'ensemble contient
+    donc toutes les chaînes de caractères de <literal>e1</literal>,
+    <literal>e2</literal>,... Un ensemble est non ordonné et n'a pas
+    d'éléments dupliqués. Par exemple {a,b,c} et {b,a,c,a} représentent le
+    même ensemble. Lorsqu'un ensemble est créé, les éléments dupliqués sont
+    supprimés et, par commodité, ses éléments sont rangés par ordre
+    alphabétique.</para>
+
+    <para>Noter que <literal>ensemble()</literal> crée un ensemble
+    vide.</para>
+
+    <para>Il est possible d'attribuer des valeurs à des éléments d'un
+    ensemble. Cela permet par exemple d'avoir des ensembles de pièces, de
+    billets ou de cartes à jouer avec des valeurs. Pour cela, la valeur sera
+    donnée en la mettant entre parenthèses à la fin du nom de l'élément. Par
+    exemple si l'on veut un ensemble de trois pièces de monnaie, que l'on
+    appelle "a", "b" et "c", de valeur 1 euro, 1 euro et 2 euros, on écrira
+    :</para>
+
+    <para>ens=ensemble("a(1)","b(1)","c(2)").</para>
+
+    <para>La fonction <literal>valeur</literal> permet alors d'avoir le
+    vecteur des valeurs des éléments, permettant ainsi de faire des calculs
+    dessus (voir <link linkend="valeur">valeur</link>).</para>
+
+    <para>Pour changer ou extraire un élément d'un ensemble, on utilise les
+    parenthèses comme pour un vecteur. Dans la parenthèse on met le rang de
+    l'élément, sachant que les élements ont été rangés automatiquement par
+    ordre alphabétique.</para>
+
+    <para>Pour avoir la taille d'un ensemble, on utilise la fonction
+    <literal>taille</literal>.</para>
+
+    <para>Pour comparer deux ensembles, on utilise l'opérateur habituel
+    <literal>==</literal>.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">ens1=ensemble("b","a","c","a")
+taille(ens1)
+ens2=ensemble("a","b","c")
+ens1==ens2
+ens=ensemble("a","b",string(1:5))
+// attention les éléments sont rangés par ordre alphabétique
+ensemble(string(1:10))</programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link linkend="valeur">valeur</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

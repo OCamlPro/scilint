@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="histogramme" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>histogramme</refname>
+
+    <refpurpose>histogramme</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>histogramme(a,n,couleur)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>a</term>
+
+        <listitem>
+          <para>vecteur de nombres réels</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>n</term>
+
+        <listitem>
+          <para>vecteur de nombres réels positifs</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>couleur</term>
+
+        <listitem>
+          <para>chaîne de caractères</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>histogramme(a,n,couleur)</literal> où
+    <literal>couleur</literal> est un argument optionnel, permet de tracer
+    l&#8217;histogramme d&#8217;une série statistique où les valeurs de la
+    variable sont regroupées dans des intervalles. <literal>a</literal> est le
+    vecteur donnant les bornes des intervalles dans l&#8217;ordre croissant.
+    <literal>n</literal> est le vecteur des effectifs ou des fréquences
+    correspondants. Le vecteur <literal>a</literal> a un élément de plus que
+    le vecteur <literal>n</literal>. <literal>couleur</literal> définit la
+    couleur comme dans la fonction <literal>plot</literal>.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">a=[0,10,15,20,40]
+n=[8,6,13,10]
+histogramme(a,n,"r")</programlisting>
+  </refsection>
+</refentry>

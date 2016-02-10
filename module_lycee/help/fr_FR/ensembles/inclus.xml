@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="inclus" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>inclus</refname>
+
+    <refpurpose>détermine si un ensemble est inclus dans un autre</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>b = inclus(ens1,ens2)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>ens1</term>
+
+        <listitem>
+          <para>ensemble</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>ens2</term>
+
+        <listitem>
+          <para>ensemble</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>b</term>
+
+        <listitem>
+          <para><literal>%T</literal> (vrai) ou <literal>%F</literal>
+          (faux)</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para>La fonction <literal>inclus</literal> retourne vrai
+    (<literal>%T</literal>) si l'ensemble <literal>ens1</literal> est inclus
+    dans l'ensemble <literal>ens2</literal> et faux (<literal>%F</literal>)
+    sinon.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">ens1=ensemble("a","c")
+ens2=ensemble("a","b","c")
+inclus(ens1,ens2)
+inclus(ens2,ens1)</programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link linkend="appartient">appartient</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

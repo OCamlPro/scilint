@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="taille" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>taille</refname>
+
+    <refpurpose>nombre d'éléments d'un vecteur ou d'une matrice</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <synopsis>t = taille(v)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>v</term>
+
+        <listitem>
+          <para>vecteur ou matrice</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>t</term>
+
+        <listitem>
+          <para>nombre ou vecteur de deux nombres</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para>Si <literal>v</literal> est un vecteur, <literal>taille(v)</literal> retourne son
+    nombre d'éléments.</para>
+
+    <para>Si v est une matrice de taille m X n, <literal>taille(v)</literal>
+    retourne le vecteur [m,n].</para>
+
+	<para>Noter que pour une matrice vide <literal>[]</literal>, le nombre d'éléments est 0.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">v=[1,2,3]
+taille(v)
+v=[1,2,3;4,5,6]
+taille(v) </programlisting>
+  </refsection>
+</refentry>

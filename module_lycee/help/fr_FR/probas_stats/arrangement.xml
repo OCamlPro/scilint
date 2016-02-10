@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ * Copyright (C) 2010 - DIGITEO - Michaël Baudin
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="arrangement" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>arrangement</refname>
+
+    <refpurpose>nombre d'arrangements</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <synopsis>a = arrangement(n,p)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>n</term>
+
+        <listitem>
+          <para>nombre entier positif ou nul</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>p</term>
+
+        <listitem>
+          <para>nombre entier positif ou nul</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>a</term>
+
+        <listitem>
+          <para>nombre entier positif</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>arrangement(n,p)</literal> retourne le nombre
+    d&#8217;arrangements de <literal>p</literal> éléments pris parmi
+    <literal>n</literal> avec <literal>n</literal> et<literal> p</literal>
+    entiers positifs ou nuls et
+    <literal>p</literal>&lt;=<literal>n</literal>.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">arrangement(8,3)
+    </programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link linkend="combinaison">combinaison</link></member>
+    </simplelist>
+  </refsection>
+</refentry>
+

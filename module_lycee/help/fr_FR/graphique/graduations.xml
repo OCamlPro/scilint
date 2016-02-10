@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="graduations" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>graduations</refname>
+
+    <refpurpose>graduation des axes de la fenêtre graphique</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>graduations()
+graduations(pas,sous_pas)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>pas</term>
+
+        <listitem>
+          <para>nombre positif ou vecteur de deux nombres positifs</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>sous_pas</term>
+
+        <listitem>
+          <para>nombre positif ou vecteur de deux nombres positifs</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para>Cette fonction permet de changer les graduations et les
+    sous-graduations des axes.</para>
+
+    <itemizedlist>
+      <listitem>
+        <para><literal>graduations(pas,sous_pas)</literal> où
+        <literal>sous_pa</literal><literal>s</literal> est un argument
+        optionnel permet de définir les graduations d&#8217;un tracé.
+        <literal>pas</literal> représente la graduation principale et
+        <literal>sous_pas</literal> la graduation secondaire. Si
+        <literal>sous_pas</literal> n&#8217;est pas présent, le mode par
+        défaut de la graduation secondaire est utilisé. Chaque argument doit
+        être un nombre positif ou un vecteur de deux nombre positifs. Il
+        représente la distance entre deux graduations ou entre deux
+        sous-graduations. Si on donne un seul nombre, il est pris à la fois
+        pour l&#8217;axe des abscisses et l&#8217;axe des ordonnées. Si on
+        donne un vecteur de deux nombres, le premier correspond à l&#8217;axe
+        des abscisses et le second à l&#8217;axe des ordonnées.</para>
+      </listitem>
+
+      <listitem>
+        <para><literal>graduations()</literal> revient au mode de graduation
+        par défaut.</para>
+      </listitem>
+    </itemizedlist>
+  </refsection>
+</refentry>

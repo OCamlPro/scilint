@@ -190,6 +190,21 @@ let rec get_arg
       None, (vl, vr), l
     | (_, _) :: vs, Seq _ -> assert false
     | (_, _) :: vs, Opt _ -> assert false
+;;
+
+    let matrix_iter ty f m =
+      let w, h = matrix_size m in
+      for i = 1 to w do
+        for j = 1 to h do
+          f i j (matrix_get m i j)
+        done
+      done
+
+    let matrix_map ty f m =
+      let w, h = matrix_size m in
+      let r = matrix_create ty w h in
+      matrix_iter ty (matrix_set r) m;
+      r
 
 let rec inject_result : type a. a argtag -> a -> value list = fun rt v ->
   match rt with
@@ -200,7 +215,6 @@ let rec inject_result : type a. a argtag -> a -> value list = fun rt v ->
   | Opt rt -> (match v with Some v -> inject_result rt v | None -> [])
   | Flag _ -> assert false
   | Seq _ -> assert false
-  | Fake _ -> [ inject Null () ]
 
 let rec wrap_fun
   : type a f r. (a, f, r) funtag -> f -> (Ast.var option * value) list -> value list
@@ -1055,28 +1069,7 @@ let stdlib state lib =
          Bytes.set m i (Char.chr (int_of_float (s +. float i *. step)))
        done ;
        Bytes.unsafe_to_string m) ;
-  (*----- trigonometry ----------------------------------------------------*)
-  let matrix_map ty f m =
-    let w, h = matrix_size m in
-    let r = matrix_create ty w h in
-    for i = 1 to w do
-      for j = 1 to h do
-        matrix_set r i j (f (matrix_get m i j))
-      done
-    done ;
-    r in
-  let register_unary_float_function (name, f) =
-    register_function lib state name (real @-> real) f ;
-    (* extend to a matrix *)
-    register_function lib state name (matrix real @-> matrix real)
-      (matrix_map (Number Real) f) ;
-  in
-  List.iter register_unary_float_function [
-    "int", floor;
-    "sin", sin;
-    "cos", cos;
-    "tan", tan
-  ];
+
   (*----- polynomials -----------------------------------------------------*)
   register_function lib state "poly" (matrix real @* string @* seq string @-> poly real)
     (fun items name -> function

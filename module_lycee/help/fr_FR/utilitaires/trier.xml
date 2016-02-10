@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="trier" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>trier</refname>
+
+    <refpurpose>trie un vecteur selon un ordre croissant ou
+    décroissant</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <synopsis>w = trier(v,ordre)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>v</term>
+
+        <listitem>
+          <para>vecteur</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>ordre</term>
+
+        <listitem>
+          <para>"&gt;" ou "&lt;"</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>w</term>
+
+        <listitem>
+          <para>vecteur</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>trier(v)</literal> ou <literal>trier(v,"&gt;")</literal>
+    retourne trié le vecteur de nombres <literal>v</literal> dans
+    l&#8217;ordre croissant ou le vecteur de chaînes de caractères
+    <literal>v</literal> dans l'ordre alphabétique croissant.</para>
+
+    <para><literal>trier(v,"&lt;")</literal> retourne trié le vecteur de
+    nombres <literal>v</literal> dans l&#8217;ordre décroissant ou le vecteur
+    de chaînes de caractères <literal>v</literal> dans l'ordre alphabétique
+    décroissant.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">v=[1,5,2,8,3]
+trier(v)
+trier(v,"&lt;")</programlisting>
+  </refsection>
+</refentry>

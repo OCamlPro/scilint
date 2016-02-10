@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="lycee" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>lycee</refname>
+
+    <refpurpose>charge ou décharge le module pour les lycées</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <synopsis>lycee(b)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>b</term>
+
+        <listitem>
+          <para>%T (pour vrai) ou %F (pour faux)</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>lycee(%T)</literal> charge le module pour les lycées et
+    <literal>lycee(%F)</literal> le décharge. Lorsque le module pour les
+    lycées est chargé, les actions suivantes sont exécutées :</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Le menu Lycée apparaît.</para>
+      </listitem>
+
+      <listitem>
+        <para>Scilab change le mode IEEE d'exception : les exceptions
+        produisent <literal>Inf</literal> ou <literal>Nan</literal>. Par
+        exemple l'exécution de <literal>1/0</literal> donnera
+        <literal>Inf</literal> au lieu d'une erreur.</para>
+      </listitem>
+
+      <listitem>
+        <para>Les nombres sont affichés avec 16 caractéres au lieu de
+        10.</para>
+      </listitem>
+
+      <listitem>
+        <para>Les axes des graphiquent passent par le point (0,0) et il n'y a
+        pas de cadre autour du tracé.</para>
+      </listitem>
+
+      <listitem>
+        <para>Redéfinir une fonction déjà définie d'affiche pas un
+        Warning.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Lorsque le module pour les lycées est déchargé, Scilab revient à son
+    mode de fonctionnement pas défaut.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">lycee(%T)
+1/0
+%pi
+x=linspace(-%pi,%pi,100); function y=f(x); y=sin(x); endfunction;
+plot(x,f)
+lycee(%F)
+1/0
+%pi
+x=linspace(-%pi,%pi,100); function y=f(x); y=sin(x); endfunction;
+plot(x,f)</programlisting>
+  </refsection>
+</refentry>

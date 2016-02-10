@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="moyenne_ponderee" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>moyenne_ponderee</refname>
+
+    <refpurpose>moyenne pondérée</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>m = moyenne_ponderee(v,n)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>v</term>
+
+        <listitem>
+          <para>vecteur de nombres réels</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>n</term>
+
+        <listitem>
+          <para>vecteur de nombres réels positifs</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>m</term>
+
+        <listitem>
+          <para>nombre réel</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>moyenne_ponderee(v,n)</literal> retourne la moyenne du
+    vecteur de nombres <literal>v</literal> pondéré par le vecteur de nombres
+    <literal>n</literal> avec <literal>v</literal> et <literal>n</literal> de
+    même dimension et <literal>n</literal> un vecteur de nombres positifs ou
+    nuls mais non tous nuls</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">v=[8,10,11]
+n=[3,5,1]
+moyenne_ponderee(v,n)</programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link linkend="moyenne">moyenne</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

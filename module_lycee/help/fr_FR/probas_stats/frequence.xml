@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="frequence" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>frequence</refname>
+
+    <refpurpose>tirage d'une suite de nombres</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <synopsis>f = frequence(n,s)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>n</term>
+
+        <listitem>
+          <para>nombre entier</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>s</term>
+
+        <listitem>
+          <para>vecteur de nombres réels</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>f</term>
+
+        <listitem>
+          <para>vecteur de nombres entiers</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>frequence(n,s)</literal> retourne la fréquence de
+    <literal>n</literal>, nombre entier, dans la suite de nombres
+    <literal>s</literal>.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">n=3
+s=[1,12,3,5.1,0,3,1,2,1,12,3,-1,-0.6];
+frequence(n,s)</programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link
+      linkend="frequence_tirage_entier">frequence_tirage_entier</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

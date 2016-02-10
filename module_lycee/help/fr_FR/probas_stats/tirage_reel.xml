@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="tirage_reel" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>tirage_reel</refname>
+
+    <refpurpose>tirage de nombres réels</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <synopsis>v = tirage_reel(p,a,b)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>p</term>
+
+        <listitem>
+          <para>nombre entier positif</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>a</term>
+
+        <listitem>
+          <para>nombre réel</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>b</term>
+
+        <listitem>
+          <para>nombre réel</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>v</term>
+
+        <listitem>
+          <para>vecteur de nombres réels</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para><literal>tirage_reel(p,a,b)</literal> retourne un vecteur de
+    <literal>p</literal> tirages réels pris entre <literal>m</literal> et
+    <literal>n</literal> avec <literal>p</literal> entier positif,
+    <literal>a</literal> et <literal>b</literal> réels et<literal>
+    a</literal>&lt;=<literal>b</literal>.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">// dix tirages uniformes entre 0 et 1
+tirage_reel(10,0,1)</programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link linkend="frequence">frequence</link></member>
+
+      <member><link linkend="tirage_entier">tirage_entier</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

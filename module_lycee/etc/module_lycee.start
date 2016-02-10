@@ -1,0 +1,63 @@
+// Scilab ( http://www.scilab.org/ ) - This file is part of Scilab
+// Copyright (C) 2011 - SCILAB ENTERPRISES
+// Copyright (C) 2011 - DIGITEO - Allan CORNET
+//
+// This file must be used under the terms of the CeCILL.
+// This source file is licensed as described in the file COPYING, which
+// you should have received as part of this distribution.  The terms
+// are also available at
+// http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+
+function [lycee_activiteslib, ..
+          lycee_analyselib, ..
+          lycee_arithmetiquelib, ..
+          lycee_ensembleslib, ..
+          lycee_graphiquelib, ..
+          lycee_probaslib, ..
+          lycee_utilitaireslib] = startModuleLycee()
+
+  module_lycee_version = "1.4";
+  module_lycee_date = "septembre 2011";
+  mprintf("Chargement du module lycée version %s (%s)\n",module_lycee_version,module_lycee_date);
+  mprintf("Ce module change le comportement par défaut de Scilab. Faire : ""help lycee""");
+
+  etc_tlbx  = get_absolute_file_path('module_lycee.start');
+  etc_tlbx  = getshortpathname(etc_tlbx);
+  root_tlbx = strncpy( etc_tlbx, length(etc_tlbx)-length('\etc\') );
+
+  // Load  functions library
+  // =============================================================================
+  pathmacros            = pathconvert( root_tlbx + "/macros");
+  lycee_activiteslib    = lib(pathmacros + "activites"    + filesep());
+  lycee_analyselib      = lib(pathmacros + "analyse"      + filesep());
+  lycee_arithmetiquelib = lib(pathmacros + "arithmetique" + filesep());
+  lycee_ensembleslib    = lib(pathmacros + "ensembles"    + filesep());
+  lycee_graphiquelib    = lib(pathmacros + "graphique"    + filesep());
+  lycee_probaslib       = lib(pathmacros + "probas_stats" + filesep());
+  lycee_utilitaireslib  = lib(pathmacros + "utilitaires"  + filesep());
+
+  // Load and add help chapter
+  // =============================================================================
+  path_addchapter = root_tlbx + "/jar/";
+  if or(getscilabmode() == ["NW";"STD"]) then
+    path_addchapter = root_tlbx + "/jar/";
+    if isdir(path_addchapter) then
+      add_help_chapter("Module Scilab pour les lycées", path_addchapter, %F);
+    end
+  end
+
+endfunction
+
+[lycee_activiteslib, ..
+          lycee_analyselib, ..
+          lycee_arithmetiquelib, ..
+          lycee_ensembleslib, ..
+          lycee_graphiquelib, ..
+          lycee_probaslib, ..
+          lycee_utilitaireslib] = startModuleLycee();
+
+clear startModuleLycee;
+
+afficher = disp;
+
+lycee(%T);

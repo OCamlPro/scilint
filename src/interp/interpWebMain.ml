@@ -295,6 +295,10 @@ let rec render ?(eval = true) step =
       D.(button [ entity "#8648" ; span ~a:[a_class ["tooltip"]] [ D.pcdata "Insert a new box before this one." ] ]) in
     let insert_after_button =
       D.(button [ entity "#8650" ; span ~a:[a_class ["tooltip"]] [ D.pcdata "Insert a new box after this one." ] ]) in
+    let empty_button =
+      D.(button [ entity "#8709" ; span ~a:[a_class ["tooltip"]] [ D.pcdata "Empty this box." ] ]) in
+    let update_button =
+      D.(button [ entity "#9655" ; span ~a:[a_class ["tooltip"]] [ D.pcdata "Update everything." ] ]) in
     M.Ev.onclick close_button (fun _ev ->
         let step =
           if step == cstep then match step.next with
@@ -310,6 +314,15 @@ let rec render ?(eval = true) step =
             del step in
         render ~eval: true step ;
         true) ;
+    M.Ev.onclick empty_button (fun _ev ->
+      cstep.phrase <- "";
+      cstep.updated <- true ;
+      render ~eval: true step ;
+      true) ;
+    M.Ev.onclick update_button (fun _ev ->
+      cstep.updated <- true ;
+      render ~eval: true step ;
+      true) ;
     M.Ev.onclick insert_before_button (fun _ev ->
         let rec ins step =
           match step.next with
@@ -334,12 +347,13 @@ let rec render ?(eval = true) step =
         render ~eval: true (ins step) ;
         true) ;
     D.([div ~a:[ a_class [ "scilab-block" ] ]
-          ([ D.(div ~a:[ a_class [ "buttons" ; "top" ]] [ insert_before_button ; close_button ]) ; code_input ] @
+          ([ D.(div ~a:[ a_class [ "buttons" ; "top" ]] [ update_button; empty_button; insert_before_button ; close_button ]) ; code_input ] @
            cstep.liste @
            (if cstep.answer <> "" then
               D.([ p ~a:[ a_class [ "scilab-output" ]] [ pcdata cstep.answer ] ])
             else []) @
-           [ D.(div ~a:[ a_class [ "buttons" ; "bottom" ]] [ insert_after_button ]) ])]) @
+           [
+             D.(div ~a:[ a_class [ "buttons" ; "bottom" ]] [ insert_after_button ]) ])]) @
     match cstep.next with
     | None -> []
     | Some next -> format_result next (nb + 1) invalidated in

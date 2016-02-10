@@ -28,7 +28,7 @@ type _ dest =
   | Strictly : 'res dest -> 'res dest
 
 (** Main interpreting function *)
-let rec interpret (state : state) (lib : lib) ast =
+let rec interpret ?(set_ans=true)(state : state) (lib : lib) ast =
   let lib = ref lib in
   let ans = State.var state "ans" in
   let colon = State.var state ":" in
@@ -61,7 +61,7 @@ let rec interpret (state : state) (lib : lib) ast =
         interpret_stmt forged
       | Exp exp ->
         let res = interpret_exp One exp in
-        if typeof res <> T Null then begin
+        if set_ans && typeof res <> T Null then begin
           State.put state ans res ;
           message (Result ("ans", res)) ;
         end else begin
@@ -622,7 +622,7 @@ let rec interpret (state : state) (lib : lib) ast =
   List.iter interpret_stmt_toplevel (from_parser state ast)
 
 (** To be called by the main on each code source passed on th CLI *)
-let treat_source state lib source =
+let treat_source ?(set_ans=true) state lib source =
   let open ScilabParserAst in
   let open ScilintOptions in
   let parse () =
@@ -671,4 +671,4 @@ let treat_source state lib source =
     let w = Located ((source, ((1, 0), (1, 0))), Error "nothing to do") in
     messages [ w ]
   else
-    interpret state lib ast
+    interpret ~set_ans state lib ast

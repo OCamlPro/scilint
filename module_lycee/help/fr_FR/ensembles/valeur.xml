@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+ * Copyright (C) 2008 - INRIA
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2-en.txt
+ *
+ -->
+<refentry version="5.0-subset Scilab" xml:id="valeur" xml:lang="fr"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns4="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <pubdate>$LastChangedDate$</pubdate>
+  </info>
+
+  <refnamediv>
+    <refname>valeur</refname>
+
+    <refpurpose>vecteur des valeurs des éléments d'un ensemble ou d'une chaîne
+    de caractères</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <title>Séquence d'appel</title>
+
+    <synopsis>v = valeur(e)</synopsis>
+  </refsynopsisdiv>
+
+  <refsection>
+    <title>Paramètres</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>e</term>
+
+        <listitem>
+          <para>ensemble ou chaîne de caractères</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>v</term>
+
+        <listitem>
+          <para>vecteur des valeurs</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsection>
+
+  <refsection>
+    <title>Description</title>
+
+    <para>Il est possible d'attribuer des valeurs à des éléments d'un
+    ensemble. Cela permet, par exemple, d'avoir des ensembles de pièces, de
+    billets ou de cartes à jouer avec des valeurs. Pour cela, la valeur sera
+    donnée en la mettant entre parenthèses à la fin du nom de l'élément. Par
+    exemple si l'on veut un ensemble de trois pièces de monnaie, que l'on
+    appelle "a", "b" et "c", de valeur 1 euro, 1 euro et 2 euros, on écrira
+    :</para>
+
+    <para><literal>ens=ensemble("a(1)","b(1)","c(2)").</literal></para>
+
+    <para>La fonction <literal>valeur</literal> permet alors d'avoir le
+    vecteur des valeurs des éléments, permettant ainsi de faire des calculs
+    dessus.</para>
+
+    <para>Si un élément n'a pas de valeur, c'est la valeur 0 qui est
+    prise.</para>
+
+    <para>Si <literal>e</literal> est une chaîne de caractères, et si ses
+    éléments représentent des chiffres, le résultat est le vecteur des
+    chiffres correspondant. Cela permet, par exemple, d'obtenir le vecteur des
+    chiffes d'un entier <literal>n</literal> en faisant
+    <literal>valeur(string(n))</literal>.</para>
+  </refsection>
+
+  <refsection>
+    <title>Exemples</title>
+
+    <programlisting role="example">ens=ensemble("a(1)","b(1)","c(2)")
+v=valeur(ens)
+sum(v)
+ens=ensemble("a","b(1)")
+valeur(ens)
+valeur("1234")
+n=850;
+valeur(string(n))</programlisting>
+  </refsection>
+
+  <refsection>
+    <title>Voir Aussi</title>
+
+    <simplelist type="inline">
+      <member><link linkend="ensemble">ensemble</link></member>
+    </simplelist>
+  </refsection>
+</refentry>

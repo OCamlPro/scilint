@@ -1,6 +1,32 @@
 open InterpLib
 open InterpCore.Values
 
+(*--- Basic math functions ---*)
+
+let () =
+  register_library (fun state lib ->
+
+  let register_unary_float_function (name, f) =
+    register_function lib state name (real @-> real) f ;
+    (* extend to a matrix *)
+    register_function lib state name (matrix real @-> matrix real)
+      (matrix_map (Number Real) f) ;
+  in
+  List.iter register_unary_float_function [
+    "int", (fun x -> if x < 0.0 then ceil x else floor x);
+    "exp", exp;
+    "log", log;
+    "sin", sin;
+    "cos", cos;
+    "tan", tan;
+    "sqrt", sqrt;
+    "floor", floor;
+    "abs", abs_float;
+    "ceil", ceil;
+  ];
+
+  )
+
 (*--- Matrices ---*)
 
 let () =
@@ -110,40 +136,29 @@ let () =
   register_library (fun state lib ->
     register_function lib state "ones" (real @* real @-> matrix real)
       (fun h w ->
-	if h < 1. || w < 1. then 
-	  matrix_create (Number Real) 0 0 
+	if h < 1. || w < 1. then
+	  matrix_create (Number Real) 0 0
 	else begin
 	  let width = int_of_float(floor w) and height = int_of_float(floor h) in
 	  let res = matrix_create (Number Real) height width in
 	  for i=1 to width do
 	    for j=1 to height do
-	      matrix_set res j i 1. 
+	      matrix_set res j i 1.
 	    done;
 	  done;
 	  res;
 	end)
   )
-	
-(*--- Basic math functions ---*)
 
-let () = 
-  register_library (fun state lib ->
-    register_function lib state "sqrt" (real @-> real)
-      (fun r -> sqrt r )) (* a changer : si negatif, complex *)
-
-let () = 
-  register_library (fun state lib ->
-    register_function lib state "floor" (real @-> real)
-      (fun r -> floor(r) ))
 
 
 (*--- definir des lois ---*)
 
 let factorial x =
   let rec loop x acc =
-    if x <= 1 then 
+    if x <= 1 then
       acc
-    else 
+    else
       loop (x - 1) (acc * x)
   in
   loop x 1
@@ -162,7 +177,7 @@ let () =
     register_function lib state "binomial_coefficient" (int32 @* int32 @-> real)
       (fun n k -> binomial_coefficient n k)
   )
-  
+
 let () =
   register_library (fun state lib ->
     register_function lib state "binomial" (int32 @* int32 @* real @-> real)
@@ -180,11 +195,26 @@ let sum v =
   done;
   !sum
 
+let cumsum m =
+  let w,h = matrix_size m in
+  let r = matrix_create (Number Real) w h in
+  let sum = ref 0. in
+  for i = 1 to w do
+    for j = 1 to h do
+      sum := !sum +. matrix_get m i j;
+      matrix_set r i j !sum
+    done
+  done;
+  r
+
 let () =
   register_library (fun state lib ->
-    register_function lib state "sum" (matrix real @-> real)
-      (fun v -> sum v)
+
+    register_function lib state "sum" (matrix real @-> real) sum;
+    register_function lib state "cumsum" (matrix real @-> matrix real) cumsum;
+
   )
+
 
 let () =
   register_library (fun state lib ->
@@ -199,7 +229,7 @@ let () =
 	let res = (if (Array.length v) mod 2 = 0 then
 	  let n = Array.length v / 2 in
 	  ( v.(n) +. v.(n+1) ) /. 2.
-	else 
+	else
 	  v.( Array.length v / 2)) in
 	res)
   )
@@ -212,8 +242,8 @@ let () =
   register_library (fun state lib ->
     register_function lib state "mean_vector" (matrix real @-> real)
       (fun v -> mean_vector v)
-  ) 
- 
+  )
+
 let variance v =
   let w, h = matrix_size v in
   let moy = mean_vector v in
@@ -229,7 +259,7 @@ let () =
   register_library (fun state lib ->
     register_function lib state "variance" (matrix real @-> real)
       (fun v -> variance v)
-  ) 
+  )
 
 (* ecart-type *)
 let () =
@@ -241,7 +271,7 @@ let () =
 let () =
   register_library (fun state lib ->
     register_function lib state "quartiles" (matrix real @-> real)
-      (fun v -> 
+      (fun v ->
 	let w, h = matrix_size v in
 	let q1 = ref 0. and q3 = ref 0. in
 	q1 := matrix_get v (int_of_float (ceil ((float_of_int w)/.4.))) 1;
@@ -258,12 +288,12 @@ let () =
   register_library (fun state lib ->
     register_function lib state "rand_int" (int32 @* int32 @-> int32 )
       (fun a b -> Random.int (b - a + 1) + a)
-  ) 
+  )
 
 let () =
   register_library (fun state lib ->
     register_function lib state "rand_float" (real @* real @-> real)
-      (fun a b -> Random.float (b -. a +. 1.) +. a)
+      (fun a b -> Random.float (b -. a) +. a)
   )
 
 let () =
