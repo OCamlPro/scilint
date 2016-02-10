@@ -21,6 +21,26 @@ type interp_message =
 
 exception Interp_error of interp_message
 
+let _ =
+  Printexc.register_printer (fun exn ->
+    match exn with
+    | Interp_error error ->
+    Printf.eprintf "Interp_error %s\n%!"
+      (let rec located error =
+         match error with
+      | Unbound_overloading _ -> "Unbound_overloading"
+      | Warning _ -> "Warning"
+      | Werror _ -> "Werror"
+      | Result _ -> "Result"
+      | Hint _ -> "Hint"
+      | Generic error -> Printf.sprintf "Generic (%S)" error
+      | Error error -> Printf.sprintf "Error (%S)" error
+      | Located (_,error) -> located error
+       in
+      located error);
+    None
+  | _ -> None)
+
 let print_value ppf value =
   let open Values in
   let print fmt = Format.fprintf ppf fmt in
